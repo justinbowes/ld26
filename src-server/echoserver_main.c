@@ -211,6 +211,24 @@ int main(int argc, char **argv) {
 		client_info->seq = packet.seq;
 		
 		if (packet.type == pt_hello) {
+			
+			if (HASH_COUNT(clients) > 127) {
+				
+				client_info temp;
+				memset(&temp, 0, sizeof(temp));
+				temp.remote_addr = src;
+				
+				packet_t full_packet;
+				full_packet.type = pt_chat;
+				strncpy(full_packet.chat, "Server is full", CHAT_MAX);
+				
+				pointcast_packet(0, &packet, &temp);
+		
+				log_event("full", NULL, "");
+				
+				continue;
+			}
+			
 			if (packet.hello.nonce && client_source == 0) {
 				client_source = client_info->player_id.client_id;
 				log_event("hello", client_info, "nonce=%u", packet.hello.nonce);
