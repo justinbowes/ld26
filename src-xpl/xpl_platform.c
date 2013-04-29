@@ -491,7 +491,7 @@ void xpl_data_resource_path(char *path_out, const char *path_in, size_t length) 
 	struct stat st = {0};
 	snprintf(path_out, length, "~/.%s", path_in);
 	if (stat(path_out, &st) == -1) {
-		mkdir(dir, 0700);
+		mkdir(path_out, 0700);
 	}
 }
 #endif

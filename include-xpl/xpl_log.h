@@ -31,7 +31,9 @@
 #define XPL_LOG_LEVEL                   XPL_LOG_LEVEL_INFO
 #endif
 
-#if defined(XPL_PLATFORM_WINDOWS)
+#define LOG_ANSI
+
+#if defined(XPL_PLATFORM_WINDOWS) || defined(XPL_PLATFORM_OSX)
 #undef LOG_ANSI
 #else
 #define XPL_STDERR stderr
