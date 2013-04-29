@@ -483,6 +483,18 @@ void xpl_data_resource_path(char *path_out, const char *path_in, size_t length) 
 #if defined(XPL_PLATFORM_OSX)
 // obj-c implementation in xpl_platform.m
 #endif
+#if defined(XPL_PLATFORM_UNIX)
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+void xpl_data_resource_path(char *path_out, const char *path_in, size_t length) {
+	struct stat st = {0};
+	snprintf(path_out, length, "~/.%s", path_in);
+	if (stat(path_out, &st) == -1) {
+		mkdir(dir, 0700);
+	}
+}
+#endif
 
 void xpl_dev_resource_path(char *path_out, const char *path_in, size_t length) {
 	format_resource_path(path_out, path_in, PLATFORM_DEV_RESOURCE_FORMAT, length);
