@@ -1695,6 +1695,22 @@ static void ui_tutorial_show(xpl_context_t *self, double time) {
 			case 2:
 				ui_tutorial_highlight(self, rect, xrect_set(61, 438, 121, 41), time);
 				ui_tutorial_highlight(self, rect, xrect_set(330, 265, 51, 42), time);
+				break;
+				
+			case 3:
+				ui_tutorial_highlight(self, rect, xrect_set(144, 287, 30, 12), time);
+				ui_tutorial_highlight(self, rect, xrect_set(177, 80, 98, 22), time);
+				ui_tutorial_highlight(self, rect, xrect_set(248, 453, 315, 19), time);
+				ui_tutorial_highlight(self, rect, xrect_set(590, 448, 53, 51), time);
+				break;
+
+			case 4:
+				ui_tutorial_highlight(self, rect, xrect_set(366, 452, 39, 55), time);
+				break;
+
+			case 5:
+				ui_tutorial_highlight(self, rect, xrect_set(56, 124, 600, 72), time);
+				break;
 				
 			default:
 				break;
