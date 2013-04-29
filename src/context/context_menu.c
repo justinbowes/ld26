@@ -12,8 +12,8 @@
 #include "xpl_context.h"
 #include "xpl_app_params.h"
 #include "xpl_hash.h"
-
-#include "xpl_effect_buffer.h"
+#include "xpl_rand.h"
+#include "xpl_sprite.h"
 
 #include "context/context_logo.h"
 #include "context/context_game.h"
@@ -45,7 +45,7 @@ static xpl_imui_context_t               *imui_context;
 static xpl_context_t                    *context_next;
 
 // Background
-static xpl_shader_t                     *background_shader;
+// static xpl_shader_t                     *background_shader;
 static xpl_shader_t                     *overlay_shader;
 static xpl_vao_t                        *effect_vao;
 static xpl_bo_t                         *effect_vbo;
@@ -55,9 +55,27 @@ static float                            overlay_strength;
 
 static double                           total_time = 0.0;
 
+static xpl_sprite_batch_t				*bg_batch;
+static xpl_sprite_t						*bg_sprite;
+static xpl_sprite_t						*up_sprite;
+#define BG_PARTICLE_COUNT				4096
+static xvec2							bg_particle[BG_PARTICLE_COUNT];
+static xvec2							bg_velocity[BG_PARTICLE_COUNT];
+static float							bg_orient[BG_PARTICLE_COUNT];
+static float							bg_rotate[BG_PARTICLE_COUNT];
+
 #define HORIZ(w, dx, ay) 	(w).x += (dx); \
                             (w).y = (ay); \
                             xpl_imui_context_area_set(w);
+
+static prefs_t prefs;
+
+static void reset_particle(int i) {
+	bg_particle[i] = xvec2_all(0.5f);
+	bg_velocity[i] = xpl_rand_xvec2(-0.5, 0.5);
+	bg_orient[i] = xpl_frand_range(0.f, M_2PI);
+	bg_rotate[i] = xpl_frand_range(-M_PI_2, M_PI_2);
+}
 
 static void create_background() {
     // Quad for effects
@@ -72,8 +90,15 @@ static void create_background() {
     xpl_vao_define_vertex_attrib(effect_vao, "position", effect_vbo,
                                  3, GL_FLOAT, GL_FALSE, element_size, offsetof(vertex_normal_t, vertex));
     
-    background_shader = xpl_shader_get_prepared("MenuBackground", "Menu.Vertex", "Menu.Background.Fragment");
+    // background_shader = xpl_shader_get_prepared("MenuBackground", "Menu.Vertex", "Menu.Background.Fragment");
     overlay_shader = xpl_shader_get_prepared("Overlay", "Overlay.Vertex", "Overlay.Fragment");
+	
+	bg_batch = xpl_sprite_batch_new();
+	bg_sprite = xpl_sprite_new(bg_batch, "star.png", NULL);
+	up_sprite = xpl_sprite_new(bg_batch, "tile_up.png", NULL);
+	for (int i = 0; i < BG_PARTICLE_COUNT; ++i) {
+		bg_particle[i] = xvec2_all(-10.f);
+	}
     
     overlay_color = xvec4_set(0.f, 0.f, 0.f, 0.f);
     overlay_strength = 0.f;
@@ -82,7 +107,7 @@ static void create_background() {
 static void destroy_background() {
 	xpl_bo_destroy(&effect_vbo);
 	xpl_vao_destroy(&effect_vao);
-	xpl_shader_release(&background_shader);
+	// xpl_shader_release(&background_shader);
 
 	audio_destroy(&title_bgm);
 }
@@ -121,9 +146,10 @@ static void menu_configure_graphics(xpl_app_t *app, xrect area) {
     area = xrect_contract_to(area, 600, 440);
     
     int window_clicked;
-    int save_clicked;
+    int save_clicked = FALSE;
 	int reset_clicked;
     int back_clicked;
+	int bgm_clicked;
     
     xpl_imui_context_begin(imui_context, app->execution_info, area);
     {
@@ -131,9 +157,10 @@ static void menu_configure_graphics(xpl_app_t *app, xrect area) {
         {
             xpl_imui_indent_custom(16.0f);
             {
+				bgm_clicked = xpl_imui_control_check(xl("config_bgm"), prefs.bgm_on, TRUE);
 				reset_clicked = xpl_imui_control_button(xl("config_reset"), 0, TRUE);
-				xpl_imui_control_label(xl("config_graphics_heading"));
                 xpl_imui_separator_line();
+				xpl_imui_control_label(xl("config_graphics_heading"));
                 window_clicked = xpl_imui_control_check(xl("config_graphics_window"), !app_config.is_fullscreen, TRUE);
                 if (xpl_imui_control_collapse(xl("config_graphics_resolution"), "",
                                               &resolution_is_expanded, supported_video_mode_count > 0)) {
@@ -154,9 +181,9 @@ static void menu_configure_graphics(xpl_app_t *app, xrect area) {
                             selected_video_mode_index = i;
                         }
                     }
+					save_clicked = xpl_imui_control_button(xl("config_save"), XPL_IMUI_BUTTON_DEFAULT, video_config_changed);
                 }
                 xpl_imui_separator_line();
-                save_clicked = xpl_imui_control_button(xl("config_save"), XPL_IMUI_BUTTON_DEFAULT, video_config_changed);
                 back_clicked = xpl_imui_control_button(xl("back"), XPL_IMUI_BUTTON_CANCEL, TRUE);
             }
             xpl_imui_outdent_custom(16.0f);
@@ -165,8 +192,19 @@ static void menu_configure_graphics(xpl_app_t *app, xrect area) {
     }
     xpl_imui_context_end(imui_context);
     
+	if (bgm_clicked) {
+		prefs.bgm_on = !prefs.bgm_on;
+		if (prefs.bgm_on) {
+			title_bgm->volume = 1.f;
+		} else {
+			title_bgm->volume = 0.f;
+		}
+		prefs_set(prefs);
+	}
+	
 	if (reset_clicked) {
 		prefs_reset();
+		prefs = prefs_get();
 	}
 	
     if (window_clicked) {
@@ -275,7 +313,7 @@ static void engine(xpl_context_t *self, double time, void *data) {
         case ms_game_start:
         {
             overlay_strength += time;
-            title_bgm->volume = 1.0f - 0.333f * overlay_strength;
+			if (title_bgm->volume > 0.f) title_bgm->volume = 1.0f - 0.333f * overlay_strength;
             overlay_color = xvec4_set(1.0, 0.67, 0.33, 1.0);
             if (overlay_strength >= 3.0) {
                 context_next = xpl_context_new(self->app, &game_context_def);
@@ -286,7 +324,7 @@ static void engine(xpl_context_t *self, double time, void *data) {
         case ms_exit:
         {
             overlay_strength += 2.0 * time;
-            title_bgm->volume = 1.0f - overlay_strength;
+            if (title_bgm->volume > 0.f) title_bgm->volume = 1.0f - overlay_strength;
             overlay_color = xvec4_set(0.f, 0.f, 0.f, 1.f);
             if (overlay_strength >= 1.0) context_next = NULL;
             break;
@@ -295,6 +333,20 @@ static void engine(xpl_context_t *self, double time, void *data) {
         default:
             break;
     }
+	
+	xrect bounds = xrect_set(0.f, 0.f, 1.0, 1.0);
+	bounds = xrect_contract(bounds, -0.1f);
+	int new_count = 0;
+	const int new_limit = 5;
+	for (int i = 0; i < BG_PARTICLE_COUNT; ++i) {
+		bg_particle[i] = xvec2_add(bg_particle[i], xvec2_scale(bg_velocity[i], time));
+		bg_orient[i] += bg_rotate[i] * time;
+		
+		if (new_count < new_limit && ! xrect_in_bounds(bounds, bg_particle[i])) {
+			++new_count;
+			reset_particle(i);
+		}
+	}
     
     total_time += time;
 }
@@ -304,11 +356,36 @@ static void render(xpl_context_t *self, double time, void *vdata) {
     
     glClearColor(0.f, 0.f, 0.f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	
+	const float size = 0.02;
+	
+	xpl_sprite_batch_begin(bg_batch); {
+		xmat4 *ortho = xpl_sprite_batch_matrix_push(bg_batch);
+		xmat4_ortho(0.f, 1.f, 0.f, 1.f, -1.f, 1.f, ortho);
+		
+		xvec4 color = xvec4_all(1.0f);
+		
+		for (int i = 0; i < BG_PARTICLE_COUNT; ++i) {
+			float f = xvec2_length(xvec2_sub(bg_particle[i], xvec2_all(0.5f)));
+			bool special = i % 2048 == 0;
+			xpl_sprite_t *sprite = special ? up_sprite : bg_sprite;
+			if (special) f *= 4.f;
+			color.a = f;
+			xpl_sprite_draw_transformed(sprite,
+										bg_particle[i].x, bg_particle[i].y,
+										-size * 0.5f * f, -size * 0.5f * f,
+										size * f, size * f,
+										1.f, 1.f, bg_orient[i], &color);
+		}
+		
+		xpl_sprite_batch_matrix_pop(bg_batch);
+	}
+	xpl_sprite_batch_end(bg_batch);
     
-    glUseProgram(background_shader->id);
-    glUniform1f(xpl_shader_get_uniform(background_shader, "time"), total_time);
-    xpl_vao_program_draw_arrays(effect_vao, background_shader, GL_TRIANGLES, 0, (GLsizei)effect_elements);
-    glUseProgram(GL_NONE);
+//    glUseProgram(background_shader->id);
+//    glUniform1f(xpl_shader_get_uniform(background_shader, "time"), total_time);
+//    xpl_vao_program_draw_arrays(effect_vao, background_shader, GL_TRIANGLES, 0, (GLsizei)effect_elements);
+//    glUseProgram(GL_NONE);
     
     menu_func mf;
     
@@ -346,6 +423,8 @@ static void *init(xpl_context_t *self) {
     create_background();
     
     resolution_is_expanded = FALSE;
+	
+	prefs = prefs_get();
     
     glfwEnable(GLFW_MOUSE_CURSOR);
     

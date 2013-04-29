@@ -14,7 +14,7 @@
 const char *xpl_file_extension(const char *filename) {
 	char *e = strrchr(filename, '.');
 	if (e == NULL) e = "";
-	return e;
+	return ++e;
 }
 
 bool xpl_file_has_extension(const char *filename, const char *extension) {

@@ -216,7 +216,7 @@ int main(int argc, char **argv) {
 			if (HASH_COUNT(clients) > 127) {
 				
 				client_info_t temp_client;
-				memset(&temp_client, 0, sizeof(temp));
+				memset(&temp_client, 0, sizeof(temp_client));
 				temp_client.remote_addr = src;
 				
 				packet_t full_packet;

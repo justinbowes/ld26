@@ -50,10 +50,6 @@ typedef struct log {
 	float				timeout;
 } log_t;
 
-#ifdef DEBUG
-# define NOMUSIC
-#endif
-
 #define JIFFY			1.0f / 60.0f
 
 #define RESPAWN_COOLDOWN 3.0f
@@ -74,6 +70,14 @@ typedef struct log {
 
 #define UI_FONT			"Chicago"
 
+#define DAMAGE_VOLUME	0.5f
+#define CHAT_VOLUME		0.5f
+#define ROTATE_VOLUME	0.2f
+#define THRUST_VOLUME	0.4f
+#define SELECT_VOLUME	0.2f
+#define EXPLODE_VOLUME	1.0f
+#define FIRE_VOLUME		0.5f
+
 enum packet_errors {
 	pe_client_id
 };
@@ -83,8 +87,6 @@ static const int down[]		= { GLFW_KEY_DOWN,		'S',	0};
 static const int left[]		= { GLFW_KEY_LEFT,		'A',	0};
 static const int right[]	= { GLFW_KEY_RIGHT,		'D',	0};
 static const int fire[]		= { GLFW_KEY_LCTRL,		' ',	GLFW_KEY_ENTER, 0};
-
-
 
 game_t									game;
 network_t								network;
@@ -110,8 +112,10 @@ static xpl_bo_t                         *effect_vbo;
 static size_t                           effect_elements;
 static xvec4                            overlay_color;
 static float                            overlay_strength;
-static audio_t							*bgm_stream;
 
+// Audio
+static audio_t							*bgm_stream;
+static audio_t							*damage_audio;
 
 static uint32_t							packet_seq = 0;
 static SOCKET							sock;
@@ -172,7 +176,7 @@ static void player_add_explode_effect(int i);
 static xvec2 player_calculate_oriented_thrust(int i);
 static xvec2 player_get_direction_vector(int i);
 static bool player_in_bounds(int i, int fudge, position_t min, position_t max);
-static void player_init(void);
+static void player_init(int i);
 static void player_local_disconnect(void);
 static bool player_local_is_connected(void);
 static void player_local_update_chat(void);
@@ -190,7 +194,7 @@ static void projectile_add(void);
 static void projectile_explode_effect(int pi, int target);
 static bool projectile_type_is_mine(int type);
 static void projectile_update(int i, bool jiffy_elapsed);
-static int projectile_with_pid_get(uint16_t pid, int allocate_type);
+static int projectile_with_pid_get(uint16_t pid, int ti, bool *was_new);
 
 static void server_resolve_addr(void);
 
@@ -209,6 +213,7 @@ static void ui_window_start(xpl_context_t *self, xvec2 size, const char *title, 
 
 static xvec2 v2_for_velocity(velocity_t velocity);
 static velocity_t velocity_for_v2(xvec2 v);
+static xvec3 v3_relative_audio(position_t position);
 
 #pragma mark -
 #pragma mark Implementations
@@ -306,12 +311,14 @@ static void game_engine(xpl_context_t *self, double time, void *data) {
 		}
 		
 		if (game.respawn_cooldown > 0.f) {
+			damage_audio->volume = 0.f;
 			game.respawn_cooldown -= time;
 			if (game.respawn_cooldown <= 0.f) {
-				player_init();
+				player_init(0);
 			}
 		} else {
 			game.player_local[0].visible = true;
+			damage_audio->volume = DAMAGE_VOLUME * ((255.f - game.player[0].health) / 255.f);
 			player_local_update_chat();
 			player_local_update_thrust(time);
 			player_local_update_rotation(time);
@@ -389,6 +396,7 @@ static void *game_init(xpl_context_t *self) {
 	game_reset();
 	
 	prefs_t prefs = prefs_get();
+	
 	strncpy(network.server_host, prefs.server, SERVER_SIZE);
 	strncpy(game.player_id[0].name, prefs.name, NAME_SIZE);
 	network.server_port = prefs.port;
@@ -408,9 +416,13 @@ static void *game_init(xpl_context_t *self) {
 	
 	bgm_stream = audio_create("bgm.ogg");
 	bgm_stream->loop = true;
-#ifndef NOMUSIC
-	bgm_stream->action = aa_play;
-#endif
+	if (prefs.bgm_on) bgm_stream->action = aa_play;
+	
+	damage_audio = audio_create("alert.ogg");
+	damage_audio->loop = true;
+	damage_audio->volume = 0.f;
+	damage_audio->action = aa_play;
+	
 	
 	ui_tutorial_page = 0;
 	
@@ -698,6 +710,7 @@ static void packet_handle_chat(uint16_t client_id, packet_t *packet) {
 	log_add_text(xl("chat_format"),
 				 player_name(player_with_client_id_get(client_id, false, NULL), false),
 				 packet->chat);
+	audio_quickplay_pan("chat.ogg", CHAT_VOLUME, 0.5f);
 }
 
 static void packet_handle_damage(uint16_t client_id, packet_t *packet) {
@@ -706,7 +719,7 @@ static void packet_handle_damage(uint16_t client_id, packet_t *packet) {
 	
 	int origin = player_with_client_id_get(packet->damage.player_id, false, NULL);
 	int target = player_with_client_id_get(client_id, false, NULL);
-	int projectile = projectile_with_pid_get(packet->damage.projectile_id, -1);
+	int projectile = projectile_with_pid_get(packet->damage.projectile_id, -1, NULL);
 
 	xvec2 velocity = xpl_rand_xvec2(-64.f, 64.f);
 	xvec4 color = RGBA_F(0x80ffc0a0);
@@ -743,8 +756,10 @@ static void packet_handle_damage(uint16_t client_id, packet_t *packet) {
 	}
 	
 	// Destroys projectile, including mines.
-	projectile_explode_effect(projectile, target);
-	game.projectile[projectile].health = 0;
+	if (projectile) {
+		projectile_explode_effect(projectile, target);
+		game.projectile[projectile].health = 0;
+	}
 	
 	if (origin == 0 && target != 0) {
 		game.player[0].score += packet->damage.amount;
@@ -764,7 +779,7 @@ static void packet_handle_hello(uint16_t client_id, packet_t *packet) {
 		if (game.player_id[0].nonce == packet->hello.nonce) {
 			LOG_DEBUG("Matching nonce, logged in");
 			game.player_id[0] = packet->hello;
-			player_init();
+			player_init(0);
 			log_add_text("You have joined the fray");
 		}
 	} else {
@@ -798,6 +813,10 @@ static void packet_handle_player(uint16_t client_id, packet_t *packet) {
 	if (pi == 0) {
 		LOG_DEBUG("Got self packet");
 	} else {
+		if (game.player[pi].orientation != packet->player.orientation) {
+			game.player_local[pi].rotate_audio->action = aa_play;
+		}
+		game.player_local[pi].thrust_audio->action = packet->player.is_thrust ? aa_play : aa_stop;
 		game.player[pi] = packet->player;
 		game.player_local[pi].visible = true;
 	}
@@ -809,9 +828,14 @@ static void packet_handle_projectile(uint16_t client_id, packet_t *packet) {
 		// Avoid hitting self due to lag
 		return;
 	}
-	int pi = projectile_with_pid_get(packet->projectile.pid, packet->projectile.type);
+	bool is_new;
+	int pi = projectile_with_pid_get(packet->projectile.pid, packet->projectile.type, &is_new);
 	game.projectile_local[pi].owner = client_id;
 	game.projectile[pi] = packet->projectile;
+	if (is_new) {
+		int type = game.projectile[pi].type;
+		audio_quickplay_position(projectile_config[type].fire_effect, FIRE_VOLUME, v3_relative_audio(game.projectile[pi].position));
+	}
 }
 
 
@@ -1057,13 +1081,30 @@ static xvec2 player_get_direction_vector(int i) {
 	return r;
 }
 
-static void player_init(void) {
-	game.player[0].position.px = (UINT32_MAX / 2) + SPAWN_BOX * xpl_frand() - (SPAWN_BOX / 2);
-	game.player[0].position.py = (UINT32_MAX / 2) + SPAWN_BOX * xpl_frand() - (SPAWN_BOX / 2);
-	game.player[0].health = INITIAL_HEALTH;
-	game.player[0].orientation = xpl_irand_range(0, UINT8_MAX);
-	game.player_local[0].visible = false;
-	game.ammo[0] = -1;
+static void player_init(int i) {
+	game.player[i].position.px = (UINT32_MAX / 2) + SPAWN_BOX * xpl_frand() - (SPAWN_BOX / 2);
+	game.player[i].position.py = (UINT32_MAX / 2) + SPAWN_BOX * xpl_frand() - (SPAWN_BOX / 2);
+	game.player[i].health = INITIAL_HEALTH;
+	game.player[i].orientation = xpl_irand_range(0, UINT8_MAX);
+	game.player_local[i].visible = false;
+	
+	if (! game.player_local[i].rotate_audio) {
+		game.player_local[i].rotate_audio = audio_create("rotate.ogg");
+		game.player_local[i].rotate_audio->volume = ROTATE_VOLUME;
+		if (i == 0) {
+			game.player_local[i].rotate_audio->loop = true;
+		}
+	}
+
+	if (! game.player_local[i].thrust_audio) {
+		game.player_local[i].thrust_audio = audio_create("thrust.ogg");
+		game.player_local[i].thrust_audio->volume = THRUST_VOLUME;
+		if (i == 0) {
+			game.player_local[i].thrust_audio->loop = true;
+		}
+	}
+
+	
 #ifdef DEBUG
 	game.player[0].score = 500;
 #else
@@ -1138,9 +1179,11 @@ static void player_local_update_firing(bool jiffy_elapsed) {
 static void player_local_update_rotation(double time) {
 	if (chat_showing) return;
 	
+	bool audio_on = false;
 	if (key_down(left)) {
 		game.player[0].orientation += TORQUE * time;
 		game.control_indicator_on[1] = true;
+		audio_on = true;
 	} else {
 		game.control_indicator_on[1] = false;
 	}
@@ -1148,19 +1191,25 @@ static void player_local_update_rotation(double time) {
 	if (key_down(right)) {
 		game.player[0].orientation -= TORQUE * time;
 		game.control_indicator_on[2] = true;
+		audio_on = true;
 	} else {
 		game.control_indicator_on[2] = false;
 	}
+	
+	game.player_local[0].rotate_audio->action = audio_on ? aa_play : aa_stop;
 }
 
 static void player_local_update_thrust(double time) {
 	game.player[0].is_thrust = false;
 	game.control_indicator_on[0] = false;
+	game.player_local[0].thrust_audio->action = aa_stop;
 	
 	if (chat_showing) return;
 	if (! key_down(up)) return;
 	
 	game.player[0].is_thrust = true;
+	game.player_local[0].thrust_audio->action = aa_play;
+	
 	game.control_indicator_on[0] = true;
 	xvec2 velocity = player_v2velocity_get(0);
 	xvec2 oriented_thrust = player_calculate_oriented_thrust(0);
@@ -1178,14 +1227,17 @@ static void player_local_update_weapon(void) {
 	
 	if (! chat_showing) {
 		for (int i = 0; i < keycount; ++i) {
-			if (glfwGetKey(weapon_keys[i])) {
+			if (glfwGetKey(weapon_keys[i]) && game.active_weapon != i) {
 				game.active_weapon = i;
+				audio_quickplay_pan("select.ogg", SELECT_VOLUME, 0.5f);
 			}
 		}
 	}
 	
-	if (projectile_config[game.active_weapon].price > game.player[0].score) {
+	if (projectile_config[game.active_weapon].price > 0 &&
+		projectile_config[game.active_weapon].price > game.player[0].score) {
 		game.active_weapon = 0;
+		audio_quickplay_pan("reject.ogg", SELECT_VOLUME, 0.5f);
 	}
 }
 
@@ -1243,6 +1295,7 @@ static int player_with_client_id_get(uint16_t client_id, bool allow_allocate, bo
 	
 	game.player_connected[empty_slot] = true;
 	game.player_id[empty_slot].client_id = client_id;
+	player_init(empty_slot);
 	
 	if (was_new_player) *was_new_player = true;
 	
@@ -1263,7 +1316,7 @@ static void projectile_add(void) {
 	xvec2 direction_vector = player_get_direction_vector(0);
 	
 	uint16_t pid = xpl_irand_range(0, UINT16_MAX);
-	int i = projectile_with_pid_get(pid, weapon);
+	int i = projectile_with_pid_get(pid, weapon, NULL);
 	// Add a little margin to get slow projectiles clear of the nose
 	float position = projectile_type_is_mine(weapon) ? -0.7 : 0.7;
 	xvec2 front = xvec2_scale(direction_vector, position * PLAYER_SIZE);
@@ -1286,6 +1339,8 @@ static void projectile_add(void) {
 	game.fire_cooldown += projectile_config[weapon].fire_cooldown;
 	
 	game.projectile_local[i].owner = game.player_id[0].client_id;
+	
+	audio_quickplay_position(projectile_config[weapon].fire_effect, FIRE_VOLUME, v3_relative_audio(game.projectile[i].position));
 	
 	if (network.position_timeout > 0.1f) packet_send_player();
 	packet_send_projectile(i);
@@ -1312,6 +1367,7 @@ static void projectile_explode_effect(int pi, int target) {
 					 projectile_config[pt].explode_particle_size,
 					 projectile_config[pt].explode_particle_life, true);
 	}
+	audio_quickplay_position(projectile_config[pt].explode_effect, EXPLODE_VOLUME, v3_relative_audio(position));
 
 }
 
@@ -1325,11 +1381,12 @@ static void projectile_initialize(uint16_t pid, int pi, int ti) {
 }
 
 // Get a projectile. Pass a negative projectile type to prevent creation.
-static int projectile_with_pid_get(uint16_t pid, int ti) {
+static int projectile_with_pid_get(uint16_t pid, int ti, bool *was_new) {
 	int allocate_index = -1;    
 	for (int i = 0; i < MAX_PROJECTILES; ++i) {
 		if (pid == game.projectile[i].pid) {
 			if (game.projectile[i].health > 0) {
+				if (was_new) *was_new = false;
 				return i;
 			} else if (ti >= 0 && allocate_index == -1) {
 				allocate_index = i;
@@ -1343,8 +1400,10 @@ static int projectile_with_pid_get(uint16_t pid, int ti) {
 	
 	if (ti >= 0) {
 		projectile_initialize(pid, allocate_index, ti);
+		if (was_new) *was_new = true;
 		return allocate_index;
 	} else {
+		if (was_new) *was_new = false;
 		return -1;
 	}
 }
@@ -1712,6 +1771,13 @@ static void ui_tutorial_show(xpl_context_t *self, double time) {
 				ui_tutorial_highlight(self, rect, xrect_set(56, 124, 600, 72), time);
 				break;
 				
+			case 6:
+				ui_tutorial_highlight(self, rect, xrect_set(57, 105, 600, 12), time);
+				ui_tutorial_highlight(self, rect, xrect_set(57, 385, 12, 280), time);
+				ui_tutorial_highlight(self, rect, xrect_set(588, 385, 12, 280), time);
+				ui_tutorial_highlight(self, rect, xrect_set(57, 397, 600, 12), time);
+				break;
+
 			default:
 				break;
 		}
@@ -1793,6 +1859,16 @@ static velocity_t velocity_for_v2(xvec2 v) {
 	}
 	
 	return result;
+}
+
+#define POSITION_SCALE 0.01625
+static xvec3 v3_relative_audio(position_t position) {
+	xvec3 r = {{
+		POSITION_SCALE * ((long)position.px - (long)camera.center.px),
+		POSITION_SCALE * ((long)position.py - (long)camera.center.py),
+		0.f
+	}};
+	return r;
 }
 
 // ------------------------------------------------------------------------------

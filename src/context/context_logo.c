@@ -20,6 +20,8 @@
 #include "context/context_logo.h"
 #include "context/context_menu.h"
 
+#include "game/prefs.h"
+
 static xpl_context_t *context_next = NULL;
 
 // This carries through.
@@ -88,13 +90,18 @@ static void *init(xpl_context_t *self) {
     brick_shader = xpl_shader_get_prepared("LogoBackground", "Logo.Vertex", "Logo.Brick.Fragment");
     quad_shader = xpl_shader_get_prepared("LogoForeground", "Overlay.Vertex", "Overlay.Fragment");
     
-	clip = audio_create("logo.mp3");
+	clip = audio_create("logo.ogg");
     clip->loop = false;
     clip_started = false;
 	
+	prefs_t prefs = prefs_get();
 	title_bgm = audio_create("title.ogg");
 	title_bgm->loop = true;
-	title_bgm->volume = 0.5f;
+	if (prefs.bgm_on) {
+		title_bgm->volume = 0.5f;
+	} else {
+		title_bgm->volume = 0.0f;
+	}
 	title_bgm->action = aa_play;
     
     logo_text = xpl_text_buffer_new(128, 128, 1);
@@ -185,7 +192,7 @@ static void engine(xpl_context_t *self, double time, void *data) {
 		clip_started = true;
 	} else {
 		if (total_time >= 4.7) {
-			title_bgm->volume = 1.0f;
+			title_bgm->volume *= 2.0f;
 		}
 		if (! audio_is_playing(clip)) {
 			if (total_time < 8.5) return;

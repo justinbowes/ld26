@@ -16,6 +16,8 @@
 #include "xpl_vec4.h"
 #include "xpl_irect.h"
 
+#include "audio/audio.h"
+
 #define MAX_PLAYERS		128
 #define MAX_PROJECTILES	4096
 #define MAX_PARTICLES	4096
@@ -28,7 +30,7 @@
 #define INDICATOR_SIZE	8.f
 #define PLAYER_SIZE		16.f
 
-#define TUTORIAL_PAGES	5
+#define TUTORIAL_PAGES	6
 
 typedef struct position {
 	uint32_t px;
@@ -52,6 +54,8 @@ typedef struct player {
 typedef struct player_local {
 	xvec2		position_buffer;
 	bool		visible;
+	audio_t		*thrust_audio;
+	audio_t		*rotate_audio;
 } player_local_t;
 
 typedef struct player_id {
@@ -132,7 +136,6 @@ typedef struct game {
 	
 	bool		control_indicator_on[3];
 	int			active_weapon;
-	int			ammo[8];
 	
 	particle_t	particle[MAX_PARTICLES];
 	text_particle_t text_particle[MAX_TEXT_PARTICLES];

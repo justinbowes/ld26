@@ -7,6 +7,7 @@
 //
 
 #include <assert.h>
+#include <sys/stat.h>
 
 #include "fmod.h"
 #include "fmod_errors.h"
@@ -80,6 +81,7 @@ static audio_resource_t *load_resource(const char *short_name) {
 	bool as_stream = (xpl_file_has_extension(short_name, "ogg") ||
 					  xpl_file_has_extension(short_name, "mp3"));
 	
+	
 	char subpath[PATH_MAX];
 	snprintf(subpath, PATH_MAX, "audio/%s", short_name);
 	
@@ -88,6 +90,10 @@ static audio_resource_t *load_resource(const char *short_name) {
 		LOG_ERROR("Couldn't load %s", subpath);
 		return NULL;
 	}
+
+	struct stat s;
+	stat(resource_path, &s);
+	if (s.st_size < 65536) as_stream = false;
 	
 	audio_resource_t *resource = xpl_calloc_type(audio_resource_t);
 	
@@ -178,7 +184,14 @@ audio_t *audio_create(const char *resource_name) {
 	return audio;
 }
 
-void audio_quickplay(const char *resource_name, float volume, xvec3 position) {
+void audio_quickplay_pan(const char *resource_name, float volume, float pan) {
+	xvec3 position = {{ -2.0f * pan, 0.f, 0.f }};
+	audio_quickplay_position(resource_name, volume, position);
+}
+
+void audio_quickplay_position(const char *resource_name, float volume, xvec3 position) {
+	if (resource_name == NULL) return;
+	
 	audio_t *audio = audio_create(resource_name);
 	audio->volume = volume;
 	audio->position = position;

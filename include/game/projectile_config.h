@@ -33,6 +33,10 @@ typedef struct projectile_config {
 	int		fire_cooldown;
 	int		price;
 	bool	can_hit_self;
+	
+	const char *fire_effect;
+	const char *explode_effect;
+	
 } projectile_config_t;
 
 typedef enum projectile_type {
@@ -72,7 +76,10 @@ static const projectile_config_t projectile_config[] = {
 		
 		20,
 		-1,
-		false
+		false,
+		
+		"weapon_0.ogg",
+		"explode_4.ogg"
 	},
 	{ // 1: heavy pew
 		30,
@@ -98,6 +105,9 @@ static const projectile_config_t projectile_config[] = {
 		25,
 		2,
 		false,
+		
+		"weapon_1.ogg",
+		"explode_4.ogg"
 	},
 	{ // 2: missile
 		45,
@@ -122,7 +132,10 @@ static const projectile_config_t projectile_config[] = {
 		
 		30,
 		5,
-		true
+		true,
+		
+		"weapon_2.ogg",
+		"explode_2.ogg"
 	},
 	{ // 3: heavy missile
 		90,
@@ -147,7 +160,10 @@ static const projectile_config_t projectile_config[] = {
 		
 		60,
 		10,
-		true
+		true,
+		
+		"weapon_3.ogg",
+		"explode_2.ogg"
 	},
 	{ // 4: nuke
 		255,
@@ -172,7 +188,10 @@ static const projectile_config_t projectile_config[] = {
 		
 		180,
 		250,
-		true
+		true,
+		
+		"weapon_4.ogg",
+		"explode_0.ogg"
 	},
 	{ // 5: mine
 		90,
@@ -197,7 +216,10 @@ static const projectile_config_t projectile_config[] = {
 		
 		30,
 		10,
-		true
+		true,
+		
+		"weapon_5.ogg",
+		"explode_2.ogg"
 	},
 	{ // 6: black hole
 		120,
@@ -222,7 +244,10 @@ static const projectile_config_t projectile_config[] = {
 		
 		180,
 		500,
-		true
+		true,
+		
+		"weapon_6.ogg",
+		"explode_3.ogg"
 	},
 	{ // 7: repair
 		128,
@@ -247,7 +272,10 @@ static const projectile_config_t projectile_config[] = {
 		
 		360,
 		250,
-		true
+		true,
+		
+		"weapon_7.ogg",
+		NULL
 	},
 };
 

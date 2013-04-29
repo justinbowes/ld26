@@ -15,6 +15,7 @@
 
 typedef struct prefs {
 	bool skip_tutorial;
+	bool bgm_on;
 	char name[NAME_SIZE];
 	char server[SERVER_SIZE];
 	int port;
