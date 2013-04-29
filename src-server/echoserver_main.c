@@ -23,7 +23,7 @@
 #include "game/game.h"
 #include "game/packet.h"
 
-#include "udpnet.h"
+#include "net/udpnet.h"
 
 #define BUFSIZE 1024
 
