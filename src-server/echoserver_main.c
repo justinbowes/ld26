@@ -191,7 +191,10 @@ int main(int argc, char **argv) {
 
 		uint16_t client_source;
 		packet_t packet;
-		packet_decode(&packet, &client_source, buf);
+		if (!packet_decode(&packet, &client_source, buf)) {
+			LOG_WARN("Malformed packet, dropping");
+			continue;
+		}
 		
 		if (packet.seq <= client_info->seq) {
 			LOG_DEBUG("Dropping old packet %d", packet.seq);
@@ -211,6 +214,11 @@ int main(int argc, char **argv) {
 			strncpy(client_info->player_id.name, packet.hello.name, NAME_SIZE);
 			// Overwrite the nonce so it's not shared
 			packet.hello.nonce = 0;
+		}
+		
+		if (packet.type == pt_chat) {
+			packet.chat[63] = '\0';
+			LOG_INFO("[%u %s] %s", client_info->player_id.client_id, client_info->player_id.name, packet.chat);
 		}
 		
 		if (client_source != client_info->player_id.client_id) {
