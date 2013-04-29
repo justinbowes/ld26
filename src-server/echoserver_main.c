@@ -215,15 +215,15 @@ int main(int argc, char **argv) {
 			
 			if (HASH_COUNT(clients) > 127) {
 				
-				client_info temp;
-				memset(&temp, 0, sizeof(temp));
-				temp.remote_addr = src;
+				client_info temp_client;
+				memset(&temp_client, 0, sizeof(temp));
+				temp_client.remote_addr = src;
 				
 				packet_t full_packet;
 				full_packet.type = pt_chat;
 				strncpy(full_packet.chat, "Server is full", CHAT_MAX);
 				
-				pointcast_packet(0, &packet, &temp);
+				pointcast_packet(0, &packet, &temp_client);
 		
 				log_event("full", NULL, "");
 				
