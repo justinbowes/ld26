@@ -33,11 +33,20 @@
 
 #define LOG_ANSI
 
-#if defined(XPL_PLATFORM_WINDOWS) || defined(XPL_PLATFORM_OSX)
-#undef LOG_ANSI
-#else
-#define XPL_STDERR stderr
-#define XPL_STDOUT stdout
+
+#if defined(XPL_PLATFORM_WINDOWS)
+# undef LOG_ANSI
+#endif
+
+#if defined(XPL_PLATFORM_OSX)
+# undef LOG_ANSI
+# define XPL_STDERR stderr
+# define XPL_STDOUT stdout
+#endif
+
+#if defined(XPL_PLATFORM_UNIX)
+# define XPL_STDERR stderr
+# define XPL_STDOUT stdout
 #endif
 
 #if !defined(LOG_ANSI)

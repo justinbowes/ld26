@@ -56,10 +56,21 @@ static void error(char *msg) {
 	exit(1);
 }
 
+static void log_event(const char *type, client_info_t *client_info, const char *format, ...) {
+	char buffer[1024];
+	va_list args;
+	va_start(args, format);
+	vsnprintf(buffer, 1024, format, args);
+	va_end(args);
+	uint16_t cid = client_info ? client_info->player_id.client_id : 0;
+	const char *cname = client_info ? client_info->player_id.name : "";
+	LOG_INFO("[%s] client_id=[%u,\"%s\"] data=[%s]", type, cid, cname, buffer);
+}
+
 static void pointcast_buffer(uint8_t *buf, int size, client_info_t *client) {
 	int ret = udp_send(sock, buf, size, client->remote_addr.address, client->remote_addr.port);
 	if (ret) {
-		LOG_DEBUG("Failed to send to %u, dropping", client->player_id.client_id);
+		log_event("send_drop", client, "size=%d", size);
 		client->drop = true;
 	}
 }
@@ -92,22 +103,21 @@ static client_info_t *get_client(UDPNET_ADDRESS *remote_addr) {
 	HASH_FIND_INT(clients, &hash, client);
 	
 	if (! client) {
-		LOG_INFO("New client");
 		client = xpl_calloc_type(client_info_t);
 		client->id = hash;
 		client->remote_addr = *remote_addr;
 		client->player_id.client_id = client_uid_counter++;
-		LOG_INFO("Client %u at %s:%d", client->player_id.client_id, client->remote_addr.address, client->remote_addr.port);
+		log_event("join", client, "ip=\"%s\",port=%d", remote_addr->address, remote_addr->port);
 		HASH_ADD_INT(clients, id, client);
 	}
 	
 	return client;
 }
 
-static void delete_client(client_info_t *client) {
+static void delete_client(client_info_t *client, const char *reason) {
 	HASH_DEL(clients, client);
 
-	LOG_DEBUG("Sending goodbye packet");
+	log_event("kick", client, "reason=\"%s\"", reason);
 	packet_t bye;
 	memset(&bye, 0, sizeof(bye));
 	bye.type = pt_goodbye;
@@ -123,13 +133,11 @@ static void purge_clients() {
 	HASH_ITER(hh, clients, dest, tmp) {
 		
 		if (dest->drop) {
-			LOG_DEBUG("Dropping client %u", dest->player_id.client_id);
-			delete_client(dest);
+			delete_client(dest, "drop");
 		}
 		
 		if (time - dest->last_packet_time > TIMEOUT) {
-			LOG_DEBUG("Timeout client %u", dest->player_id.client_id);
-			delete_client(dest);
+			delete_client(dest, "timeout");
 		}
 	}
 }
@@ -205,7 +213,7 @@ int main(int argc, char **argv) {
 		if (packet.type == pt_hello) {
 			if (packet.hello.nonce && client_source == 0) {
 				client_source = client_info->player_id.client_id;
-				LOG_DEBUG("Sending client id %u to client", client_info->player_id.client_id);
+				log_event("hello", client_info, "nonce=%u", packet.hello.nonce);
 				packet.hello.client_id = client_info->player_id.client_id;
 				pointcast_packet(client_source, &packet, client_info);
 				
@@ -218,18 +226,14 @@ int main(int argc, char **argv) {
 		
 		if (packet.type == pt_chat) {
 			packet.chat[63] = '\0';
-			LOG_INFO("[chat] client_id=%u name=\"%s\" message=\"%s\"",
-					 client_info->player_id.client_id,
-					 client_info->player_id.name,
-					 packet.chat);
+			log_event("chat", client_info, "message=\"%s\"", packet.chat);
 		}
 		
 		if (packet.type == pt_damage) {
-			LOG_INFO("[damage] client_id=%u damage=%u origin=%u flags=%u",
-					 client_info->player_id.client_id,
-					 packet.damage.amount,
-					 packet.damage.player_id,
-					 packet.damage.flags);
+			log_event("damage", client_info, "damage=%u,origin=%u,flags=&u",
+					  packet.damage.amount,
+					  packet.damage.player_id,
+					  packet.damage.flags);
 		}
 		
 		if (client_source != client_info->player_id.client_id) {
