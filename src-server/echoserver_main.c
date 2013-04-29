@@ -23,7 +23,7 @@
 #include "game/game.h"
 #include "game/packet.h"
 
-#include "udpnet.h"
+#include "net/udpnet.h"
 
 #define BUFSIZE 1024
 
@@ -191,7 +191,10 @@ int main(int argc, char **argv) {
 
 		uint16_t client_source;
 		packet_t packet;
-		packet_decode(&packet, &client_source, buf);
+		if (!packet_decode(&packet, &client_source, buf)) {
+			LOG_WARN("Malformed packet, dropping");
+			continue;
+		}
 		
 		if (packet.seq <= client_info->seq) {
 			LOG_DEBUG("Dropping old packet %d", packet.seq);
@@ -211,6 +214,22 @@ int main(int argc, char **argv) {
 			strncpy(client_info->player_id.name, packet.hello.name, NAME_SIZE);
 			// Overwrite the nonce so it's not shared
 			packet.hello.nonce = 0;
+		}
+		
+		if (packet.type == pt_chat) {
+			packet.chat[63] = '\0';
+			LOG_INFO("[chat] client_id=%u name=\"%s\" message=\"%s\"",
+					 client_info->player_id.client_id,
+					 client_info->player_id.name,
+					 packet.chat);
+		}
+		
+		if (packet.type == pt_damage) {
+			LOG_INFO("[damage] client_id=%u damage=%u origin=%u flags=%u",
+					 client_info->player_id.client_id,
+					 packet.damage.amount,
+					 packet.damage.player_id,
+					 packet.damage.flags);
 		}
 		
 		if (client_source != client_info->player_id.client_id) {
