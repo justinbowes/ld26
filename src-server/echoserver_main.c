@@ -46,6 +46,7 @@ typedef struct client_info {
 } client_info_t;
 
 static client_info_t *clients = NULL;
+static int client_count = 0;
 static uint16_t client_uid_counter = 1;
 static SOCKET sock;
 
@@ -108,6 +109,7 @@ static client_info_t *get_client(UDPNET_ADDRESS *remote_addr) {
 		client->id = hash;
 		client->remote_addr = *remote_addr;
 		client->player_id.client_id = client_uid_counter++;
+		++client_count;
 		log_event("join", client, "ip=\"%s\",port=%d", remote_addr->address, remote_addr->port);
 		HASH_ADD_INT(clients, id, client);
 	}
@@ -124,7 +126,9 @@ static void delete_client(client_info_t *client, const char *reason) {
 	bye.type = pt_goodbye;
 	bye.goodbye = client->player_id;
 	broadcast_packet(client->player_id.client_id, &bye);
-	
+
+	--client_count;	
+
 	xpl_free(client);
 }
 
@@ -213,7 +217,7 @@ int main(int argc, char **argv) {
 		
 		if (packet.type == pt_hello) {
 			
-			if (HASH_COUNT(clients) > 127) {
+			if (client_count > 127) {
 				
 				client_info_t temp_client;
 				memset(&temp_client, 0, sizeof(temp_client));
