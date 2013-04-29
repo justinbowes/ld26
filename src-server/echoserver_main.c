@@ -218,7 +218,18 @@ int main(int argc, char **argv) {
 		
 		if (packet.type == pt_chat) {
 			packet.chat[63] = '\0';
-			LOG_INFO("[%u %s] %s", client_info->player_id.client_id, client_info->player_id.name, packet.chat);
+			LOG_INFO("[chat] client_id=%u name=\"%s\" message=\"%s\"",
+					 client_info->player_id.client_id,
+					 client_info->player_id.name,
+					 packet.chat);
+		}
+		
+		if (packet.type == pt_damage) {
+			LOG_INFO("[damage] client_id=%u damage=%u origin=%u flags=%u",
+					 client_info->player_id.client_id,
+					 packet.damage.amount,
+					 packet.damage.player_id,
+					 packet.damage.flags);
 		}
 		
 		if (client_source != client_info->player_id.client_id) {
