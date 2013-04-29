@@ -66,6 +66,7 @@ typedef struct projectile {
 typedef struct projectile_local {
 	uint8_t		trail_timeout;
 	uint16_t	owner;
+	bool		force_detonate;
 	xvec4		color;
 } projectile_local_t;
 

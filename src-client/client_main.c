@@ -174,7 +174,7 @@ int main(int argc, char *argv[]) {
 	app->init_func = init;
 	app->destroy_func = destroy;
 	app->main_loop_func = main_loop;
-	app->title = "XPL";
+	app->title = "ULTRAPEW!";
 
 	xpl_start_app(app);
 

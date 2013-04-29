@@ -70,6 +70,10 @@ typedef struct log {
 
 #define TILE_SIZE		32
 
+#define STAR_LAYERS		3
+#define STARS_PER_LAYER	256
+#define STAR_LAYER_SIZE	4096
+
 #define UI_FONT			"Chicago"
 
 enum packet_errors {
@@ -108,13 +112,20 @@ static xpl_imui_context_t				*imui;
 
 static xpl_sprite_batch_t				*playfield_batch;
 static xpl_sprite_batch_t				*ui_batch;
+static xpl_sprite_t						*panel_background_sprite;
+static xpl_sprite_t						*solid_sprite;
+static xpl_sprite_t						*grid8_sprite;
 static xpl_sprite_t						*ship_sprite;
+static xpl_sprite_t						*star_sprite;
 static xpl_sprite_t						*indicator_sprite;
 static xpl_sprite_t						*playfield_coin_sprite;
 static xpl_sprite_t						*particle_sprite;
 static xpl_sprite_t						*weapon_key_sprites[8];
 static xpl_sprite_t						*control_key_sprites[3];
 static xpl_sprite_t						*ui_coin_sprite;
+
+static xpl_sprite_t						*star_sprite;
+static xivec3							star_layers[STAR_LAYERS][STARS_PER_LAYER];
 
 static xirect							draw_area;
 
@@ -327,9 +338,9 @@ static void game_engine(xpl_context_t *self, double time, void *data) {
 	}
 	if (ui_log.rebuild) {
 		xpl_text_buffer_clear(ui_log.buffer);
-		xvec2 pen = {{ 0.f, self->size.height }};
+		xvec2 pen = {{ 0.f, self->size.height - 4.f }};
 		for (int i = 0; i < LOG_LINES; ++i) {
-			pen.x = 0.f;
+			pen.x = 4.f;
 			wchar_t line[LOG_LINE_MAX];
 			mbstowcs(line, ui_log.lines[i], LOG_LINE_MAX);
 			xpl_text_buffer_add_text(ui_log.buffer, &pen, &ui_log.markup, line[0] ? line : L"", 0);
@@ -375,7 +386,6 @@ static void game_engine(xpl_context_t *self, double time, void *data) {
 		
 		for (int i = 0; i < MAX_PROJECTILES; ++i) {
 			if (game.projectile[i].health) {
-				LOG_DEBUG("Projectile %d active", i);
 				projectile_update(i, jiffy_elapsed);
 			}
 		}
@@ -476,19 +486,31 @@ static void game_init_sprites(void) {
 	ship_sprite = xpl_sprite_new(playfield_batch, "ship.png", NULL);
 	indicator_sprite = xpl_sprite_new(playfield_batch, "indicator.png", NULL);
 	particle_sprite = xpl_sprite_new(playfield_batch, "particle.png", NULL);
+	playfield_coin_sprite = xpl_sprite_new(playfield_batch, "coin.png", NULL);
+	star_sprite = xpl_sprite_new(playfield_batch, "star.png", NULL);
+
+	panel_background_sprite = xpl_sprite_new(ui_batch, "panel_background.png", NULL);
+	solid_sprite = xpl_sprite_new(ui_batch, "tile_solid.png", NULL);
+	grid8_sprite = xpl_sprite_new(ui_batch, "tile_grid.png", NULL);
+	
 	for (int i = 0; i < 8; ++i) {
 		char resource[PATH_MAX];
 		snprintf(resource, PATH_MAX, "weapon_%d.png", i);
 		weapon_key_sprites[i] = xpl_sprite_new(ui_batch, resource, NULL);
-		xpl_sprite_set_blend_funcs(weapon_key_sprites[i], BLEND_FUNCS_ADD);
 	}
 	const char *key_sprites[3] = { "key_thrust.png", "key_left.png", "key_right.png" };
 	for (int i = 0; i < 3; ++i) {
 		control_key_sprites[i] = xpl_sprite_new(ui_batch, key_sprites[i], NULL);
-		xpl_sprite_set_blend_funcs(control_key_sprites[i], BLEND_FUNCS_ADD);
 	}
-	playfield_coin_sprite = xpl_sprite_new(playfield_batch, "coin.png", NULL);
 	ui_coin_sprite = xpl_sprite_new(ui_batch, "coin.png", NULL);
+	
+	for (int i = 0; i < STAR_LAYERS; ++i) {
+		for (int j = 0; j < STARS_PER_LAYER; ++j) {
+			star_layers[i][j].x = xpl_irand_range(0, STAR_LAYER_SIZE);
+			star_layers[i][j].y = xpl_irand_range(0, STAR_LAYER_SIZE);
+			star_layers[i][j].z = (int)RGBA(0xff, 0xff, 0xff, 0x80);
+		}
+	}
 }
 
 static void game_init_overlay(void) {
@@ -515,13 +537,9 @@ static void game_init_overlay(void) {
 static void game_init_text(void) {
 	ui_log.buffer = xpl_text_buffer_new(1024, 1024, 1);
 	xpl_markup_clear(&ui_log.markup);
-	xpl_markup_set(&ui_log.markup, UI_FONT, 16.f, FALSE, FALSE, xvec4_set(0.8f, 0.85f, 1.f, 1.f), xvec4_set(0.f, 0.f, 0.f, 0.0f));
+	xpl_markup_set(&ui_log.markup, UI_FONT, 16.f, FALSE, FALSE, xvec4_set(0.0f, 0.0f, 0.3f, 1.f), xvec4_set(0.f, 0.f, 0.f, 0.0f));
 	memset(ui_log.lines, 0, LOG_LINES * LOG_LINE_MAX);
 	ui_log.timeout = LOG_TIMEOUT;
-	
-	log_add_text("Engine online");
-	log_add_text("Renderer online");
-	log_add_text("Network online");
 	
 	name_cache = xpl_text_cache_new();
 	xpl_markup_clear(&name_markup);
@@ -539,7 +557,7 @@ static void game_init_text(void) {
 static void game_render(xpl_context_t *self, double time, void *data) {
 	assert(self);
 	
-	glClearColor(1.f, 0.f, 0.f, 1.f);
+	glClearColor(0.f, 0.f, 0.f, 1.f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glEnable(GL_BLEND);
 	
@@ -573,14 +591,17 @@ static void game_render_log(xpl_context_t *self) {
 static void game_render_playfield(xpl_context_t *self, double time) {
 	
 	const xvec4 coin_color = RGBA_F(0xff00ffff);
+	const xvec4 active_color = RGBA_F(0xff80ffff);
+	const xvec4 inactive_color = RGBA_F(0x60ffffff);
+	const xvec4 healthy = RGBA_F(0xff40c040);
+	const xvec4 unhealthy = RGBA_F(0xff0040ff);
+	const xvec4 solid_black = RGBA_F(0xff000000);
 
 	xmat4 ortho;
 	xmat4_ortho(0.f, self->size.width, 0.f, self->size.height, -1.f, 1.f, &ortho);
 	
 	glEnable(GL_SCISSOR_TEST);
 	glScissor(draw_area.x, draw_area.y, draw_area.width, draw_area.height);
-	glClearColor(0.f, 0.f, 0.f, 1.f);
-	glClear(GL_COLOR_BUFFER_BIT);
 
 	// Render player names, excluding self
 	for (int i = 1; i < MAX_PLAYERS; ++i) {
@@ -606,6 +627,27 @@ static void game_render_playfield(xpl_context_t *self, double time) {
 		xmat4 *sprite_ortho = xpl_sprite_batch_matrix_push(playfield_batch);
 		*sprite_ortho = ortho;
 		
+		// Background stars
+		for (int i = 0; i < STAR_LAYERS; ++i) {
+			for (int j = 0; j < STARS_PER_LAYER; ++j) {
+				long px = (star_layers[i][j].x - (game.camera_center.px >> (2 * i + 2))) % STAR_LAYER_SIZE;
+				long py = (star_layers[i][j].y - (game.camera_center.py >> (2 * i + 2))) % STAR_LAYER_SIZE;
+				if (px > draw_area.x &&
+					py > draw_area.y &&
+					px < draw_area.x + draw_area.width &&
+					py < draw_area.y + draw_area.height) {
+					xvec4 color = RGBA_F((uint32_t)star_layers[i][j].z);
+					xpl_sprite_draw_transformed(star_sprite,
+												px, py, 0.f, 0.f,
+												10 / (i + 1), 10 / (i + 1),
+												1.f, 1.f,
+												0.f,
+												&color);
+				}
+			}
+		}
+		
+		// Particles
 		for (int i = 0; i < MAX_PARTICLES; ++i) {
 			if (game.particle[i].life >= 0.f) {
 				if (position_in_bounds(game.particle[i].position, game.particle[i].size, game.camera_min, game.camera_max)) {
@@ -720,15 +762,17 @@ static void game_render_playfield(xpl_context_t *self, double time) {
 	{
 		xmat4 *sprite_ortho = xpl_sprite_batch_matrix_push(ui_batch);
 		*sprite_ortho = ortho;
+		
+		// Bottom and top panels
+		xpl_sprite_draw(panel_background_sprite, 0.f, 0.f, self->size.width, draw_area.y);
+		xpl_sprite_draw(panel_background_sprite, 0.f, draw_area.y + draw_area.height, self->size.width, draw_area.y);
 
-		const xvec4 active_color = RGBA_F(0xffffffff);
-		const xvec4 inactive_color = RGBA_F(0x80ffffff);
 		for (int i = 0; i < 3; ++i) {
 			xpl_sprite_draw_colored(control_key_sprites[i], 8 + (TILE_SIZE + 8) * i, 24, TILE_SIZE, TILE_SIZE,
 									game.control_indicator_on[i] ? active_color : inactive_color);
 		}
 		
-		xpl_sprite_draw_colored(ui_coin_sprite, 176, 4, 16, 16, coin_color);
+		xpl_sprite_draw_colored(ui_coin_sprite, 192, 4, 16, 16, coin_color);
 		for (int i = 0; i < 8; ++i) {
 			xpl_sprite_draw_colored(weapon_key_sprites[i], 192 + (TILE_SIZE + 8) * i, 24, TILE_SIZE, TILE_SIZE,
 									i == game.active_weapon ? active_color : inactive_color);
@@ -739,6 +783,28 @@ static void game_render_playfield(xpl_context_t *self, double time) {
 			xpl_sprite_draw_colored(ui_coin_sprite, self->size.width - 16 - (coin_symbols - i) * 16, 12, 16, 16, coin_color);
 		}
 
+		// Render health
+		for (int i = 0; i < 256; i += 48) {
+			float y = 8 + 8 * (i / 48);
+			if (i <= game.player[0].health) {
+				xvec4 health_color = xvec4_mix(healthy, unhealthy, (255.f - i) / 255.f);
+				xpl_sprite_draw_colored(grid8_sprite, 512, y, 8, 8, health_color);
+			} else {
+				xpl_sprite_draw_colored(solid_sprite, 512, y, 8, 8, solid_black);
+			}
+		}
+		
+		// Render weapon cooldown
+		for (int i = 0; i < 6; ++i) {
+			float y = 8 + 8 * i;
+			if (game.fire_cooldown < ((int)1 << (8 - i))) {
+				xvec4 health_color = xvec4_mix(healthy, unhealthy, (6.f - i) / 6.f);
+				xpl_sprite_draw_colored(grid8_sprite, 176, y, 8, 8, health_color);
+			} else {
+				xpl_sprite_draw_colored(solid_sprite, 176, y, 8, 8, solid_black);
+			}
+		}
+		
 		xpl_sprite_batch_matrix_pop(ui_batch);
 	}
 	xpl_sprite_batch_end(ui_batch);
@@ -746,10 +812,21 @@ static void game_render_playfield(xpl_context_t *self, double time) {
 	int cash = game.player[0].score;
 	const xvec4 expensive_color = RGBA_F(0xff808080);
 	const xvec4 available_color = RGBA_F(0xff00ffff);
-	// Render prices
+	// Render prices and keys
 	for (int i = 0; i < 8; ++i) {
 		int price = projectile_config[i].price;
 		char price_str[8];
+		char key_str[2];
+
+		snprintf(key_str, 2, "%d", i + 1);
+		ui_markup.foreground_color = (price <= cash) ? active_color : expensive_color;
+		ui_markup.size = 16.f;   
+		xpl_cached_text_t *text = xpl_text_cache_get(ui_cache, &ui_markup, key_str);
+		xvec3 pen = {{ 194 + (TILE_SIZE + 8) * i, 38.f + ui_markup.size, 0.f }};
+		xmat4 ortho_translate;
+		xmat4_translate(&ortho, &pen, &ortho_translate);
+		xpl_text_buffer_render(text->buffer, ortho_translate.data);
+		
 		if (price >= 0) {
 			snprintf(price_str, 8, "%d", price);
 			ui_markup.foreground_color = (price <= cash) ? available_color : expensive_color;
@@ -762,6 +839,8 @@ static void game_render_playfield(xpl_context_t *self, double time) {
 			xpl_text_buffer_render(text->buffer, ortho_translate.data);
 		}
 	}
+	
+	
 	// Render cash
 	char score[20];
 	snprintf(score, 20, "%u", game.player[0].score);
@@ -867,29 +946,26 @@ static void packet_handle_damage(uint16_t client_id, packet_t *packet) {
 	int origin = player_with_client_id_get(packet->damage.player_id, false, NULL);
 	int projectile = projectile_with_pid_get(packet->damage.projectile_id, -1);
 
-	if (projectile >= 0 && game.projectile[projectile].health > 0) {
-		if (packet->damage.flags & DAMAGE_FLAG_REPAIRS) {
-			log_add_text("%s repairs for %d",
-						 player_name(origin, false),
-						 packet->damage.amount);
-			
-		} else {
-			log_add_text("%s take%s %d damage from a %s",
-						 player_name(origin, false),
-						 origin == 0 ? "" : "s",
-						 packet->damage.amount,
-						 weapon_names[game.projectile[projectile].type]);
-		}
-		// Destroys projectile, including mines.
-		game.projectile[projectile].health = 0;
-		projectile_explode_effect(projectile, target);
+	if (packet->damage.flags & DAMAGE_FLAG_REPAIRS) {
+		log_add_text("%s repair%s for %d",
+					 player_name(origin, false),
+					 origin == 0 ? "" : "s",
+					 packet->damage.amount);
+		
+	} else if (projectile >= 0 && game.projectile[projectile].health > 0) {
+		log_add_text("%s take%s %d damage from a %s",
+					 player_name(origin, false),
+					 origin == 0 ? "" : "s",
+					 packet->damage.amount,
+					 weapon_names[game.projectile[projectile].type]);
+
+		
 	} else {
-//		log_add_text("%s take%s %d damage from an explosion",
-//					 player_name(origin, false),
-//					 origin == 0 ? "" : "s",
-//					 packet->damage.amount,
-//					 weapon_names[game.projectile[projectile].type]);
-//		return; // Is this needed for mines?
+		log_add_text("%s take%s %d damage from a misdirected explosion",
+					 player_name(origin, false),
+					 origin == 0 ? "" : "s",
+					 packet->damage.amount,
+					 weapon_names[game.projectile[projectile].type]);
 	}
 	
 	if (packet->damage.flags & DAMAGE_FLAG_EXPLODES) {
@@ -897,6 +973,10 @@ static void packet_handle_damage(uint16_t client_id, packet_t *packet) {
 		game.player_local[target].visible = false;
 		log_add_text("%s %s %s", player_name(origin, false), random_word(destroyed_words), player_name(target, true));
 	}
+	
+	// Destroys projectile, including mines.
+	projectile_explode_effect(projectile, target);
+	game.projectile[projectile].health = 0;
 	
 	if (origin == 0 && target != 0) {
 		game.player[0].score += packet->damage.amount;
@@ -1009,7 +1089,7 @@ static void packet_send(packet_t *packet) {
 	uint8_t buffer[1024];
 	packet->seq = ++packet_seq;
 	size_t len = packet_encode(packet, game.player_id[0].client_id, buffer);
-	LOG_DEBUG("sending packet");
+	LOG_TRACE("sending packet");
 	int result = udp_send(sock, buffer, (int)len, server_addr->address, server_addr->port);
 	if (result == -1) {
 		ui_error_set("Invalid remote address");
@@ -1374,26 +1454,25 @@ static bool position_in_bounds(position_t position, int fudge, position_t min, p
 
 // ------------------------------------------------------------------------------
 static void projectile_add(void) {
+	int weapon = game.active_weapon;
 	xvec2 direction_vector = player_get_direction_vector(0);
-	// Add a little margin to get slow projectiles clear of the nose
-	xvec2 origin = xvec2_scale(direction_vector, 0.7f * PLAYER_SIZE);
 	
 	uint16_t pid = xpl_irand_range(0, UINT16_MAX);
-	int weapon = game.active_weapon;
 	int i = projectile_with_pid_get(pid, weapon);
-	xvec2 front = player_get_direction_vector(0);
-	front = xvec2_scale(front, 0.5f * PLAYER_SIZE);
+	// Add a little margin to get slow projectiles clear of the nose
+	float position = projectile_type_is_mine(weapon) ? -0.7 : 0.7;
+	xvec2 front = xvec2_scale(direction_vector, position * PLAYER_SIZE);
 	
 	game.projectile[i].position = game.player[0].position;
 	game.projectile[i].position.px += (int)front.x;
 	game.projectile[i].position.py += (int)front.y;
 	
 	velocity_t velocity = {
-		roundf(projectile_config[weapon].velocity * origin.x),
-		roundf(projectile_config[weapon].velocity * origin.y)
+		roundf(projectile_config[weapon].velocity * direction_vector.x),
+		roundf(projectile_config[weapon].velocity * direction_vector.y)
 	};
 	
-	if (projectile_type_is_mine(weapon)) {
+	if (! projectile_type_is_mine(weapon)) {
 		velocity.dx += game.player[0].velocity.dx;
 		velocity.dy += game.player[0].velocity.dy;
 	}
@@ -1403,10 +1482,13 @@ static void projectile_add(void) {
 	
 	game.projectile_local[i].owner = game.player_id[0].client_id;
 	
-	packet_send_player();
+	if (network.position_timeout > 0.1f) packet_send_player();
 	packet_send_projectile(i);
 }
 
+// Create an explosion effect for the current projectile.
+// If the target is nonnegative, the explosion occurs at the target.
+// Otherwise the explosion occurs at the projectile.
 static void projectile_explode_effect(int pi, int target) {
 	
 	int pt = game.projectile[pi].type;
@@ -1434,6 +1516,7 @@ static void projectile_initialize(uint16_t pid, int pi, int ti) {
 	game.projectile[pi].type = (uint8_t)ti;
 	game.projectile_local[pi].trail_timeout = projectile_config[ti].trail_timeout;
 	game.projectile_local[pi].color = color_variant(projectile_config[ti].color, projectile_config[ti].variance);
+	game.projectile_local[pi].force_detonate = false;
 }
 
 // Get a projectile. Pass a negative projectile type to prevent creation.
@@ -1466,6 +1549,7 @@ static bool projectile_type_is_mine(int type) {
 }
 
 static void projectile_update(int i, bool jiffy_elapsed) {
+	long pdx, pdy;
 	game.projectile_position_buffer[i] = xvec2_add(game.projectile_position_buffer[i],
 												   xvec2_set(game.projectile[i].velocity.dx / VELOCITY_SCALE,
 															 game.projectile[i].velocity.dy / VELOCITY_SCALE));
@@ -1481,16 +1565,31 @@ static void projectile_update(int i, bool jiffy_elapsed) {
 		game.projectile_position_buffer[i].y -= dy;
 	}
 	
-	float current_explosion_radius = 0.f;
 	int type = game.projectile[i].type;
-	if (jiffy_elapsed) {
-		--game.projectile[i].health;
-		if (projectile_type_is_mine(type) && game.projectile[i].health < 2) {
-			// Mines linger at 2 or 1 health
-			// They change to trail color when armed
+	if (type != pt_blackhole && type != pt_repair) {
+		// Are there any non-mine projectiles too close?
+		for (int j = i + 1; j < MAX_PROJECTILES; ++j) {
+			if (game.projectile[j].health) {
+				pdx = (long)game.projectile[i].position.px - (long)game.projectile[j].position.px;
+				pdy = (long)game.projectile[i].position.py - (long)game.projectile[j].position.py;
+				if (pdx < 10 && pdy < 10) {
+					// Set both to explode or disappear.
+					game.projectile_local[i].force_detonate = true;
+					game.projectile_local[j].force_detonate = true;
+				}
+			}
+		}
+	}
+	
+	float current_explosion_radius = 0.f;
+	if (jiffy_elapsed && type != pt_repair) {
+		if (projectile_type_is_mine(type) && game.projectile[i].health == 2) {
+			// Mines linger at 2 health
 			game.projectile[i].health++;
+			// They change to trail color when armed
 			game.projectile_local[i].color = color_variant(projectile_config[type].trail_color, projectile_config[type].trail_life);
 		}
+		--game.projectile[i].health;
 		--game.projectile_local[i].trail_timeout;
 		if (game.projectile_local[i].trail_timeout) {
 			xvec4 trail_color = color_variant(projectile_config[type].trail_color, projectile_config[type].trail_variance);
@@ -1498,13 +1597,13 @@ static void projectile_update(int i, bool jiffy_elapsed) {
 						 trail_color, projectile_config[type].trail_size,
 						 projectile_config[type].trail_life, true);
 		}
-		if (game.projectile[i].health == 0) {
-			current_explosion_radius = projectile_config[type].explode_radius;
-		}
+	}
+	if (game.projectile[i].health == 0 || game.projectile_local[i].force_detonate) {
+		current_explosion_radius = projectile_config[type].explode_radius;
 	}
 	
-	long pdx = (long)game.projectile[i].position.px - (long)game.player[0].position.px;
-	long pdy = (long)game.projectile[i].position.py - (long)game.player[0].position.py;
+	pdx = (long)game.projectile[i].position.px - (long)game.player[0].position.px;
+	pdy = (long)game.projectile[i].position.py - (long)game.player[0].position.py;
 	int projectile_owner = player_with_client_id_get(game.projectile_local[i].owner, false, NULL);
 
 	float dtt = sqrtf(labs(pdx * pdx) + labs(pdy * pdy));
@@ -1512,7 +1611,7 @@ static void projectile_update(int i, bool jiffy_elapsed) {
 	dtt = xmax(dtt, 0.f);
 	
 	// Black hole accelerates you in
-	if (type == pt_blackhole && game.projectile[i].health <= 2) {
+	if (type == pt_blackhole && game.projectile[i].health == 2) {
 		xvec2 direction = {{ pdx, pdy }};
 		float length = dtt;
 		// Fudge because black hole throws you around so fast
@@ -1523,7 +1622,8 @@ static void projectile_update(int i, bool jiffy_elapsed) {
 		LOG_DEBUG("Black hole acceleration: %f %f", acceleration.x, acceleration.y);
 	}
 	
-	bool could_hit = (dtt <= current_explosion_radius);
+	bool in_contact = (type == pt_repair) || (dtt <= current_explosion_radius);
+	bool could_hit = in_contact;
 	could_hit = could_hit && (projectile_config[type].can_hit_self || projectile_owner);
 	
 	if (current_explosion_radius > 0.f) {
@@ -1531,48 +1631,56 @@ static void projectile_update(int i, bool jiffy_elapsed) {
 		projectile_explode_effect(i, -1);
 	}
 	
-	if (projectile_type_is_mine(type) && game.projectile[i].health != 2) could_hit = false;
-	
-	// No hit.
-	if (! could_hit) return;
+	could_hit = could_hit || game.projectile_local[i].force_detonate;
 
-	if (projectile_type_is_mine(type)) game.projectile[i].health = 1; // Retain at 1 health but don't retrigger.
-	
-	current_explosion_radius = projectile_config[type].explode_radius;
-	
-	// Apply damage
-	uint8_t damage;
-	if (projectile_config[type].explode_radius || projectile_type_is_mine(type)) {
-		damage = (type == pt_blackhole) ? 255 : projectile_config[type].initial_health;
-	} else {
-		damage = game.projectile[i].health;
-	}
-	if (current_explosion_radius) {
-		float damage_scale = (current_explosion_radius - dtt) / current_explosion_radius;
-		damage_scale = xclamp(damage_scale, 0.f, 1.f);
-		damage *= damage_scale;
-	}
-	
-	uint8_t flags = 0;
-	if (type != pt_repair) {
-		if (game.player[0].health <= damage) {
-			game.respawn_cooldown = RESPAWN_COOLDOWN; 
-			damage = game.player[0].health;
-			flags |= DAMAGE_FLAG_EXPLODES;
-			game.player[0].health = 0;
+	// Don't allow mines to double-detonate.
+	if (projectile_type_is_mine(type) && game.projectile[i].health != 2) could_hit = false;
+
+	if (could_hit) {
+		current_explosion_radius = projectile_config[type].explode_radius;
+		
+		// Apply damage
+		uint8_t damage;
+		if (projectile_config[type].explode_radius || projectile_type_is_mine(type)) {
+			damage = (type == pt_blackhole) ? 255 : projectile_config[type].initial_health;
 		} else {
-			game.player[0].health -= damage;
+			damage = in_contact ? game.projectile[i].health : 0;
 		}
-	} else {
-		int health = game.player[0].health;
-		health += damage;
-		health = xclamp(health, 0, UINT8_MAX);
-		game.player[0].health = health;
-		flags |= DAMAGE_FLAG_REPAIRS;
+		if (current_explosion_radius) {
+			float damage_scale = (current_explosion_radius - dtt) / current_explosion_radius;
+			damage_scale = xclamp(damage_scale, 0.f, 1.f);
+			damage *= damage_scale;
+		}
+		
+		uint8_t flags = 0;
+		if (type != pt_repair) {
+			if (game.player[0].health <= damage) {
+				game.respawn_cooldown = RESPAWN_COOLDOWN; 
+				damage = game.player[0].health;
+				flags |= DAMAGE_FLAG_EXPLODES;
+				game.player[0].health = 0;
+			} else {
+				game.player[0].health -= damage;
+			}
+		} else {
+			int health = game.player[0].health;
+			health += damage;
+			health = xclamp(health, 0, UINT8_MAX);
+			game.player[0].health = health;
+			flags |= DAMAGE_FLAG_REPAIRS;
+		}
+		LOG_DEBUG("Player health remaining: %u", game.player[0].health);
+		
+		if (damage)	{
+			packet_send_damage(game.projectile_local[i].owner, game.projectile[i].pid, damage, flags);
+			if (projectile_type_is_mine(type)) game.projectile[i].health = 1;
+
+		} else {
+			// Just kill the projectile
+			game.projectile[i].health = 0;
+			// Don't propagate this. The other clients will figure it out too.
+		}
 	}
-	LOG_DEBUG("Player health remaining: %u", game.player[0].health);
-	
-	packet_send_damage(game.projectile_local[i].owner, game.projectile[i].pid, damage, flags);
 }
 
 

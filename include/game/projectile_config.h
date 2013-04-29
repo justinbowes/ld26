@@ -62,7 +62,7 @@ static const char *weapon_names[] = {
 static const projectile_config_t projectile_config[] = {
 	{ // 0: pew
 		20,
-		320,
+		2800,
 		3,
 		RGBA(0xff, 0x00, 0x00, 0xff),
 		0.1f,
@@ -87,7 +87,7 @@ static const projectile_config_t projectile_config[] = {
 	},
 	{ // 1: heavy pew
 		30,
-		256,
+		2200,
 		4,
 		RGBA(0xff, 0x00, 0xff, 0xff),
 		0.1f,
@@ -112,7 +112,7 @@ static const projectile_config_t projectile_config[] = {
 	},
 	{ // 2: missile
 		45,
-		80,
+		900,
 		4,
 		RGBA(0xc0, 0xc0, 0xc0, 0xff),
 		0.0f,
@@ -137,7 +137,7 @@ static const projectile_config_t projectile_config[] = {
 	},
 	{ // 3: heavy missile
 		90,
-		60,
+		650,
 		4,
 		RGBA(0xc0, 0xc0, 0xc0, 0xff),
 		0.0f,
@@ -162,7 +162,7 @@ static const projectile_config_t projectile_config[] = {
 	},
 	{ // 4: nuke
 		255,
-		30,
+		350,
 		8,
 		RGBA(0xc0, 0xc0, 0xc0, 0xff),
 		0.0f,
@@ -212,7 +212,7 @@ static const projectile_config_t projectile_config[] = {
 	},
 	{ // 6: black hole
 		120,
-		-4,
+		-50,
 		16,
 		RGBA(0xff, 0x70, 0xff, 0xff),
 		0.0f,
@@ -231,7 +231,7 @@ static const projectile_config_t projectile_config[] = {
 		5.0f,
 		512.f / 5.0f * EXPL_VIS_FACTOR,
 		
-		60,
+		180,
 		500,
 		true
 	},

@@ -8,11 +8,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1234"
-         endingLineNumber = "1234"
+         startingLineNumber = "1321"
+         endingLineNumber = "1321"
          landmarkName = "player_local_update_firing()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -21,11 +21,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1395"
-         endingLineNumber = "1395"
+         startingLineNumber = "1481"
+         endingLineNumber = "1481"
          landmarkName = "projectile_add()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -34,11 +34,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "629"
-         endingLineNumber = "629"
+         startingLineNumber = "671"
+         endingLineNumber = "671"
          landmarkName = "game_render_playfield()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -47,11 +47,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "824"
-         endingLineNumber = "824"
+         startingLineNumber = "903"
+         endingLineNumber = "903"
          landmarkName = "log_advance_line()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -60,11 +60,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1438"
-         endingLineNumber = "1438"
+         startingLineNumber = "1528"
+         endingLineNumber = "1528"
          landmarkName = "projectile_with_pid_get()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -73,11 +73,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "635"
-         endingLineNumber = "635"
+         startingLineNumber = "677"
+         endingLineNumber = "677"
          landmarkName = "game_render_playfield()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -86,11 +86,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1385"
-         endingLineNumber = "1385"
+         startingLineNumber = "1471"
+         endingLineNumber = "1471"
          landmarkName = "projectile_add()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -99,11 +99,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "include/game/game.h"
-         timestampString = "388894316.727523"
+         timestampString = "388905962.496191"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "98"
-         endingLineNumber = "98">
+         startingLineNumber = "102"
+         endingLineNumber = "102">
       </FileBreakpoint>
       <FileBreakpoint
          shouldBeEnabled = "No"
@@ -123,11 +123,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "781"
-         endingLineNumber = "781"
+         startingLineNumber = "860"
+         endingLineNumber = "860"
          landmarkName = "game_reset()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -136,11 +136,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "860"
-         endingLineNumber = "860"
+         startingLineNumber = "939"
+         endingLineNumber = "939"
          landmarkName = "packet_handle_damage()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -149,11 +149,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "782"
-         endingLineNumber = "782"
+         startingLineNumber = "861"
+         endingLineNumber = "861"
          landmarkName = "game_reset()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -162,11 +162,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1068"
-         endingLineNumber = "1068"
+         startingLineNumber = "1155"
+         endingLineNumber = "1155"
          landmarkName = "packet_send_damage()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -175,11 +175,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "895"
-         endingLineNumber = "895"
+         startingLineNumber = "982"
+         endingLineNumber = "982"
          landmarkName = "packet_handle_damage()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -188,11 +188,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1203"
-         endingLineNumber = "1203"
+         startingLineNumber = "1290"
+         endingLineNumber = "1290"
          landmarkName = "player_init()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -201,11 +201,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1568"
-         endingLineNumber = "1568"
+         startingLineNumber = "1691"
+         endingLineNumber = "1691"
          landmarkName = "random_word()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -214,11 +214,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1571"
-         endingLineNumber = "1571"
+         startingLineNumber = "1694"
+         endingLineNumber = "1694"
          landmarkName = "random_word()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -227,11 +227,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388900064.159853"
+         timestampString = "388911772.992925"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "377"
-         endingLineNumber = "377"
+         startingLineNumber = "388"
+         endingLineNumber = "388"
          landmarkName = "game_engine()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -240,11 +240,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388900064.159853"
+         timestampString = "388911772.992925"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "379"
-         endingLineNumber = "379"
+         startingLineNumber = "389"
+         endingLineNumber = "389"
          landmarkName = "game_engine()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -253,11 +253,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1437"
-         endingLineNumber = "1437"
+         startingLineNumber = "1527"
+         endingLineNumber = "1527"
          landmarkName = "projectile_with_pid_get()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -266,11 +266,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1426"
-         endingLineNumber = "1426"
+         startingLineNumber = "1515"
+         endingLineNumber = "1515"
          landmarkName = "projectile_initialize()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -279,11 +279,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "953"
-         endingLineNumber = "953"
+         startingLineNumber = "1040"
+         endingLineNumber = "1040"
          landmarkName = "packet_handle_projectile()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -292,11 +292,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "959"
-         endingLineNumber = "959"
+         startingLineNumber = "1046"
+         endingLineNumber = "1046"
          landmarkName = "packet_handle_projectile()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -305,11 +305,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1094"
-         endingLineNumber = "1094"
+         startingLineNumber = "1181"
+         endingLineNumber = "1181"
          landmarkName = "packet_send_projectile()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -318,11 +318,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388900064.159853"
+         timestampString = "388911772.992925"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "407"
-         endingLineNumber = "407"
+         startingLineNumber = "417"
+         endingLineNumber = "417"
          landmarkName = "game_engine()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -331,11 +331,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388911772.992925"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "459"
-         endingLineNumber = "459"
+         startingLineNumber = "469"
+         endingLineNumber = "469"
          landmarkName = "game_init()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -344,11 +344,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388911772.992925"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "457"
-         endingLineNumber = "457"
+         startingLineNumber = "467"
+         endingLineNumber = "467"
          landmarkName = "game_init()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -357,11 +357,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388911772.992925"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "456"
-         endingLineNumber = "456"
+         startingLineNumber = "466"
+         endingLineNumber = "466"
          landmarkName = "game_init()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -370,11 +370,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388900064.159853"
+         timestampString = "388911772.992925"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "235"
-         endingLineNumber = "235"
+         startingLineNumber = "246"
+         endingLineNumber = "246"
          landmarkName = "camera_calculate_center()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -383,11 +383,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "751"
-         endingLineNumber = "751"
+         startingLineNumber = "817"
+         endingLineNumber = "817"
          landmarkName = "game_render_playfield()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -448,11 +448,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "679"
-         endingLineNumber = "679"
+         startingLineNumber = "721"
+         endingLineNumber = "721"
          landmarkName = "game_render_playfield()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -461,11 +461,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "652"
-         endingLineNumber = "652"
+         startingLineNumber = "694"
+         endingLineNumber = "694"
          landmarkName = "game_render_playfield()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -474,11 +474,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "755"
-         endingLineNumber = "755"
+         startingLineNumber = "832"
+         endingLineNumber = "832"
          landmarkName = "game_render_playfield()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -500,11 +500,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388911772.992925"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "587"
-         endingLineNumber = "587"
+         startingLineNumber = "608"
+         endingLineNumber = "608"
          landmarkName = "game_render_playfield()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -513,11 +513,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388911772.992925"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "592"
-         endingLineNumber = "592"
+         startingLineNumber = "613"
+         endingLineNumber = "613"
          landmarkName = "game_render_playfield()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -526,11 +526,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "705"
-         endingLineNumber = "705"
+         startingLineNumber = "747"
+         endingLineNumber = "747"
          landmarkName = "game_render_playfield()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -539,11 +539,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388900064.159853"
+         timestampString = "388911772.992925"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "391"
-         endingLineNumber = "391"
+         startingLineNumber = "401"
+         endingLineNumber = "401"
          landmarkName = "game_engine()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -552,11 +552,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "703"
-         endingLineNumber = "703"
+         startingLineNumber = "745"
+         endingLineNumber = "745"
          landmarkName = "game_render_playfield()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -565,11 +565,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1644"
-         endingLineNumber = "1644"
+         startingLineNumber = "1767"
+         endingLineNumber = "1767"
          landmarkName = "text_particle_find_new()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -578,11 +578,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1645"
-         endingLineNumber = "1645"
+         startingLineNumber = "1768"
+         endingLineNumber = "1768"
          landmarkName = "text_particle_find_new()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -591,11 +591,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1648"
-         endingLineNumber = "1648"
+         startingLineNumber = "1771"
+         endingLineNumber = "1771"
          landmarkName = "text_particle_find_new()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -604,11 +604,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1661"
-         endingLineNumber = "1661"
+         startingLineNumber = "1784"
+         endingLineNumber = "1784"
          landmarkName = "text_particle_find_new()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -617,11 +617,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1636"
-         endingLineNumber = "1636"
+         startingLineNumber = "1759"
+         endingLineNumber = "1759"
          landmarkName = "text_particle_add()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -630,11 +630,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1635"
-         endingLineNumber = "1635"
+         startingLineNumber = "1758"
+         endingLineNumber = "1758"
          landmarkName = "text_particle_add()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -643,11 +643,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1665"
-         endingLineNumber = "1665"
+         startingLineNumber = "1788"
+         endingLineNumber = "1788"
          landmarkName = "text_particle_update()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -656,11 +656,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1233"
-         endingLineNumber = "1233"
+         startingLineNumber = "1320"
+         endingLineNumber = "1320"
          landmarkName = "player_local_update_firing()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -669,11 +669,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1277"
-         endingLineNumber = "1277"
+         startingLineNumber = "1364"
+         endingLineNumber = "1364"
          landmarkName = "player_local_update_weapon()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -682,11 +682,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1274"
-         endingLineNumber = "1274"
+         startingLineNumber = "1361"
+         endingLineNumber = "1361"
          landmarkName = "player_local_update_weapon()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -695,11 +695,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388912311.992222"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1539"
-         endingLineNumber = "1539"
+         startingLineNumber = "1631"
+         endingLineNumber = "1631"
          landmarkName = "projectile_update()"
          landmarkType = "7">
       </FileBreakpoint>
@@ -708,51 +708,116 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
+         timestampString = "388911772.992925"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1524"
-         endingLineNumber = "1524"
-         landmarkName = "projectile_update()"
-         landmarkType = "7">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "No"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1537"
-         endingLineNumber = "1537"
-         landmarkName = "projectile_update()"
-         landmarkType = "7">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "No"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "src/context/context_game.c"
-         timestampString = "388901533.346997"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "1544"
-         endingLineNumber = "1544"
-         landmarkName = "projectile_update()"
-         landmarkType = "7">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "No"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "src/context/context_game.c"
-         timestampString = "388901556.03302"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "411"
-         endingLineNumber = "411"
+         startingLineNumber = "421"
+         endingLineNumber = "421"
          landmarkName = "game_engine()"
+         landmarkType = "7">
+      </FileBreakpoint>
+      <FileBreakpoint
+         shouldBeEnabled = "No"
+         ignoreCount = "0"
+         continueAfterRunningActions = "No"
+         filePath = "src/context/context_game.c"
+         timestampString = "388912311.992222"
+         startingColumnNumber = "9223372036854775807"
+         endingColumnNumber = "9223372036854775807"
+         startingLineNumber = "1650"
+         endingLineNumber = "1650"
+         landmarkName = "projectile_update()"
+         landmarkType = "7">
+      </FileBreakpoint>
+      <FileBreakpoint
+         shouldBeEnabled = "No"
+         ignoreCount = "0"
+         continueAfterRunningActions = "No"
+         filePath = "src/context/context_game.c"
+         timestampString = "388912311.992222"
+         startingColumnNumber = "9223372036854775807"
+         endingColumnNumber = "9223372036854775807"
+         startingLineNumber = "978"
+         endingLineNumber = "978"
+         landmarkName = "packet_handle_damage()"
+         landmarkType = "7">
+      </FileBreakpoint>
+      <FileBreakpoint
+         shouldBeEnabled = "No"
+         ignoreCount = "0"
+         continueAfterRunningActions = "No"
+         filePath = "src/context/context_game.c"
+         timestampString = "388912311.992222"
+         startingColumnNumber = "9223372036854775807"
+         endingColumnNumber = "9223372036854775807"
+         startingLineNumber = "1553"
+         endingLineNumber = "1553"
+         landmarkName = "projectile_update()"
+         landmarkType = "7">
+      </FileBreakpoint>
+      <FileBreakpoint
+         shouldBeEnabled = "No"
+         ignoreCount = "0"
+         continueAfterRunningActions = "No"
+         filePath = "src/context/context_game.c"
+         timestampString = "388912311.992222"
+         startingColumnNumber = "9223372036854775807"
+         endingColumnNumber = "9223372036854775807"
+         startingLineNumber = "1584"
+         endingLineNumber = "1584"
+         landmarkName = "projectile_update()"
+         landmarkType = "7">
+      </FileBreakpoint>
+      <FileBreakpoint
+         shouldBeEnabled = "No"
+         ignoreCount = "0"
+         continueAfterRunningActions = "No"
+         filePath = "src/context/context_game.c"
+         timestampString = "388912311.992222"
+         startingColumnNumber = "9223372036854775807"
+         endingColumnNumber = "9223372036854775807"
+         startingLineNumber = "1577"
+         endingLineNumber = "1577"
+         landmarkName = "projectile_update()"
+         landmarkType = "7">
+      </FileBreakpoint>
+      <FileBreakpoint
+         shouldBeEnabled = "No"
+         ignoreCount = "0"
+         continueAfterRunningActions = "No"
+         filePath = "src/context/context_game.c"
+         timestampString = "388912311.992222"
+         startingColumnNumber = "9223372036854775807"
+         endingColumnNumber = "9223372036854775807"
+         startingLineNumber = "1676"
+         endingLineNumber = "1676"
+         landmarkName = "projectile_update()"
+         landmarkType = "7">
+      </FileBreakpoint>
+      <FileBreakpoint
+         shouldBeEnabled = "No"
+         ignoreCount = "0"
+         continueAfterRunningActions = "No"
+         filePath = "src/context/context_game.c"
+         timestampString = "388912311.992222"
+         startingColumnNumber = "9223372036854775807"
+         endingColumnNumber = "9223372036854775807"
+         startingLineNumber = "633"
+         endingLineNumber = "633"
+         landmarkName = "game_render_playfield()"
+         landmarkType = "7">
+      </FileBreakpoint>
+      <FileBreakpoint
+         shouldBeEnabled = "No"
+         ignoreCount = "0"
+         continueAfterRunningActions = "No"
+         filePath = "src-xpl/xpl_sprite.c"
+         timestampString = "388912675.009674"
+         startingColumnNumber = "9223372036854775807"
+         endingColumnNumber = "9223372036854775807"
+         startingLineNumber = "426"
+         endingLineNumber = "426"
+         landmarkName = "xpl_sprite_new()"
          landmarkType = "7">
       </FileBreakpoint>
    </FileBreakpoints>

@@ -318,7 +318,7 @@ static void render(xpl_context_t *self, double time, void *vdata) {
     mf(self->app, area);
     
     glUseProgram(overlay_shader->id);
-    glUniform1f(xpl_shader_get_uniform(overlay_shader, "scanline_amount"), 0.3f);
+    glUniform1f(xpl_shader_get_uniform(overlay_shader, "scanline_amount"), 0.7f);
     glUniform1f(xpl_shader_get_uniform(overlay_shader, "strength"), overlay_strength);
     glUniform4fv(xpl_shader_get_uniform(overlay_shader, "color"), 1, overlay_color.data);
     xpl_vao_program_draw_arrays(effect_vao, overlay_shader, GL_TRIANGLES, 0, (GLsizei)effect_elements);
