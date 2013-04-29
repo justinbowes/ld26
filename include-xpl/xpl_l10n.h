@@ -13,6 +13,7 @@
 
 #ifdef XPL_SHORT_L10N_FUNCTIONS
 #define xl(key) (xpl_l10n_get(key))
+#define xl_exists(key) (xpl_l10n_get(key) != key)
 #endif
 
 void xpl_l10n_set_locale(const char *locale);

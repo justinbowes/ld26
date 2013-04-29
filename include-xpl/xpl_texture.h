@@ -28,7 +28,7 @@ typedef struct xpl_texture_region {
 xpl_texture_t *xpl_texture_new(void);
 void xpl_texture_destroy(xpl_texture_t **pptexture);
 
-GLuint xpl_texture_load(xpl_texture_t *self, const char *resource_name);
+GLuint xpl_texture_load(xpl_texture_t *self, const char *resource_name, bool allow_compress);
 // Loads a null-terminated list of texture resource names into a GL_TEXTURE_2D_ARRAY.
 GLuint xpl_texture_load_array(xpl_texture_t *self, ...);
 

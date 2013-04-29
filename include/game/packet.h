@@ -11,6 +11,7 @@
 
 #include "game/game.h"
 
+#define CHAT_MAX 64
 
 #define encode(x, type, ptr) \
 	*((type *)ptr) = x; \
@@ -26,7 +27,8 @@ typedef enum packet_type {
 	pt_goodbye,
 	pt_player,
 	pt_projectile,
-	pt_damage
+	pt_damage,
+	pt_chat
 } packet_type_t;
 
 typedef struct packet {
@@ -39,6 +41,7 @@ typedef struct packet {
 		player_id_t		goodbye;
 		projectile_t	projectile;
 		damage_t		damage;
+		char			chat[CHAT_MAX];
 	};
 	
 } packet_t;

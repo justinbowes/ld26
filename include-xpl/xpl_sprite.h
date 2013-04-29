@@ -31,6 +31,10 @@ static const int BLEND_FUNCS_ADD[] = {
     GL_ONE, GL_ONE,
     GL_ONE, GL_ONE
 };
+static const int BLEND_FUNCS_REPLACE[] = {
+    GL_SRC_ALPHA, GL_ZERO,
+    GL_ONE, GL_ZERO,
+};
 
 typedef struct xpl_sprite xpl_sprite_t;
 typedef struct xpl_sprite_batch xpl_sprite_batch_t;

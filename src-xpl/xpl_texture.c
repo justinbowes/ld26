@@ -35,7 +35,7 @@ void xpl_texture_destroy(xpl_texture_t **pptexture) {
 	*pptexture = NULL;
 }
 
-GLuint xpl_texture_load(xpl_texture_t *self, const char *resource_name) {
+GLuint xpl_texture_load(xpl_texture_t *self, const char *resource_name, bool allow_compress) {
 	char filename[PATH_MAX];
 	if (!xpl_resolve_resource(filename, resource_name, PATH_MAX)) {
 		LOG_ERROR("Couldn't load resource: %s", resource_name);
@@ -47,9 +47,11 @@ GLuint xpl_texture_load(xpl_texture_t *self, const char *resource_name) {
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	unsigned char *data = SOIL_load_image(filename, &self->size.x,
 			&self->size.y, &self->channels, FALSE);
-	self->texture_id = SOIL_create_OGL_texture(data, self->size.x, self->size.y,
-			self->channels, self->texture_id ? self->texture_id : SOIL_CREATE_NEW_ID,
-			SOIL_FLAG_COMPRESS_TO_DXT | SOIL_FLAG_INVERT_Y);
+	self->texture_id = SOIL_create_OGL_texture(data,
+											   self->size.x, self->size.y,
+											   self->channels,
+											   self->texture_id ? self->texture_id : SOIL_CREATE_NEW_ID,
+											   (allow_compress ? SOIL_FLAG_COMPRESS_TO_DXT : 0) | SOIL_FLAG_INVERT_Y);
 	SOIL_free_image_data(data);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, original_unpack_alignment);
     GL_DEBUG();

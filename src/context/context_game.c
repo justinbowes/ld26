@@ -17,13 +17,17 @@
 #include <arpa/inet.h>
 #include <stdlib.h>
 
+#include "game/camera.h"
 #include "game/game.h"
 #include "game/packet.h"
+#include "game/palette.h"
+#include "game/prefs.h"
 #include "game/projectile_config.h"
+#include "game/sprites.h"
+#include "game/util.h"
 
 #include "context/context_game.h"
 
-#include "xpl_sprite.h"
 #include "xpl_imui.h"
 #include "xpl_rand.h"
 #include "xpl_text_cache.h"
@@ -46,8 +50,9 @@ typedef struct log {
 	float				timeout;
 } log_t;
 
-
-#define NOMUSIC
+#ifdef DEBUG
+# define NOMUSIC
+#endif
 
 #define JIFFY			1.0f / 60.0f
 
@@ -63,16 +68,9 @@ typedef struct log {
 #define TORQUE			192.0f
 #define INITIAL_HEALTH	255
 
-#define INDICATOR_SIZE	8.f
-#define PLAYER_SIZE		16.f
-
 #define SPAWN_BOX		1024
 
-#define TILE_SIZE		32
-
-#define STAR_LAYERS		3
-#define STARS_PER_LAYER	256
-#define STAR_LAYER_SIZE	4096
+#define DEFAULT_SCANLINE	0.7f
 
 #define UI_FONT			"Chicago"
 
@@ -87,47 +85,23 @@ static const int right[]	= { GLFW_KEY_RIGHT,		'D',	0};
 static const int fire[]		= { GLFW_KEY_LCTRL,		' ',	GLFW_KEY_ENTER, 0};
 
 
-static const char *destroyed_words[] = {
-	"destroyed",
-	"exploded",
-	"mangled",
-	"blew up",
-	"obliterated",
-	"slagged",
-	"ventilated",
-	"depressurized",
-	"exposed the contents of",
-	"ended",
-	"dramatically hurt the resale value of",
-	"showed very little respect for",
-	"gave freedom to the bits of",
-	NULL
-};
 
-static game_t							game;
-static network_t						network;
+game_t									game;
+network_t								network;
+
+// tutorial
+static int								ui_tutorial_page;
+static float							scanline_strength;
+
+// chat
+static bool								chat_showing;
+static bool								chat_close_wait;
+static bool								chat_reset_focus;
+static char								chat_buffer[CHAT_MAX];
 
 static xpl_imui_theme_t					*theme;
 static xpl_imui_context_t				*imui;
 
-static xpl_sprite_batch_t				*playfield_batch;
-static xpl_sprite_batch_t				*ui_batch;
-static xpl_sprite_t						*panel_background_sprite;
-static xpl_sprite_t						*solid_sprite;
-static xpl_sprite_t						*grid8_sprite;
-static xpl_sprite_t						*ship_sprite;
-static xpl_sprite_t						*star_sprite;
-static xpl_sprite_t						*indicator_sprite;
-static xpl_sprite_t						*playfield_coin_sprite;
-static xpl_sprite_t						*particle_sprite;
-static xpl_sprite_t						*weapon_key_sprites[8];
-static xpl_sprite_t						*control_key_sprites[3];
-static xpl_sprite_t						*ui_coin_sprite;
-
-static xpl_sprite_t						*star_sprite;
-static xivec3							star_layers[STAR_LAYERS][STARS_PER_LAYER];
-
-static xirect							draw_area;
 
 // Overlay
 static xpl_shader_t                     *overlay_shader;
@@ -151,17 +125,17 @@ static xpl_text_cache_t					*text_particle_cache;
 static xpl_markup_t						text_particle_markup;
 static xpl_text_cache_t					*ui_cache;
 static xpl_markup_t						ui_markup;
+static xpl_text_buffer_t				*tutorial_buffer;
+static xpl_markup_t						tutorial_markup;
 
 // forward decls
 #pragma mark -
 #pragma mark Declarations
-static void camera_calculate_center(xirect viewport, position_t *center, int nudge_x, int nudge_y, position_t *min, position_t *max);
 
 static void game_destroy(xpl_context_t *self, void *data);
 static void game_engine(xpl_context_t *self, double time, void *data);
 static void *game_init(xpl_context_t *self);
 static void game_init_overlay(void);
-static void game_init_sprites(void);
 static void game_init_text(void);
 static void game_render(xpl_context_t *self, double time, void *data);
 static void game_render_log(xpl_context_t *self);
@@ -175,6 +149,7 @@ static void log_add_text(const char *text, ...);
 static void log_advance_line(void);
 
 static void packet_handle(uint16_t client_id, packet_t *packet);
+static void packet_handle_chat(uint16_t client_id, packet_t *packet);
 static void packet_handle_damage(uint16_t client_id, packet_t *packet);
 static void packet_handle_hello(uint16_t client_id, packet_t *packet);
 static void packet_handle_goodbye(uint16_t client_id, packet_t *packet);
@@ -182,6 +157,7 @@ static void packet_handle_player(uint16_t client_id, packet_t *packet);
 static void packet_handle_projectile(uint16_t client_id, packet_t *packet);
 static void packet_receive(void);
 static void packet_send(packet_t *packet);
+static void packet_send_chat(void);
 static void packet_send_hello(void);
 static void packet_send_player(void);
 static void packet_send_projectile(int i);
@@ -199,6 +175,7 @@ static bool player_in_bounds(int i, int fudge, position_t min, position_t max);
 static void player_init(void);
 static void player_local_disconnect(void);
 static bool player_local_is_connected(void);
+static void player_local_update_chat(void);
 static void player_local_update_firing(bool jiffy_elapsed);
 static void player_local_update_rotation(double time);
 static void player_local_update_thrust(double time);
@@ -209,15 +186,11 @@ static void player_update_position(int i);
 static int player_with_client_id_get(uint16_t client_id, bool allow_allocate, bool *was_new_player);
 static xvec2 player_v2velocity_get(int i);
 
-static bool position_in_bounds(position_t position, int fudge, position_t min, position_t max);
-
 static void projectile_add(void);
 static void projectile_explode_effect(int pi, int target);
 static bool projectile_type_is_mine(int type);
 static void projectile_update(int i, bool jiffy_elapsed);
 static int projectile_with_pid_get(uint16_t pid, int allocate_type);
-
-static const char *random_word(const char *word_array[]);
 
 static void server_resolve_addr(void);
 
@@ -230,6 +203,7 @@ static void ui_error_set(const char *msg, ...);
 static void ui_error_packet_set(int eno);
 static void ui_error_show(xpl_context_t *self);
 static void ui_pilot_config_show(xpl_context_t *self);
+static void ui_tutorial_show(xpl_context_t *self, double time);
 static void ui_window_end(void);
 static void ui_window_start(xpl_context_t *self, xvec2 size, const char *title, float *scroll);
 
@@ -239,46 +213,6 @@ static velocity_t velocity_for_v2(xvec2 v);
 #pragma mark -
 #pragma mark Implementations
 
-// ------------------------------------------------------------------------------
-
-
-static void camera_calculate_center(xirect viewport, position_t *center, int nudge_x, int nudge_y, position_t *min, position_t *max) {
-	long x = center->px;
-	long y = center->py;
-	x += nudge_x;
-	y += nudge_y;
-	
-	int halfwidth = viewport.width >> 1;
-	int halfheight = viewport.height >> 1;
-	
-	long minx = x - halfwidth;
-	if (minx < 0) x -= minx;
-	
-	long maxx = x + halfwidth;
-	if (maxx > UINT32_MAX) y -= (maxx - UINT32_MAX);
-	
-	long miny = y - halfheight;
-	if (miny < 0) y -= miny;
-	
-	long maxy = y + halfheight;
-	if (maxy > UINT32_MAX) y -= (maxy - UINT32_MAX);
-	
-	center->px = (int)x;
-	center->py = (int)y;
-	
-	min->px = center->px - halfwidth;
-	min->py = center->py - halfheight;
-	
-	max->px = center->px + halfwidth;
-	max->py = center->py + halfheight;
-}
-
-static xvec2 camera_get_draw_position(position_t position) {
-	long lx = (long)position.px - (long)game.camera_min.px + (long)draw_area.x;
-	long ly = (long)position.py - (long)game.camera_min.py + (long)draw_area.y;
-	xvec2 v = {{ (float)lx, (float)ly }};
-	return v;
-}
 
 // ------------------------------------------------------------------------------
 
@@ -378,6 +312,7 @@ static void game_engine(xpl_context_t *self, double time, void *data) {
 			}
 		} else {
 			game.player_local[0].visible = true;
+			player_local_update_chat();
 			player_local_update_thrust(time);
 			player_local_update_rotation(time);
 			player_local_update_firing(jiffy_elapsed);
@@ -409,12 +344,11 @@ static void game_engine(xpl_context_t *self, double time, void *data) {
 			//			LOG_DEBUG("%d: %u,%u", i, game.player[i].position.px, game.player[i].position.py);
 		}
 		
-		game.camera_center = game.player[0].position;
-		int max_nudge_x = draw_area.width / 4;
-		int max_nudge_y = draw_area.height / 4;
+		int max_nudge_x = camera.draw_area.width / 4;
+		int max_nudge_y = camera.draw_area.height / 4;
 		int nudge_x = xclamp(game.player[0].velocity.dx / VELOCITY_SCALE, -max_nudge_x, max_nudge_x);
 		int nudge_y = xclamp(game.player[0].velocity.dy / VELOCITY_SCALE, -max_nudge_y, max_nudge_y);
-		camera_calculate_center(draw_area, &game.camera_center, nudge_x, nudge_y, &game.camera_min, &game.camera_max);
+		camera_calculate_center(&game.player[0].position, nudge_x, nudge_y);
 		
 		for (int i = 0; i < MAX_PLAYERS; ++i) {
 			if (game.player[i].health < 255 && game.player[i].health > 0) {
@@ -424,7 +358,7 @@ static void game_engine(xpl_context_t *self, double time, void *data) {
 					if (xpl_frand() > frequency) player_add_damage_particle(i);
 				}
 			}
-			if (game.player[i].is_thrust && position_in_bounds(game.player[i].position, 500, game.camera_min, game.camera_max)) {
+			if (game.player[i].is_thrust && position_in_bounds(game.player[i].position, 500, camera.min, camera.max)) {
 				player_add_thrust_particle(i);
 			}
 		}
@@ -445,7 +379,7 @@ static xpl_context_t *game_handoff(xpl_context_t *self, void *data) {
 
 static void *game_init(xpl_context_t *self) {
 	srand((unsigned int)time(0));
-	random_word(destroyed_words);
+	random_word("destroyed");
 	
 	theme = xpl_imui_theme_load_new("ld26");
 	imui = xpl_imui_context_new(theme);
@@ -454,21 +388,23 @@ static void *game_init(xpl_context_t *self) {
 	sock = udp_create_endpoint(0);
 	game_reset();
 	
-	strncpy(network.server_host, "gs.ultrapew.com", 128);
-#ifdef DEBUG
-	strncpy(game.player_id[0].name, "Ken", NAME_SIZE);
-#endif
-	network.server_port = 3000;
+	prefs_t prefs = prefs_get();
+	strncpy(network.server_host, prefs.server, SERVER_SIZE);
+	strncpy(game.player_id[0].name, prefs.name, NAME_SIZE);
+	network.server_port = prefs.port;
 	
 	game_init_overlay();
-	game_init_sprites();
 	game_init_text();
+
+	sprites_init();
 	
-	draw_area = xirect_set(0, 0, self->size.width, self->size.height);
+	camera.draw_area = xirect_set(0, 0, self->size.width, self->size.height);
 	// room for bottom bar
-	draw_area.y += (TILE_SIZE + 40); draw_area.height -= (TILE_SIZE + 40);
+	camera.draw_area.y += (TILE_SIZE + 40); camera.draw_area.height -= (TILE_SIZE + 40);
 	// room for log
-	draw_area.height -= 48;
+	camera.draw_area.height -= 48;
+	
+	scanline_strength = 0.7;
 	
 	bgm_stream = audio_create("bgm.ogg");
 	bgm_stream->loop = true;
@@ -476,41 +412,9 @@ static void *game_init(xpl_context_t *self) {
 	bgm_stream->action = aa_play;
 #endif
 	
+	ui_tutorial_page = 0;
+	
 	return NULL;
-}
-
-static void game_init_sprites(void) {
-	playfield_batch = xpl_sprite_batch_new();
-	ui_batch = xpl_sprite_batch_new();
-	
-	ship_sprite = xpl_sprite_new(playfield_batch, "ship.png", NULL);
-	indicator_sprite = xpl_sprite_new(playfield_batch, "indicator.png", NULL);
-	particle_sprite = xpl_sprite_new(playfield_batch, "particle.png", NULL);
-	playfield_coin_sprite = xpl_sprite_new(playfield_batch, "coin.png", NULL);
-	star_sprite = xpl_sprite_new(playfield_batch, "star.png", NULL);
-
-	panel_background_sprite = xpl_sprite_new(ui_batch, "panel_background.png", NULL);
-	solid_sprite = xpl_sprite_new(ui_batch, "tile_solid.png", NULL);
-	grid8_sprite = xpl_sprite_new(ui_batch, "tile_grid.png", NULL);
-	
-	for (int i = 0; i < 8; ++i) {
-		char resource[PATH_MAX];
-		snprintf(resource, PATH_MAX, "weapon_%d.png", i);
-		weapon_key_sprites[i] = xpl_sprite_new(ui_batch, resource, NULL);
-	}
-	const char *key_sprites[3] = { "key_thrust.png", "key_left.png", "key_right.png" };
-	for (int i = 0; i < 3; ++i) {
-		control_key_sprites[i] = xpl_sprite_new(ui_batch, key_sprites[i], NULL);
-	}
-	ui_coin_sprite = xpl_sprite_new(ui_batch, "coin.png", NULL);
-	
-	for (int i = 0; i < STAR_LAYERS; ++i) {
-		for (int j = 0; j < STARS_PER_LAYER; ++j) {
-			star_layers[i][j].x = xpl_irand_range(0, STAR_LAYER_SIZE);
-			star_layers[i][j].y = xpl_irand_range(0, STAR_LAYER_SIZE);
-			star_layers[i][j].z = (int)RGBA(0xff, 0xff, 0xff, 0x80);
-		}
-	}
 }
 
 static void game_init_overlay(void) {
@@ -552,6 +456,10 @@ static void game_init_text(void) {
 	ui_cache = xpl_text_cache_new();
 	xpl_markup_clear(&ui_markup);
 	xpl_markup_set(&ui_markup, UI_FONT, 16.f, FALSE, FALSE, xvec4_set(1.f, 1.f, 1.f, 1.f), xvec4_all(0.f));
+	
+	tutorial_buffer = xpl_text_buffer_new(1024, 1024, 1);
+	xpl_markup_clear(&tutorial_markup);
+	xpl_markup_set(&tutorial_markup, UI_FONT, 14.f, FALSE, FALSE, xvec4_set(1.f, 1.f, 1.f, 1.f), xvec4_all(0.f));
 }
 
 static void game_render(xpl_context_t *self, double time, void *data) {
@@ -563,6 +471,8 @@ static void game_render(xpl_context_t *self, double time, void *data) {
 	
 	if (network.error_timeout) {
 		ui_error_show(self);
+	} else if (ui_tutorial_page) {
+		ui_tutorial_show(self, time);
 	} else if (! game.player_connected[0] && ! network.error_timeout) {
 		ui_pilot_config_show(self);
 	} else if (player_local_is_connected()) {
@@ -573,7 +483,7 @@ static void game_render(xpl_context_t *self, double time, void *data) {
 	
 	// Effect overlay
 	glUseProgram(overlay_shader->id);
-	glUniform1f(xpl_shader_get_uniform(overlay_shader, "scanline_amount"), 0.67f);
+	glUniform1f(xpl_shader_get_uniform(overlay_shader, "scanline_amount"), scanline_strength);
 	glUniform1f(xpl_shader_get_uniform(overlay_shader, "strength"), overlay_strength);
 	glUniform4fv(xpl_shader_get_uniform(overlay_shader, "color"), 1, overlay_color.data);
 	xpl_vao_program_draw_arrays(effect_vao, overlay_shader, GL_TRIANGLES, 0, (GLsizei)effect_elements);
@@ -590,159 +500,37 @@ static void game_render_log(xpl_context_t *self) {
 
 static void game_render_playfield(xpl_context_t *self, double time) {
 	
-	const xvec4 coin_color = RGBA_F(0xff00ffff);
-	const xvec4 active_color = RGBA_F(0xff80ffff);
-	const xvec4 inactive_color = RGBA_F(0x60ffffff);
-	const xvec4 healthy = RGBA_F(0xff40c040);
-	const xvec4 unhealthy = RGBA_F(0xff0040ff);
-	const xvec4 solid_black = RGBA_F(0xff000000);
-
 	xmat4 ortho;
 	xmat4_ortho(0.f, self->size.width, 0.f, self->size.height, -1.f, 1.f, &ortho);
 	
 	glEnable(GL_SCISSOR_TEST);
-	glScissor(draw_area.x, draw_area.y, draw_area.width, draw_area.height);
+	glScissor(camera.draw_area.x, camera.draw_area.y, camera.draw_area.width, camera.draw_area.height);
 
 	// Render player names, excluding self
 	for (int i = 1; i < MAX_PLAYERS; ++i) {
 		if (! game.player_connected[i]) continue;
 		if (! game.player_local[i].visible) continue;
-		if (! player_in_bounds(i, PLAYER_SIZE, game.camera_min, game.camera_max)) continue;
+		if (! player_in_bounds(i, PLAYER_SIZE, camera.min, camera.max)) continue;
 		
 		const char *name = player_name(i, false);
 		xpl_cached_text_t *text = xpl_text_cache_get(name_cache, &name_markup, name);
 		float text_length = text_get_length(text->managed_font, name, -1);
 		xvec2 v = camera_get_draw_position(game.player[i].position);
 		xvec3 pen = {{ v.x - text_length / 2, v.y - name_markup.size, 0.f }};
-		pen.x = xclamp(pen.x, draw_area.x, draw_area.x + draw_area.width - text_length);
-		pen.y = xclamp(pen.y, draw_area.y + name_markup.size, draw_area.y + draw_area.height);
+		pen.x = xclamp(pen.x, camera.draw_area.x, camera.draw_area.x + camera.draw_area.width - text_length);
+		pen.y = xclamp(pen.y, camera.draw_area.y + name_markup.size, camera.draw_area.y + camera.draw_area.height);
 		xmat4 ortho_translate;
 		xmat4_translate(&ortho, &pen, &ortho_translate);
 		
 		xpl_text_buffer_render(text->buffer, ortho_translate.data);
 	}
 	
-	xpl_sprite_batch_begin(playfield_batch);
-	{
-		xmat4 *sprite_ortho = xpl_sprite_batch_matrix_push(playfield_batch);
-		*sprite_ortho = ortho;
-		
-		// Background stars
-		for (int i = 0; i < STAR_LAYERS; ++i) {
-			for (int j = 0; j < STARS_PER_LAYER; ++j) {
-				long px = (star_layers[i][j].x - (game.camera_center.px >> (2 * i + 2))) % STAR_LAYER_SIZE;
-				long py = (star_layers[i][j].y - (game.camera_center.py >> (2 * i + 2))) % STAR_LAYER_SIZE;
-				if (px > draw_area.x &&
-					py > draw_area.y &&
-					px < draw_area.x + draw_area.width &&
-					py < draw_area.y + draw_area.height) {
-					xvec4 color = RGBA_F((uint32_t)star_layers[i][j].z);
-					xpl_sprite_draw_transformed(star_sprite,
-												px, py, 0.f, 0.f,
-												10 / (i + 1), 10 / (i + 1),
-												1.f, 1.f,
-												0.f,
-												&color);
-				}
-			}
-		}
-		
-		// Particles
-		for (int i = 0; i < MAX_PARTICLES; ++i) {
-			if (game.particle[i].life >= 0.f) {
-				if (position_in_bounds(game.particle[i].position, game.particle[i].size, game.camera_min, game.camera_max)) {
-					xvec2 v = camera_get_draw_position(game.particle[i].position);
-					xvec2 s = xvec2_set(game.particle[i].size, game.particle[i].size);
-					xvec2 half_s = xvec2_scale(s, 0.5f);
-					v = xvec2_sub(v, half_s);
-					xpl_sprite_draw_transformed(particle_sprite,
-												v.x, v.y,
-												half_s.x, half_s.y,
-												s.x, s.y,
-												1.f, 1.f,
-												game.particle[i].orientation,
-												&game.particle[i].color);
-				}
-			}
-		}
-		
-		for (int i = 0; i < MAX_PROJECTILES; ++i) {
-			if (game.projectile[i].health) {
-				int pt = game.projectile[i].type;
-				if (position_in_bounds(game.projectile[i].position, projectile_config[pt].size, game.camera_min, game.camera_max)) {
-					xvec2 v = camera_get_draw_position(game.projectile[i].position);
-					xvec2 s = xvec2_set(projectile_config[pt].size, projectile_config[pt].size);
-					xvec2 half_s = xvec2_scale(s, 0.5f);
-					v = xvec2_sub(v, half_s);
-					xpl_sprite_draw_transformed(particle_sprite,
-												v.x, v.y,
-												half_s.x, half_s.y,
-												s.x, s.y,
-												1.f, 1.f,
-												game.projectile[i].orientation,
-												&game.projectile_local[i].color);
-				}
-			}
-		}
-		
-		for (int i = 0; i < MAX_PLAYERS; ++i) {
-			if (! game.player_connected[i]) continue;
-			if (! game.player_local[i].visible) continue;
-			
-			if (player_in_bounds(i, PLAYER_SIZE, game.camera_min, game.camera_max)) {
-				// Draw player
-				xvec2 v = camera_get_draw_position(game.player[i].position);
-				xvec2 s = xvec2_set(PLAYER_SIZE, PLAYER_SIZE);
-				xvec2 half_s = xvec2_scale(s, 0.5f);
-				v = xvec2_sub(v, half_s);
-				float rot_rad = player_rotation_rads_get(i);
-				xvec4 color = (i == 0 ? xvec4_set(0.f, 1.f, 0.f, 1.f) : xvec4_set(0.8f, 0.8f, 0.8f, 1.f));
-				xpl_sprite_draw_transformed(ship_sprite,
-											v.x, v.y,
-											half_s.x, half_s.y,
-											s.x, s.y,
-											1.f, 1.f,
-											rot_rad,
-											&color);
-				
-				if (i > 0) {
-					int coin_symbols = xclamp(1 + game.player[i].score / 250, 1, 4);
-					v.y -= (PLAYER_SIZE + 16);
-					v.x += -4 * (coin_symbols - 2);
-					for (int j = 0; j < coin_symbols; ++j) {
-						xpl_sprite_draw_colored(playfield_coin_sprite, v.x, v.y, 8, 8, coin_color);
-						v.x += 8;
-					}
-				}
-			} else if (game.indicators_on) {
-				// Draw indicator
-				long dlx = (long)game.player[i].position.px - (long)game.player[0].position.px;
-				long dly = (long)game.player[i].position.py - (long)game.player[0].position.py;
-				xvec2 d = {{ (float)dlx, (float)dly }};
-				float angle = atan2f(d.y, d.x);
-				d = xvec2_add(d, xvec2_set(draw_area.x + (draw_area.width >> 1),
-										   draw_area.y + (draw_area.height >> 1)));
-				d.x = xclamp(d.x, draw_area.x, draw_area.x + draw_area.width - INDICATOR_SIZE);
-				d.y = xclamp(d.y, draw_area.y, draw_area.y + draw_area.height - INDICATOR_SIZE);
-				xvec4 color = xvec4_set(1.f, 1.f, 0.f, 0.6f);
-				xpl_sprite_draw_transformed(indicator_sprite,
-											d.x, d.y,
-											INDICATOR_SIZE * 0.5f, INDICATOR_SIZE * 0.5f,
-											INDICATOR_SIZE, INDICATOR_SIZE,
-											1.0f, 1.0f,
-											angle,
-											&color);
-			}
-		}
-				
-		xpl_sprite_batch_matrix_pop(playfield_batch);
-	}
-	xpl_sprite_batch_end(playfield_batch);
+	sprites_playfield_render(self, &ortho);
 	
 	// Render text particles
 	for (int i = 0; i < MAX_TEXT_PARTICLES; ++i) {
 		if (game.text_particle[i].life <= 0.f) continue;
-		if (! position_in_bounds(game.text_particle[i].position, 64, game.camera_min, game.camera_max)) continue;
+		if (! position_in_bounds(game.text_particle[i].position, 64, camera.min, camera.max)) continue;
 		
 		text_particle_markup.foreground_color = game.text_particle[i].color;
 		xpl_cached_text_t *text = xpl_text_cache_get(text_particle_cache, &text_particle_markup, game.text_particle[i].text);
@@ -758,60 +546,9 @@ static void game_render_playfield(xpl_context_t *self, double time) {
 	
 	glDisable(GL_SCISSOR_TEST);
 	
-	xpl_sprite_batch_begin(ui_batch);
-	{
-		xmat4 *sprite_ortho = xpl_sprite_batch_matrix_push(ui_batch);
-		*sprite_ortho = ortho;
-		
-		// Bottom and top panels
-		xpl_sprite_draw(panel_background_sprite, 0.f, 0.f, self->size.width, draw_area.y);
-		xpl_sprite_draw(panel_background_sprite, 0.f, draw_area.y + draw_area.height, self->size.width, draw_area.y);
-
-		for (int i = 0; i < 3; ++i) {
-			xpl_sprite_draw_colored(control_key_sprites[i], 8 + (TILE_SIZE + 8) * i, 24, TILE_SIZE, TILE_SIZE,
-									game.control_indicator_on[i] ? active_color : inactive_color);
-		}
-		
-		xpl_sprite_draw_colored(ui_coin_sprite, 192, 4, 16, 16, coin_color);
-		for (int i = 0; i < 8; ++i) {
-			xpl_sprite_draw_colored(weapon_key_sprites[i], 192 + (TILE_SIZE + 8) * i, 24, TILE_SIZE, TILE_SIZE,
-									i == game.active_weapon ? active_color : inactive_color);
-		}
-		
-		int coin_symbols = xclamp(1 + game.player[0].score / 250, 1, 4);
-		for (int i = 0; i < coin_symbols; ++i) {
-			xpl_sprite_draw_colored(ui_coin_sprite, self->size.width - 16 - (coin_symbols - i) * 16, 12, 16, 16, coin_color);
-		}
-
-		// Render health
-		for (int i = 0; i < 256; i += 48) {
-			float y = 8 + 8 * (i / 48);
-			if (i <= game.player[0].health) {
-				xvec4 health_color = xvec4_mix(healthy, unhealthy, (255.f - i) / 255.f);
-				xpl_sprite_draw_colored(grid8_sprite, 512, y, 8, 8, health_color);
-			} else {
-				xpl_sprite_draw_colored(solid_sprite, 512, y, 8, 8, solid_black);
-			}
-		}
-		
-		// Render weapon cooldown
-		for (int i = 0; i < 6; ++i) {
-			float y = 8 + 8 * i;
-			if (game.fire_cooldown < ((int)1 << (8 - i))) {
-				xvec4 health_color = xvec4_mix(healthy, unhealthy, (6.f - i) / 6.f);
-				xpl_sprite_draw_colored(grid8_sprite, 176, y, 8, 8, health_color);
-			} else {
-				xpl_sprite_draw_colored(solid_sprite, 176, y, 8, 8, solid_black);
-			}
-		}
-		
-		xpl_sprite_batch_matrix_pop(ui_batch);
-	}
-	xpl_sprite_batch_end(ui_batch);
+	sprites_ui_render(self, &ortho);
 	
 	int cash = game.player[0].score;
-	const xvec4 expensive_color = RGBA_F(0xff808080);
-	const xvec4 available_color = RGBA_F(0xff00ffff);
 	// Render prices and keys
 	for (int i = 0; i < 8; ++i) {
 		int price = projectile_config[i].price;
@@ -844,8 +581,6 @@ static void game_render_playfield(xpl_context_t *self, double time) {
 	// Render cash
 	char score[20];
 	snprintf(score, 20, "%u", game.player[0].score);
-	xvec4 normal_color = RGBA_F(0xffffffff);
-	xvec4 broke_color = RGBA_F(0xff00ffff);
 	ui_markup.foreground_color = game.player[0].score ? normal_color : broke_color;
 	ui_markup.size = 24.f;
 	xpl_cached_text_t *text = xpl_text_cache_get(ui_cache, &ui_markup, score);
@@ -854,6 +589,22 @@ static void game_render_playfield(xpl_context_t *self, double time) {
 	xmat4 ortho_translate;
 	xmat4_translate(&ortho, &pen, &ortho_translate);
 	xpl_text_buffer_render(text->buffer, ortho_translate.data);
+	
+	// Render chat if it's up
+	if (chat_showing) {
+		static int chat_cursor = 0;
+		xpl_imui_context_begin(imui, self->app->execution_info, xrect_set(0, self->size.height - 80, self->size.width, 30));
+		{
+			if (chat_reset_focus) {
+				xpl_imui_context_reset_focus();
+				chat_reset_focus = false;
+				if (! glfwGetKey('T')) 	xpl_imui_control_textfield(xl("chat_message"), chat_buffer, CHAT_MAX, &chat_cursor, "", TRUE);
+			} else {
+				xpl_imui_control_textfield(xl("chat_message"), chat_buffer, CHAT_MAX, &chat_cursor, "", TRUE);
+			}
+		}
+		xpl_imui_context_end(imui);
+	}
 }
 
 static void game_reset(void) {
@@ -863,6 +614,8 @@ static void game_reset(void) {
 	memset(&game, 0, sizeof(game));
 	
 	strncpy(game.player_id[0].name, name, NAME_SIZE);
+	
+	chat_showing = false;
 }
 
 // ------------------------------------------------------------------------------
@@ -930,48 +683,63 @@ static void packet_handle(uint16_t client_id, packet_t *packet) {
 			packet_handle_damage(client_id, packet);
 			break;
 			
+		case pt_chat:
+			packet_handle_chat(client_id, packet);
+			break;
+			
 		default:
 			break;
 	}
 }
 
+static void packet_handle_chat(uint16_t client_id, packet_t *packet) {
+	packet->chat[63] = '\0';
+	LOG_DEBUG("Got chat packet: %u %s", client_id, packet->chat);
+	log_add_text(xl("chat_format"),
+				 player_name(player_with_client_id_get(client_id, false, NULL), false),
+				 packet->chat);
+}
+
 static void packet_handle_damage(uint16_t client_id, packet_t *packet) {
 	char damage[8];
 	snprintf(damage, 8, "%d", (int)packet->damage.amount);
+	
+	int origin = player_with_client_id_get(packet->damage.player_id, false, NULL);
 	int target = player_with_client_id_get(client_id, false, NULL);
+	int projectile = projectile_with_pid_get(packet->damage.projectile_id, -1);
+
 	xvec2 velocity = xpl_rand_xvec2(-64.f, 64.f);
 	xvec4 color = RGBA_F(0x80ffc0a0);
 	text_particle_add(game.player[target].position, velocity, damage, color, 2.0);
 	
-	int origin = player_with_client_id_get(packet->damage.player_id, false, NULL);
-	int projectile = projectile_with_pid_get(packet->damage.projectile_id, -1);
-
+	
 	if (packet->damage.flags & DAMAGE_FLAG_REPAIRS) {
-		log_add_text("%s repair%s for %d",
+		log_add_text("%s repaired for %d",
 					 player_name(origin, false),
-					 origin == 0 ? "" : "s",
 					 packet->damage.amount);
 		
 	} else if (projectile >= 0 && game.projectile[projectile].health > 0) {
-		log_add_text("%s take%s %d damage from a %s",
+		char weapon_name_key[20];
+		snprintf(weapon_name_key, 20, "weapon_name_%d", game.projectile[projectile].type);
+		
+		log_add_text(xl("weapon_damage_format"),
 					 player_name(origin, false),
-					 origin == 0 ? "" : "s",
+					 random_word("damaged"),
 					 packet->damage.amount,
-					 weapon_names[game.projectile[projectile].type]);
+					 player_name(target, origin == target ? true : false),
+					 xl(weapon_name_key));
 
 		
 	} else {
-		log_add_text("%s take%s %d damage from a misdirected explosion",
+		log_add_text("%s took %d damage from a misdirected explosion",
 					 player_name(origin, false),
-					 origin == 0 ? "" : "s",
-					 packet->damage.amount,
-					 weapon_names[game.projectile[projectile].type]);
+					 packet->damage.amount);
 	}
 	
 	if (packet->damage.flags & DAMAGE_FLAG_EXPLODES) {
 		player_add_explode_effect(target);
 		game.player_local[target].visible = false;
-		log_add_text("%s %s %s", player_name(origin, false), random_word(destroyed_words), player_name(target, true));
+		log_add_text("%s %s %s", player_name(origin, false), random_word("destroyed"), player_name(target, true));
 	}
 	
 	// Destroys projectile, including mines.
@@ -1145,6 +913,14 @@ static void packet_send(packet_t *packet) {
 	}
 }
 
+static void packet_send_chat(void) {
+	packet_t packet;
+	memset(&packet, 0, sizeof(packet));
+	packet.type = pt_chat;
+	strncpy(packet.chat, chat_buffer, CHAT_MAX);
+	packet_send(&packet);
+}
+
 static void packet_send_damage(uint16_t origin, uint16_t projectile_id, uint8_t damage, uint8_t flags) {
 	assert(origin);
 	
@@ -1281,11 +1057,6 @@ static xvec2 player_get_direction_vector(int i) {
 	return r;
 }
 
-static bool player_in_bounds(int i, int fudge, position_t min, position_t max) {
-	position_t player_position = game.player[i].position;
-	return position_in_bounds(player_position, fudge, min, max);
-}
-
 static void player_init(void) {
 	game.player[0].position.px = (UINT32_MAX / 2) + SPAWN_BOX * xpl_frand() - (SPAWN_BOX / 2);
 	game.player[0].position.py = (UINT32_MAX / 2) + SPAWN_BOX * xpl_frand() - (SPAWN_BOX / 2);
@@ -1300,6 +1071,13 @@ static void player_init(void) {
 #endif
 }
 
+static void player_local_connect(void) {
+	scanline_strength = DEFAULT_SCANLINE;
+	game.player_id[0].nonce = xpl_irand_range(0, UINT16_MAX);
+	game.player_connected[0] = true;
+	network.hello_timeout = 0.f;
+	network.receive_timeout = RECEIVE_TIMEOUT;
+}
 
 static void player_local_disconnect(void) {
 	game.player_connected[0] = false;
@@ -1310,8 +1088,42 @@ static bool player_local_is_connected(void) {
 	return game.player_connected[0] && game.player_id[0].client_id;
 }
 
+static void player_local_update_chat(void) {
+	if (! chat_showing) {
+		if (glfwGetKey('T')) {
+			chat_buffer[0] = '\0';
+			chat_showing = true;
+			chat_close_wait = false;
+			chat_reset_focus = true;
+		}
+	} else {
+		
+		bool key_down = false;
+		if (glfwGetKey(GLFW_KEY_ESC)) {
+			chat_close_wait = true;
+			key_down = true;
+		}
+		
+		if (glfwGetKey(GLFW_KEY_ENTER)) {
+			if (strlen(chat_buffer)) {
+				packet_send_chat();
+				chat_buffer[0] = '\0';
+			}
+			chat_close_wait = true;
+			key_down = true;
+		}
+
+		if (chat_close_wait && !key_down) {
+			chat_showing = false;
+			chat_close_wait = false;
+		}
+	}
+}
+
 static void player_local_update_firing(bool jiffy_elapsed) {
 	if (jiffy_elapsed && game.fire_cooldown > 0) --game.fire_cooldown;
+	
+	if (chat_showing) return;
 	
 	if (game.fire_cooldown == 0 && key_down(fire)) {
 		int w = game.active_weapon;
@@ -1324,6 +1136,8 @@ static void player_local_update_firing(bool jiffy_elapsed) {
 }
 
 static void player_local_update_rotation(double time) {
+	if (chat_showing) return;
+	
 	if (key_down(left)) {
 		game.player[0].orientation += TORQUE * time;
 		game.control_indicator_on[1] = true;
@@ -1342,6 +1156,8 @@ static void player_local_update_rotation(double time) {
 static void player_local_update_thrust(double time) {
 	game.player[0].is_thrust = false;
 	game.control_indicator_on[0] = false;
+	
+	if (chat_showing) return;
 	if (! key_down(up)) return;
 	
 	game.player[0].is_thrust = true;
@@ -1359,9 +1175,12 @@ static void player_local_update_thrust(double time) {
 static void player_local_update_weapon(void) {
 	const int weapon_keys[] = { '1', '2', '3', '4', '5', '6', '7', '8' };
 	const int keycount = sizeof(weapon_keys) / sizeof(weapon_keys[0]);
-	for (int i = 0; i < keycount; ++i) {
-		if (glfwGetKey(weapon_keys[i])) {
-			game.active_weapon = i;
+	
+	if (! chat_showing) {
+		for (int i = 0; i < keycount; ++i) {
+			if (glfwGetKey(weapon_keys[i])) {
+				game.active_weapon = i;
+			}
 		}
 	}
 	
@@ -1376,13 +1195,6 @@ static const char *player_name(int i, bool as_object) {
 	}
 	if (strlen(game.player_id[i].name)) return game.player_id[i].name;
 	return "A Player";
-}
-
-static float player_rotation_rads_get(int i) {
-	float orientation = game.player[i].orientation;
-	orientation /= (float)UINT8_MAX;
-	orientation *= M_2PI;
-	return orientation;
 }
 
 
@@ -1438,18 +1250,11 @@ static int player_with_client_id_get(uint16_t client_id, bool allow_allocate, bo
 }
 
 // ------------------------------------------------------------------------------
-
-static bool position_in_bounds(position_t position, int fudge, position_t min, position_t max) {
-	long x = position.px;
-	long y = position.py;
-	
-	if (x + fudge < min.px) return false;
-	if (y + fudge < min.py) return false;
-	
-	if (x - fudge > max.px) return false;
-	if (y - fudge > max.py) return false;
-	
-	return true;
+static void prefs_save_connect(void) {
+	prefs_t prefs = prefs_get();
+	strncpy(prefs.name, game.player_id[0].name, NAME_SIZE);
+	strncpy(prefs.server, network.server_host, SERVER_SIZE);
+	prefs_set(prefs);
 }
 
 // ------------------------------------------------------------------------------
@@ -1686,17 +1491,6 @@ static void projectile_update(int i, bool jiffy_elapsed) {
 
 // ------------------------------------------------------------------------------
 
-static const char *random_word(const char *word_array[]) {
-	int count = 0;
-	while (word_array[count]) {
-		count++;
-	}
-	int select = xpl_irand_range(0, count);
-	return word_array[select];
-}
-
-// ------------------------------------------------------------------------------
-
 
 static void server_resolve_addr(void) {
 	struct addrinfo hints, *res;
@@ -1798,6 +1592,11 @@ static void text_particle_update(int i, double time) {
 
 // ------------------------------------------------------------------------------
 
+static void ui_error_packet_set(int eno) {
+	ui_error_set("Invalid packet (%d).", eno);
+	player_local_disconnect();
+}
+
 static void ui_error_set(const char *msg, ...) {
 	va_list args;
 	va_start(args, msg);
@@ -1809,11 +1608,20 @@ static void ui_error_set(const char *msg, ...) {
 	network.error_timeout = ERROR_TIMEOUT;
 }
 
-
-static void ui_error_packet_set(int eno) {
-	ui_error_set("Invalid packet (%d).", eno);
-	player_local_disconnect();
+static void ui_error_show(xpl_context_t *self) {
+	static float scroll = 0.f;
+	ui_window_start(self, xvec2_set(400, 120), xl("error"), &scroll);
+	{
+		xpl_imui_control_label(network.error);
+		xpl_imui_separator_line();
+		if (xpl_imui_control_button(xl("ok"), XPL_IMUI_BUTTON_CANCEL | XPL_IMUI_BUTTON_DEFAULT,
+									network.error_timeout + 2.0f < ERROR_TIMEOUT)) {
+			network.error_timeout = 0.0f;
+		}
+	}
+	ui_window_end();
 }
+
 
 static int name_cursor = 0, server_host_cursor = 0, server_port_cursor = 0;
 static void ui_pilot_config_show(xpl_context_t *self) {
@@ -1834,30 +1642,106 @@ static void ui_pilot_config_show(xpl_context_t *self) {
 									strlen(game.player_id[0].name) >= 3 &&
 									strlen(network.server_host) >= 3 &&
 									network.server_port > 128)) {
-			game.player_id[0].nonce = xpl_irand_range(0, UINT16_MAX);
-			game.player_connected[0] = true;
-			network.hello_timeout = 0.f;
-			network.receive_timeout = RECEIVE_TIMEOUT;
+			prefs_save_connect();
+			prefs_t prefs = prefs_get();
+			if (prefs.skip_tutorial) {
+				player_local_connect();
+			} else {
+				ui_tutorial_page = 1;
+			}
 		}
 		if (xpl_imui_control_button(xl("exit"), XPL_IMUI_BUTTON_CANCEL, TRUE)) exit(0);
 	}
 	ui_window_end();
 }
 
-static void ui_error_show(xpl_context_t *self) {
-	static float scroll = 0.f;
-	ui_window_start(self, xvec2_set(400, 120), xl("error"), &scroll);
-	{
-		xpl_imui_control_label(network.error);
-		xpl_imui_separator_line();
-		if (xpl_imui_control_button(xl("ok"), XPL_IMUI_BUTTON_CANCEL | XPL_IMUI_BUTTON_DEFAULT,
-									network.error_timeout + 2.0f < ERROR_TIMEOUT)) {
-			network.error_timeout = 0.0f;
-		}
-	}
-	ui_window_end();
+static void ui_tutorial_highlight(xpl_context_t *self, xrect bmp_area, xrect area, double time) {
+	static double accum = 0.0;
+	accum += time;
+	float amount = cosf(accum * 0.5);
+	xvec4 color = xvec4_mix(highlight_color1, highlight_color2, amount);
+	xpl_sprite_draw_colored(sprites.solid_sprite, area.x + bmp_area.x, bmp_area.height - (area.y + bmp_area.y), area.width, area.height, color);
 }
 
+static void ui_tutorial_show(xpl_context_t *self, double time) {
+	scanline_strength = 0.0f;
+	static int skip_tutorial = FALSE;
+	int next_clicked;
+	xmat4 ortho;
+	xmat4_ortho(0.f, self->size.width, 0.f, self->size.height, -1.f, 1.f, &ortho);
+	xpl_imui_context_begin(imui, self->app->execution_info, xrect_set(0.f, 0.f, self->size.width, self->size.height));
+	{
+		xpl_imui_context_area_set(xrect_set(4, 32, 320, 32));
+		if (xpl_imui_control_check(xl("tutorial_skip"), skip_tutorial, TRUE)) skip_tutorial = !skip_tutorial;
+		xpl_imui_context_area_set(xrect_set(self->size.width - 132, 32, 128, 32));
+		next_clicked = xpl_imui_control_button(skip_tutorial ? xl("tutorial_skip") : xl("tutorial_next"), XPL_IMUI_BUTTON_CANCEL | XPL_IMUI_BUTTON_DEFAULT, TRUE);
+	}
+	xpl_imui_context_end(imui);
+
+	xpl_sprite_batch_begin(sprites.ui_batch);
+	{
+		xmat4 *mat = xpl_sprite_batch_matrix_push(sprites.ui_batch);
+		*mat = ortho;
+		
+		xrect rect = xrect_set(0.f, 0.f, self->size.width, self->size.height);
+		rect = xrect_contract_to(rect, 714, 536);
+		rect.y = 0;
+		xpl_sprite_draw(sprites.ui_tutorial_pages[ui_tutorial_page - 1], rect.x, rect.y, rect.width, rect.height);
+		
+		switch (ui_tutorial_page) {
+			case 1:
+				break;
+				
+			case 2:
+				ui_tutorial_highlight(self, rect, xrect_set(61, 438, 121, 41), time);
+				ui_tutorial_highlight(self, rect, xrect_set(330, 265, 51, 42), time);
+				
+			default:
+				break;
+		}
+		
+		xpl_sprite_batch_matrix_pop(sprites.ui_batch);
+	}
+	xpl_sprite_batch_end(sprites.ui_batch);
+	
+	xvec2 pen = {{ 4.f, 64.f }};
+	if (ui_tutorial_page == 1) {
+		xpl_text_buffer_clear(tutorial_buffer);
+		wchar_t buffer[1024];
+		char key_name[64];
+		snprintf(key_name, 64, "tutorial_%d", ui_tutorial_page - 1);
+		mbstowcs(buffer, xl(key_name), 1024);
+		xpl_text_buffer_add_text(tutorial_buffer, &pen, &tutorial_markup, buffer, 0);
+		xpl_text_buffer_commit(tutorial_buffer);
+	}
+	
+	xpl_text_buffer_render(tutorial_buffer, ortho.data);
+	
+	if (next_clicked) {
+		if (skip_tutorial) {
+			ui_tutorial_page = TUTORIAL_PAGES + 1;
+		} else {
+			++ui_tutorial_page;
+		}
+	}
+
+	if (ui_tutorial_page > TUTORIAL_PAGES) {
+		prefs_t prefs = prefs_get();
+		prefs.skip_tutorial = true;
+		prefs_set(prefs);
+		ui_tutorial_page = 0;
+		player_local_connect();
+	} else {
+		// Set up text for next page
+		xpl_text_buffer_clear(tutorial_buffer);
+		wchar_t buffer[1024];
+		char key_name[64];
+		snprintf(key_name, 64, "tutorial_%d", ui_tutorial_page - 1);
+		mbstowcs(buffer, xl(key_name), 1024);
+		xpl_text_buffer_add_text(tutorial_buffer, &pen, &tutorial_markup, buffer, 0);
+		xpl_text_buffer_commit(tutorial_buffer);
+	}
+}
 
 static void ui_window_end(void) {
 	xpl_imui_control_scroll_area_end();

@@ -423,7 +423,7 @@ struct xpl_sprite *xpl_sprite_new(xpl_sprite_batch_t *batch, const char *resourc
 		char resource_path[PATH_MAX];
 		snprintf(resource_path, PATH_MAX, "bitmaps/%s", resource);
 		xpl_texture_t *texture = xpl_texture_new();
-		assert(xpl_texture_load(texture, resource_path));
+		assert(xpl_texture_load(texture, resource_path, false));
 		entry = xpl_alloc_type(struct texture_entry);
 		strncpy(entry->resource, resource, PATH_MAX);
 		entry->texture = texture;

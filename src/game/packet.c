@@ -59,6 +59,10 @@ size_t packet_encode(packet_t *packet, uint16_t client_id, uint8_t *buffer) {
 			encode(packet->damage.flags, uint8_t, p);
 			break;
 			
+		case pt_chat:
+			memmove(p, packet->chat, CHAT_MAX);
+			p += CHAT_MAX;
+			
 		default:
 			break;
 	}
@@ -109,6 +113,10 @@ bool packet_decode(packet_t *packet, uint16_t *client_source, uint8_t *buffer) {
 			decode(p, uint16_t, packet->damage.projectile_id);
 			decode(p, uint8_t, packet->damage.amount);
 			decode(p, uint8_t, packet->damage.flags);
+			break;
+			
+		case pt_chat:
+			memmove(packet->chat, p, CHAT_MAX);
 			break;
 			
 		default:

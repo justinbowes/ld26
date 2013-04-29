@@ -10,6 +10,8 @@
 #define ld26_app_settings_h
 
 // Don't quote this.
-#define APPLICATION_NAME_PATH ld26
+#define APPLICATION_NAME_PATH UltraPew
+
+#define XPL_WINDOW_DEFAULT_FRAMELIMIT 1
 
 #endif

@@ -360,7 +360,7 @@ XPLINLINE int control_active_keyboard(control_id id) {
 				LOG_DEBUG("Control %ud is ending the retreat, active control is %ud", (unsigned int)id, (unsigned int)g_context->controls.keyboard_active_id);
 			}
 		}
-	}
+	} 
 	return g_context->controls.keyboard_active_id == id;
 }
 
@@ -728,6 +728,12 @@ void xpl_imui_context_area_set(xrect context_area) {
 void xpl_imui_context_area_restore() {
 	assert(context_valid());
 	g_context->controls.widget_area = g_context->controls.widget_area_mark;
+}
+
+void xpl_imui_context_reset_focus(void) {
+	assert(context_valid());
+	g_context->controls.keyboard_active_id = CONTROL_NONE;
+	g_context->controls.keyboard_active_to_be_id = 1;
 }
 
 void xpl_imui_context_end(xpl_imui_context_t *context) {

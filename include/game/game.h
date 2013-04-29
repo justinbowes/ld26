@@ -14,6 +14,7 @@
 
 #include "xpl_vec2.h"
 #include "xpl_vec4.h"
+#include "xpl_irect.h"
 
 #define MAX_PLAYERS		128
 #define MAX_PROJECTILES	4096
@@ -23,6 +24,11 @@
 #define NAME_SIZE		16
 
 #define VELOCITY_SCALE	128.0f
+
+#define INDICATOR_SIZE	8.f
+#define PLAYER_SIZE		16.f
+
+#define TUTORIAL_PAGES	5
 
 typedef struct position {
 	uint32_t px;
@@ -121,10 +127,6 @@ typedef struct game {
 	int			fire_cooldown;
 	float		respawn_cooldown;
 	
-	position_t	camera_center;
-	position_t	camera_min;
-	position_t	camera_max;
-	
 	uint8_t		indicators_cooldown;
 	bool		indicators_on;
 	
@@ -137,9 +139,13 @@ typedef struct game {
 	
 } game_t;
 
+extern game_t							game;
+
+#define SERVER_SIZE		128
+
 typedef struct network {
 	
-	char		server_host[128];
+	char		server_host[SERVER_SIZE];
 	uint16_t	server_port;
 	float		hello_timeout;
 	
@@ -151,5 +157,6 @@ typedef struct network {
 	
 } network_t;
 
+extern network_t						network;
 
 #endif

@@ -50,6 +50,7 @@ void xpl_imui_context_area_mark(void);
 void xpl_imui_context_area_restore(void);
 xrect xpl_imui_context_area_get(void);
 void xpl_imui_context_area_set(xrect area);
+void xpl_imui_context_reset_focus(void);
 
 
 int xpl_imui_control_scroll_area_begin(const char *name, xvec2 area, float *scroll);

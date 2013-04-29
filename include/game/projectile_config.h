@@ -48,17 +48,6 @@ typedef enum projectile_type {
 
 #define EXPL_VIS_FACTOR (128.0 / VELOCITY_SCALE)
 
-static const char *weapon_names[] = {
-	"pew laser",
-	"heavy pew",
-	"missile",
-	"heavy missile",
-	"nuke",
-	"mine",
-	"black hole",
-	"repair pack"
-};
-
 static const projectile_config_t projectile_config[] = {
 	{ // 0: pew
 		20,

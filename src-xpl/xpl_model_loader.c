@@ -333,7 +333,7 @@ static void wf_add_material_lib(xpl_model_t *model, const char *resource) {
 			char tex_resource_name[PATH_MAX];
 			xpl_resolve_resource(tex_resource_name, filename, PATH_MAX);
 			current_material->texture = xpl_texture_new();
-			xpl_texture_load(current_material->texture, tex_resource_name);
+			xpl_texture_load(current_material->texture, tex_resource_name, true);
 
 		} else {
 			LOG_WARN("Unknown command '%s' in material file %s at line %i:\n\t%s",

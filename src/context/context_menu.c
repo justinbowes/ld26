@@ -22,6 +22,8 @@
 
 #include "context/context_menu.h"
 
+#include "game/prefs.h"
+
 typedef void(* menu_func)(xpl_app_t *app, xrect area);
 
 #define MENU_STACK_MAX  64
@@ -120,14 +122,16 @@ static void menu_configure_graphics(xpl_app_t *app, xrect area) {
     
     int window_clicked;
     int save_clicked;
+	int reset_clicked;
     int back_clicked;
     
     xpl_imui_context_begin(imui_context, app->execution_info, area);
     {
-        xpl_imui_control_scroll_area_begin(xl("config_graphics_title"), area.size, &resolution_scroll);
+        xpl_imui_control_scroll_area_begin(xl("config_title"), area.size, &resolution_scroll);
         {
             xpl_imui_indent_custom(16.0f);
             {
+				reset_clicked = xpl_imui_control_button(xl("config_reset"), 0, TRUE);
 				xpl_imui_control_label(xl("config_graphics_heading"));
                 xpl_imui_separator_line();
                 window_clicked = xpl_imui_control_check(xl("config_graphics_window"), !app_config.is_fullscreen, TRUE);
@@ -161,6 +165,10 @@ static void menu_configure_graphics(xpl_app_t *app, xrect area) {
     }
     xpl_imui_context_end(imui_context);
     
+	if (reset_clicked) {
+		prefs_reset();
+	}
+	
     if (window_clicked) {
         app_config.is_fullscreen = !app_config.is_fullscreen;
         video_config_changed = true;
