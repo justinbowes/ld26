@@ -116,7 +116,7 @@ static void populate_video_modes() {
 }
 
 static void menu_configure_graphics(xpl_app_t *app, xrect area) {
-    area = xrect_contract_to(area, 640, 440);
+    area = xrect_contract_to(area, 600, 440);
     
     int window_clicked;
     int save_clicked;
@@ -128,6 +128,8 @@ static void menu_configure_graphics(xpl_app_t *app, xrect area) {
         {
             xpl_imui_indent_custom(16.0f);
             {
+				xpl_imui_control_label(xl("config_graphics_heading"));
+                xpl_imui_separator_line();
                 window_clicked = xpl_imui_control_check(xl("config_graphics_window"), !app_config.is_fullscreen, TRUE);
                 if (xpl_imui_control_collapse(xl("config_graphics_resolution"), "",
                                               &resolution_is_expanded, supported_video_mode_count > 0)) {
@@ -179,6 +181,7 @@ static void menu_configure_graphics(xpl_app_t *app, xrect area) {
     
 }
 
+/*
 static void menu_configure(xpl_app_t *app, xrect area) {
     area = xrect_contract_to(area, 640, 160);
     
@@ -212,12 +215,12 @@ static void menu_configure(xpl_app_t *app, xrect area) {
         menu_pop();
     }
 }
+ */
 
 static void menu_main(xpl_app_t *app, xrect area) {
-    area = xrect_contract_to(area, 640, 240);
+    area = xrect_contract_to(area, 600, 210);
     
     int new_clicked;
-    int load_clicked;
     int configure_clicked;
     int exit_clicked;
     
@@ -231,7 +234,6 @@ static void menu_main(xpl_app_t *app, xrect area) {
             {
                 xpl_imui_separator_line();
                 new_clicked = xpl_imui_control_button(xl("main_new"), 0, TRUE);
-                load_clicked = xpl_imui_control_button(xl("main_load"), 0, FALSE);
                 xpl_imui_separator();
                 configure_clicked = xpl_imui_control_button(xl("main_configure"), 0, TRUE);
                 xpl_imui_separator_line();
@@ -248,7 +250,7 @@ static void menu_main(xpl_app_t *app, xrect area) {
     }
     
     if (configure_clicked) {
-        menu_push(ms_configure);
+        menu_push(ms_configure_graphics);
     }
     
     if (exit_clicked) {
@@ -303,10 +305,7 @@ static void render(xpl_context_t *self, double time, void *vdata) {
     menu_func mf;
     
     switch (menu_stack[menu_index]) {
-        case ms_configure:
-            mf = menu_configure;
-            break;
-            
+           
         case ms_configure_graphics:
             mf = menu_configure_graphics;
             break;

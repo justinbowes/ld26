@@ -10,6 +10,7 @@
 #define ld26_projectile_config_h
 
 #include "xpl_color.h"
+#include "game/game.h"
 
 typedef struct projectile_config {
 	uint8_t	initial_health;
@@ -22,6 +23,7 @@ typedef struct projectile_config {
 	float	trail_variance;
 	float	trail_life;
 	uint8_t	trail_timeout;
+	float	explode_radius;
 	int		explode_particle_count;
 	int		explode_particle_size;
 	uint32_t explode_particle_color;
@@ -30,12 +32,37 @@ typedef struct projectile_config {
 	float	explode_particle_velocity;
 	int		fire_cooldown;
 	int		price;
+	bool	can_hit_self;
 } projectile_config_t;
+
+typedef enum projectile_type {
+	pt_pew			= 0,
+	pt_heavypew		= 1,
+	pt_missile		= 2,
+	pt_heavymissile = 3,
+	pt_nuke			= 4,
+	pt_mine			= 5,
+	pt_blackhole	= 6,
+	pt_repair		= 7
+} projectile_type_t;
+
+#define EXPL_VIS_FACTOR (128.0 / VELOCITY_SCALE)
+
+static const char *weapon_names[] = {
+	"pew laser",
+	"heavy pew",
+	"missile",
+	"heavy missile",
+	"nuke",
+	"mine",
+	"black hole",
+	"repair pack"
+};
 
 static const projectile_config_t projectile_config[] = {
 	{ // 0: pew
 		20,
-		256,
+		320,
 		3,
 		RGBA(0xff, 0x00, 0x00, 0xff),
 		0.1f,
@@ -46,21 +73,23 @@ static const projectile_config_t projectile_config[] = {
 		0.4f,
 		5,
 		
+		0.f,
 		100,
 		2,
 		RGBA(0xff, 0x00, 0x00, 0xff),
 		0.1f,
 		0.5f,
 		100.f,
-		20,
 		
-		-1
+		20,
+		-1,
+		false
 	},
 	{ // 1: heavy pew
 		30,
 		256,
 		4,
-		RGBA(0xff, 0x00, 0x00, 0xff),
+		RGBA(0xff, 0x00, 0xff, 0xff),
 		0.1f,
 		
 		2,
@@ -69,18 +98,20 @@ static const projectile_config_t projectile_config[] = {
 		0.4f,
 		5,
 		
+		0.f,
 		150,
 		3,
 		RGBA(0xff, 0x00, 0x00, 0xff),
 		0.1f,
 		0.5f,
 		100.f,
-		25,
 		
-		2
+		25,
+		2,
+		false,
 	},
 	{ // 2: missile
-		80,
+		45,
 		80,
 		4,
 		RGBA(0xc0, 0xc0, 0xc0, 0xff),
@@ -92,18 +123,20 @@ static const projectile_config_t projectile_config[] = {
 		1.0f,
 		5,
 		
+		16.f,
 		100,
 		4,
 		RGBA(0xff, 0xff, 0x30, 0xc0),
 		0.1f,
-		0.8f,
-		150.f,
-		50,
+		0.4f,
+		16.f / 0.4f * EXPL_VIS_FACTOR,
 		
-		5
+		30,
+		5,
+		true
 	},
 	{ // 3: heavy missile
-		120,
+		90,
 		60,
 		4,
 		RGBA(0xc0, 0xc0, 0xc0, 0xff),
@@ -115,15 +148,17 @@ static const projectile_config_t projectile_config[] = {
 		1.0f,
 		5,
 		
+		50.f,
 		100,
 		4,
 		RGBA(0xff, 0xff, 0x30, 0xc0),
 		0.1f,
 		1.2f,
-		150.f,
-		150,
+		50.f / 1.2f * EXPL_VIS_FACTOR,
 		
-		10
+		60,
+		10,
+		true
 	},
 	{ // 4: nuke
 		255,
@@ -138,61 +173,67 @@ static const projectile_config_t projectile_config[] = {
 		1.0f,
 		10,
 		
+		400.f,
 		500,
 		4,
 		RGBA(0xff, 0xff, 0x30, 0xc0),
 		0.1f,
 		5.0f,
-		150.f,
-		180,
+		400.f / 5.f * EXPL_VIS_FACTOR,
 		
-		250
+		180,
+		250,
+		true
 	},
 	{ // 5: mine
-		200,
+		90,
 		0,
 		6,
 		RGBA(0xc0, 0xc0, 0xc0, 0xff),
 		0.0f,
 		
 		0,
-		RGBA(0xff, 0xff, 0x30, 0xc0),
-		0.f,
+		RGBA(0xff, 0x30, 0x30, 0xff),
+		0.4f,
 		0.f,
 		255,
 		
-		400,
+		50.f,
+		200,
 		4,
 		RGBA(0xff, 0xff, 0x30, 0xc0),
 		0.1f,
-		5.0f,
-		150.f,
-		180,
+		1.2f,
+		50.f / 1.2f * EXPL_VIS_FACTOR,
 		
-		10
+		30,
+		10,
+		true
 	},
 	{ // 6: black hole
 		120,
-		32,
+		-4,
 		16,
-		RGBA(0x00, 0x00, 0x00, 0xff),
+		RGBA(0xff, 0x70, 0xff, 0xff),
 		0.0f,
 		
 		0,
-		RGBA(0xff, 0xff, 0x30, 0xc0),
+		RGBA(0x40, 0x20, 0x40, 0xff),
 		0.f,
 		0.f,
 		255,
 		
+		512.f,
 		400,
 		4,
 		RGBA(0xff, 0x70, 0xff, 0xff),
 		0.1f,
 		5.0f,
-		150.f,
-		180,
+		512.f / 5.0f * EXPL_VIS_FACTOR,
 		
-		500
+		60,
+		500,
+		true
 	},
 	{ // 7: repair
 		128,
@@ -207,15 +248,17 @@ static const projectile_config_t projectile_config[] = {
 		0.f,
 		255,
 		
+		0.f,
 		100,
 		2,
 		RGBA(0x00, 0xff, 0x00, 0xff),
 		0.1f,
 		1.0f,
 		120.f,
-		360,
 		
-		250
+		360,
+		250,
+		true
 	},
 };
 

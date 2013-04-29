@@ -13,8 +13,6 @@
 
 typedef enum menu_select {
     ms_main = 0,
-    ms_load,
-    ms_configure,
     ms_configure_graphics,
     ms_game_start,
     ms_exit

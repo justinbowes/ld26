@@ -56,7 +56,7 @@ size_t packet_encode(packet_t *packet, uint16_t client_id, uint8_t *buffer) {
 			encode(packet->damage.player_id, uint16_t, p);
 			encode(packet->damage.projectile_id, uint16_t, p);
 			encode(packet->damage.amount, uint8_t, p);
-			encode(packet->damage.explodes, bool, p);
+			encode(packet->damage.flags, uint8_t, p);
 			break;
 			
 		default:
@@ -108,7 +108,7 @@ bool packet_decode(packet_t *packet, uint16_t *client_source, uint8_t *buffer) {
 			decode(p, uint16_t, packet->damage.player_id);
 			decode(p, uint16_t, packet->damage.projectile_id);
 			decode(p, uint8_t, packet->damage.amount);
-			decode(p, bool, packet->damage.explodes);
+			decode(p, uint8_t, packet->damage.flags);
 			break;
 			
 		default:

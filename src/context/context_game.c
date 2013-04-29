@@ -61,8 +61,6 @@ typedef struct log {
 
 #define THRUST			0.8f
 #define TORQUE			192.0f
-#define VELOCITY_SCALE	128.0f
-#define POSITION_SCALE	16.0f
 #define INITIAL_HEALTH	255
 
 #define INDICATOR_SIZE	8.f
@@ -181,6 +179,7 @@ static void particle_add(position_t position, xvec2 velocity, xvec4 color, int s
 static int particle_find_new(void);
 static void particle_update(int i, double time);
 
+static void player_add_damage_particle(int i);
 static void player_add_thrust_particle(int i);
 static void player_add_explode_effect(int i);
 static xvec2 player_calculate_oriented_thrust(int i);
@@ -193,7 +192,7 @@ static void player_local_update_firing(bool jiffy_elapsed);
 static void player_local_update_rotation(double time);
 static void player_local_update_thrust(double time);
 static void player_local_update_weapon(void);
-static const char *player_name(int i);
+static const char *player_name(int i, bool as_object);
 static float player_rotation_rads_get(int i);
 static void player_update_position(int i);
 static int player_with_client_id_get(uint16_t client_id, bool allow_allocate, bool *was_new_player);
@@ -202,8 +201,10 @@ static xvec2 player_v2velocity_get(int i);
 static bool position_in_bounds(position_t position, int fudge, position_t min, position_t max);
 
 static void projectile_add(void);
-static int projectile_with_pid_get(uint16_t pid, int allocate_type);
+static void projectile_explode_effect(int pi, int target);
+static bool projectile_type_is_mine(int type);
 static void projectile_update(int i, bool jiffy_elapsed);
+static int projectile_with_pid_get(uint16_t pid, int allocate_type);
 
 static const char *random_word(const char *word_array[]);
 
@@ -369,6 +370,7 @@ static void game_engine(xpl_context_t *self, double time, void *data) {
 			player_local_update_thrust(time);
 			player_local_update_rotation(time);
 			player_local_update_firing(jiffy_elapsed);
+			player_local_update_weapon();
 		}
 		
 		for (int i = 0; i < MAX_PROJECTILES; ++i) {
@@ -405,6 +407,13 @@ static void game_engine(xpl_context_t *self, double time, void *data) {
 		camera_calculate_center(draw_area, &game.camera_center, nudge_x, nudge_y, &game.camera_min, &game.camera_max);
 		
 		for (int i = 0; i < MAX_PLAYERS; ++i) {
+			if (game.player[i].health < 255 && game.player[i].health > 0) {
+				float frac = game.player[i].health / 255.f;
+				if (xpl_frand() > frac) {
+					const float frequency = 50.f / 60.f;
+					if (xpl_frand() > frequency) player_add_damage_particle(i);
+				}
+			}
 			if (game.player[i].is_thrust && position_in_bounds(game.player[i].position, 500, game.camera_min, game.camera_max)) {
 				player_add_thrust_particle(i);
 			}
@@ -435,8 +444,8 @@ static void *game_init(xpl_context_t *self) {
 	sock = udp_create_endpoint(0);
 	game_reset();
 	
+	strncpy(network.server_host, "gs.ultrapew.com", 128);
 #ifdef DEBUG
-	strncpy(network.server_host, "localhost", 128);
 	strncpy(game.player_id[0].name, "Ken", NAME_SIZE);
 #endif
 	network.server_port = 3000;
@@ -579,7 +588,7 @@ static void game_render_playfield(xpl_context_t *self, double time) {
 		if (! game.player_local[i].visible) continue;
 		if (! player_in_bounds(i, PLAYER_SIZE, game.camera_min, game.camera_max)) continue;
 		
-		const char *name = player_name(i);
+		const char *name = player_name(i, false);
 		xpl_cached_text_t *text = xpl_text_cache_get(name_cache, &name_markup, name);
 		float text_length = text_get_length(text->managed_font, name, -1);
 		xvec2 v = camera_get_draw_position(game.player[i].position);
@@ -858,26 +867,35 @@ static void packet_handle_damage(uint16_t client_id, packet_t *packet) {
 	int origin = player_with_client_id_get(packet->damage.player_id, false, NULL);
 	int projectile = projectile_with_pid_get(packet->damage.projectile_id, -1);
 
-	if (projectile >= 0) {
-		LOG_DEBUG("Projectile %d hit", projectile);
-		game.projectile[projectile].health = 0;
-		int pt = game.projectile[projectile].type;
-		for (int i = 0; i < projectile_config[pt].explode_particle_count; ++i) {
-			float vel = projectile_config[pt].explode_particle_velocity;
-			particle_add(game.player[target].position, xpl_rand_xvec2(-vel, vel),
-						 color_variant(projectile_config[pt].explode_particle_color, projectile_config[pt].explode_particle_color_variance),
-						 projectile_config[pt].explode_particle_size,
-						 projectile_config[pt].explode_particle_life, true);
+	if (projectile >= 0 && game.projectile[projectile].health > 0) {
+		if (packet->damage.flags & DAMAGE_FLAG_REPAIRS) {
+			log_add_text("%s repairs for %d",
+						 player_name(origin, false),
+						 packet->damage.amount);
+			
+		} else {
+			log_add_text("%s take%s %d damage from a %s",
+						 player_name(origin, false),
+						 origin == 0 ? "" : "s",
+						 packet->damage.amount,
+						 weapon_names[game.projectile[projectile].type]);
 		}
-		
+		// Destroys projectile, including mines.
+		game.projectile[projectile].health = 0;
+		projectile_explode_effect(projectile, target);
 	} else {
-		LOG_WARN("pid not found");
+//		log_add_text("%s take%s %d damage from an explosion",
+//					 player_name(origin, false),
+//					 origin == 0 ? "" : "s",
+//					 packet->damage.amount,
+//					 weapon_names[game.projectile[projectile].type]);
+//		return; // Is this needed for mines?
 	}
 	
-	if (packet->damage.explodes) {
+	if (packet->damage.flags & DAMAGE_FLAG_EXPLODES) {
 		player_add_explode_effect(target);
 		game.player_local[target].visible = false;
-		log_add_text("%s %s %s", player_name(origin), random_word(destroyed_words), player_name(target));
+		log_add_text("%s %s %s", player_name(origin, false), random_word(destroyed_words), player_name(target, true));
 	}
 	
 	if (origin == 0 && target != 0) {
@@ -906,9 +924,9 @@ static void packet_handle_hello(uint16_t client_id, packet_t *packet) {
 		int pi = player_with_client_id_get(packet->hello.client_id, true, &was_new);
 		bool had_name = !! strlen(game.player_id[pi].name);
 		game.player_id[pi] = packet->hello;
-		LOG_DEBUG("Player alive: %s %u", player_name(pi), game.player_id[pi].client_id);
+		LOG_DEBUG("Player alive: %s %u", player_name(pi, false), game.player_id[pi].client_id);
 		if (was_new || !had_name) {
-			log_add_text("%s has joined", player_name(pi));
+			log_add_text("%s has joined", player_name(pi, false));
 		}
 	}
 }
@@ -918,8 +936,8 @@ static void packet_handle_goodbye(uint16_t client_id, packet_t *packet) {
 	if (pi == -1) {
 		LOG_WARN("We didn't know about player %u who left", client_id);
 	}
-	LOG_DEBUG("Player leaving: %s %u", player_name(pi), game.player_id[pi].client_id);
-	log_add_text("%s quit", player_name(pi));
+	LOG_DEBUG("Player leaving: %s %u", player_name(pi, false), game.player_id[pi].client_id);
+	log_add_text("%s quit", player_name(pi, false));
 	game.player_connected[pi] = false;
 	memset(&game.player_id[pi], 0, sizeof(player_id_t));
 	player_add_explode_effect(pi);
@@ -939,6 +957,10 @@ static void packet_handle_player(uint16_t client_id, packet_t *packet) {
 
 static void packet_handle_projectile(uint16_t client_id, packet_t *packet) {
 	LOG_DEBUG("Updating projectile fired by %d", client_id);
+	if (client_id == game.player_id[0].client_id) {
+		// Avoid hitting self due to lag
+		return;
+	}
 	int pi = projectile_with_pid_get(packet->projectile.pid, packet->projectile.type);
 	game.projectile_local[pi].owner = client_id;
 	game.projectile[pi] = packet->projectile;
@@ -1043,16 +1065,15 @@ static void packet_send(packet_t *packet) {
 	}
 }
 
-static void packet_send_damage(uint16_t origin, uint16_t projectile_id, uint8_t damage, bool exploded) {
+static void packet_send_damage(uint16_t origin, uint16_t projectile_id, uint8_t damage, uint8_t flags) {
 	assert(origin);
-	assert(damage);
 	
 	packet_t packet;
 	packet.type = pt_damage;
 	packet.damage.player_id = origin;
 	packet.damage.projectile_id = projectile_id;
 	packet.damage.amount = damage;
-	packet.damage.explodes = exploded;
+	packet.damage.flags = flags;
 	packet_send(&packet);
 }
 
@@ -1140,6 +1161,10 @@ static void particle_update(int i, double time) {
 
 // ------------------------------------------------------------------------------
 
+static void player_add_damage_particle(int i) {
+	particle_add(game.player[i].position, xpl_rand_xvec2(-50.f, 50.f), xvec4_set(1.f, 0.5f, 0.f, 1.f), 4, 1.f, true);
+}
+									   
 static void player_add_thrust_particle(int i) {
 	float radians = player_rotation_rads_get(i);
 	radians += M_PI;
@@ -1148,13 +1173,15 @@ static void player_add_thrust_particle(int i) {
 	back.px += (int)(backward.x * PLAYER_SIZE * 0.5f);
 	back.py += (int)(backward.y * PLAYER_SIZE * 0.5f);
 	xvec2 thrust_vector = xpl_rand_xvec2(-10.f, 10.f);
-	particle_add(back, thrust_vector, xvec4_set(1.f, 0.5f, 0.f, 1.f), 4, 1.f, true);
+	particle_add(back, thrust_vector, color_variant(0xffc0c0c0, 0.2f), 4, 1.f, true);
 }
 
 #define GOODBYE_PARTICLES 100
-#define GOODBYE_PARTICLE_SIZE 4
+#define GOODBYE_PARTICLE_SIZE 3
 static void player_add_explode_effect(int i) {
 	position_t position = game.player[i].position;
+	velocity_t nil_velocity = { 0, 0 };
+	game.player[i].velocity = nil_velocity;
 	for (int i = 0; i < GOODBYE_PARTICLES; ++i) {
 		xvec2 random_vector = xpl_rand_xvec2(-100.f, 100.f);
 		xvec4 color = xvec4_set(xpl_frand_range(0.5f, 0.7f), xpl_frand_range(0.7f, 1.0f), xpl_frand_range(0.8f, 1.0f), 1.0f);
@@ -1186,7 +1213,11 @@ static void player_init(void) {
 	game.player[0].orientation = xpl_irand_range(0, UINT8_MAX);
 	game.player_local[0].visible = false;
 	game.ammo[0] = -1;
+#ifdef DEBUG
+	game.player[0].score = 500;
+#else
 	game.player[0].score = 0;
+#endif
 }
 
 
@@ -1203,7 +1234,12 @@ static void player_local_update_firing(bool jiffy_elapsed) {
 	if (jiffy_elapsed && game.fire_cooldown > 0) --game.fire_cooldown;
 	
 	if (game.fire_cooldown == 0 && key_down(fire)) {
-		projectile_add();
+		int w = game.active_weapon;
+		int cost = projectile_config[w].price;
+		if (cost == -1 || cost <= game.player[0].score) {
+			if (cost > 0) game.player[0].score -= cost;
+			projectile_add();
+		}
 	}
 }
 
@@ -1241,15 +1277,25 @@ static void player_local_update_thrust(double time) {
 }
 
 static void player_local_update_weapon(void) {
+	const int weapon_keys[] = { '1', '2', '3', '4', '5', '6', '7', '8' };
+	const int keycount = sizeof(weapon_keys) / sizeof(weapon_keys[0]);
+	for (int i = 0; i < keycount; ++i) {
+		if (glfwGetKey(weapon_keys[i])) {
+			game.active_weapon = i;
+		}
+	}
+	
 	if (projectile_config[game.active_weapon].price > game.player[0].score) {
 		game.active_weapon = 0;
 	}
 }
 
-static const char *player_name(int i) {
-	if (i == 0) return "you";
+static const char *player_name(int i, bool as_object) {
+	if (i == 0) {
+		return as_object ? "yourself" : "You";
+	}
 	if (strlen(game.player_id[i].name)) return game.player_id[i].name;
-	return "a player";
+	return "A Player";
 }
 
 static float player_rotation_rads_get(int i) {
@@ -1329,10 +1375,11 @@ static bool position_in_bounds(position_t position, int fudge, position_t min, p
 // ------------------------------------------------------------------------------
 static void projectile_add(void) {
 	xvec2 direction_vector = player_get_direction_vector(0);
-	xvec2 origin = xvec2_scale(direction_vector, 0.5f * PLAYER_SIZE);
+	// Add a little margin to get slow projectiles clear of the nose
+	xvec2 origin = xvec2_scale(direction_vector, 0.7f * PLAYER_SIZE);
 	
 	uint16_t pid = xpl_irand_range(0, UINT16_MAX);
-	int weapon = game.selected_weapon;
+	int weapon = game.active_weapon;
 	int i = projectile_with_pid_get(pid, weapon);
 	xvec2 front = player_get_direction_vector(0);
 	front = xvec2_scale(front, 0.5f * PLAYER_SIZE);
@@ -1345,8 +1392,11 @@ static void projectile_add(void) {
 		roundf(projectile_config[weapon].velocity * origin.x),
 		roundf(projectile_config[weapon].velocity * origin.y)
 	};
-	velocity.dx += game.player[0].velocity.dx;
-	velocity.dy += game.player[0].velocity.dy;
+	
+	if (projectile_type_is_mine(weapon)) {
+		velocity.dx += game.player[0].velocity.dx;
+		velocity.dy += game.player[0].velocity.dy;
+	}
 	game.projectile[i].velocity = velocity;
 	
 	game.fire_cooldown += projectile_config[weapon].fire_cooldown;
@@ -1355,6 +1405,27 @@ static void projectile_add(void) {
 	
 	packet_send_player();
 	packet_send_projectile(i);
+}
+
+static void projectile_explode_effect(int pi, int target) {
+	
+	int pt = game.projectile[pi].type;
+	position_t position;
+	if (projectile_type_is_mine(pt) || target == -1) {
+		position = game.projectile[pi].position;
+	} else {
+		position = game.player[target].position;
+	}
+	
+	for (int i = 0; i < projectile_config[pt].explode_particle_count; ++i) {
+		float vel = projectile_config[pt].explode_particle_velocity;
+		particle_add(position, xpl_rand_xvec2(-vel, vel),
+					 color_variant(projectile_config[pt].explode_particle_color,
+								   projectile_config[pt].explode_particle_color_variance),
+					 projectile_config[pt].explode_particle_size,
+					 projectile_config[pt].explode_particle_life, true);
+	}
+
 }
 
 static void projectile_initialize(uint16_t pid, int pi, int ti) {
@@ -1390,6 +1461,10 @@ static int projectile_with_pid_get(uint16_t pid, int ti) {
 	}
 }
 
+static bool projectile_type_is_mine(int type) {
+	return (type == pt_mine || type == pt_blackhole);
+}
+
 static void projectile_update(int i, bool jiffy_elapsed) {
 	game.projectile_position_buffer[i] = xvec2_add(game.projectile_position_buffer[i],
 												   xvec2_set(game.projectile[i].velocity.dx / VELOCITY_SCALE,
@@ -1406,34 +1481,98 @@ static void projectile_update(int i, bool jiffy_elapsed) {
 		game.projectile_position_buffer[i].y -= dy;
 	}
 	
+	float current_explosion_radius = 0.f;
+	int type = game.projectile[i].type;
 	if (jiffy_elapsed) {
 		--game.projectile[i].health;
+		if (projectile_type_is_mine(type) && game.projectile[i].health < 2) {
+			// Mines linger at 2 or 1 health
+			// They change to trail color when armed
+			game.projectile[i].health++;
+			game.projectile_local[i].color = color_variant(projectile_config[type].trail_color, projectile_config[type].trail_life);
+		}
 		--game.projectile_local[i].trail_timeout;
 		if (game.projectile_local[i].trail_timeout) {
-			int type = game.projectile[i].type;
 			xvec4 trail_color = color_variant(projectile_config[type].trail_color, projectile_config[type].trail_variance);
 			particle_add(game.projectile[i].position, v2_for_velocity(game.projectile[i].velocity),
 						 trail_color, projectile_config[type].trail_size,
 						 projectile_config[type].trail_life, true);
 		}
+		if (game.projectile[i].health == 0) {
+			current_explosion_radius = projectile_config[type].explode_radius;
+		}
 	}
 	
 	long pdx = (long)game.projectile[i].position.px - (long)game.player[0].position.px;
 	long pdy = (long)game.projectile[i].position.py - (long)game.player[0].position.py;
-	if (labs(pdx) < PLAYER_SIZE * 0.5f && labs(pdy) < PLAYER_SIZE * 0.5f && game.player[0].health) {
-		// Apply damage
-		uint8_t damage = game.projectile[i].health;
-		bool exploded = false;
-		if (game.player[0].health <= game.projectile[i].health) {
-			game.respawn_cooldown = RESPAWN_COOLDOWN;
+	int projectile_owner = player_with_client_id_get(game.projectile_local[i].owner, false, NULL);
+
+	float dtt = sqrtf(labs(pdx * pdx) + labs(pdy * pdy));
+	dtt -= PLAYER_SIZE * 0.5f;
+	dtt = xmax(dtt, 0.f);
+	
+	// Black hole accelerates you in
+	if (type == pt_blackhole && game.projectile[i].health <= 2) {
+		xvec2 direction = {{ pdx, pdy }};
+		float length = dtt;
+		// Fudge because black hole throws you around so fast
+		if (length < 20.f) dtt = 0.f;
+		xvec2 acceleration = xvec2_scale(xvec2_normalize(direction), 4.f * VELOCITY_SCALE * VELOCITY_SCALE / (length * length));
+		game.player[0].velocity.dx += xclamp(acceleration.x, -512, 512);
+		game.player[0].velocity.dy += xclamp(acceleration.y, -512, 512);
+		LOG_DEBUG("Black hole acceleration: %f %f", acceleration.x, acceleration.y);
+	}
+	
+	bool could_hit = (dtt <= current_explosion_radius);
+	could_hit = could_hit && (projectile_config[type].can_hit_self || projectile_owner);
+	
+	if (current_explosion_radius > 0.f) {
+		// Explode on expire is here. Otherwise wait to receive a damage packet.
+		projectile_explode_effect(i, -1);
+	}
+	
+	if (projectile_type_is_mine(type) && game.projectile[i].health != 2) could_hit = false;
+	
+	// No hit.
+	if (! could_hit) return;
+
+	if (projectile_type_is_mine(type)) game.projectile[i].health = 1; // Retain at 1 health but don't retrigger.
+	
+	current_explosion_radius = projectile_config[type].explode_radius;
+	
+	// Apply damage
+	uint8_t damage;
+	if (projectile_config[type].explode_radius || projectile_type_is_mine(type)) {
+		damage = (type == pt_blackhole) ? 255 : projectile_config[type].initial_health;
+	} else {
+		damage = game.projectile[i].health;
+	}
+	if (current_explosion_radius) {
+		float damage_scale = (current_explosion_radius - dtt) / current_explosion_radius;
+		damage_scale = xclamp(damage_scale, 0.f, 1.f);
+		damage *= damage_scale;
+	}
+	
+	uint8_t flags = 0;
+	if (type != pt_repair) {
+		if (game.player[0].health <= damage) {
+			game.respawn_cooldown = RESPAWN_COOLDOWN; 
 			damage = game.player[0].health;
-			exploded = true;
+			flags |= DAMAGE_FLAG_EXPLODES;
 			game.player[0].health = 0;
 		} else {
 			game.player[0].health -= damage;
 		}
-		packet_send_damage(game.projectile_local[i].owner, game.projectile[i].pid, damage, exploded);
+	} else {
+		int health = game.player[0].health;
+		health += damage;
+		health = xclamp(health, 0, UINT8_MAX);
+		game.player[0].health = health;
+		flags |= DAMAGE_FLAG_REPAIRS;
 	}
+	LOG_DEBUG("Player health remaining: %u", game.player[0].health);
+	
+	packet_send_damage(game.projectile_local[i].owner, game.projectile[i].pid, damage, flags);
 }
 
 

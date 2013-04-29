@@ -22,6 +22,8 @@
 #define MAX_TEXT_PARTICLE_CHARS 16
 #define NAME_SIZE		16
 
+#define VELOCITY_SCALE	128.0f
+
 typedef struct position {
 	uint32_t px;
 	uint32_t py;
@@ -93,11 +95,14 @@ typedef struct text_particle {
 	float		initial_life;
 } text_particle_t;
 
+#define DAMAGE_FLAG_EXPLODES	0x01
+#define DAMAGE_FLAG_REPAIRS		0x02
+
 typedef struct damage {
 	uint16_t	player_id;
 	uint16_t	projectile_id;
 	uint8_t		amount;
-	bool		explodes;
+	uint8_t		flags;
 } damage_t;
 
 typedef struct game {
@@ -112,7 +117,6 @@ typedef struct game {
 	projectile_t projectile[MAX_PROJECTILES];
 	projectile_local_t projectile_local[MAX_PROJECTILES];
 	
-	int			selected_weapon;
 	int			fire_cooldown;
 	float		respawn_cooldown;
 	
