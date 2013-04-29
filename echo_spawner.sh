@@ -4,5 +4,5 @@ while true ; do
 		echo "Server crashed, restarting"
 		nohup build/echoserver 3000
 	fi
-	sleep 30
+	sleep 10
 done
