@@ -144,7 +144,7 @@ static void draw_command(xpl_sprite_batch_t *self, sprite_batch_command_t *cmd) 
 	if (self->gl_state.bound_texture[texno] != ftid || self->gl_state.unknown) {
 		self->gl_state.bound_texture[texno] = ftid;
 		glBindTexture(GL_TEXTURE_2D, ftid);
-		glUniform1i(xpl_shader_get_uniform(sprite_shader, "texture"), 0);
+		glUniform1i(xpl_shader_get_uniform(sprite_shader, "tex"), 0);
 	}
     
 	const float scale_x = cmd->scale.x;

@@ -282,7 +282,7 @@ static void game_engine(xpl_context_t *self, double time, void *data) {
 			pen.x = 4.f;
 			wchar_t line[LOG_LINE_MAX];
 			mbstowcs(line, ui_log.lines[i], LOG_LINE_MAX);
-			xpl_text_buffer_add_text(ui_log.buffer, &pen, &ui_log.markup, line[0] ? line : L"", 0);
+			if (wcslen(line)) xpl_text_buffer_add_text(ui_log.buffer, &pen, &ui_log.markup, line, 0);
 			pen.y = floorf(pen.y);
 		}
 		xpl_text_buffer_commit(ui_log.buffer);
@@ -1108,7 +1108,7 @@ static void player_init(int i) {
 #ifdef DEBUG
 	game.player[0].score = 500;
 #else
-	game.player[0].score = 0;
+	game.player[0].score = 100;
 #endif
 }
 

@@ -30,9 +30,7 @@ void main()
 
 //------------------- Fragment.GL32 -------------------------------
 
-#include "Lib.Effects"
-
-uniform sampler2D 	texture;
+uniform sampler2D 	tex;
 
 in vec4				vcolor;
 in vec2				vuv;
@@ -42,7 +40,7 @@ out vec4			frag_color;
 
 void main()
 {
-    vec4 tc = texture(texture, vuv);
+    vec4 tc = texture(tex, vuv);
     frag_color.rgb = vcolor.rgb * vcolor.a * tc.rgb * tc.a;
 	frag_color.a = vcolor.a * tc.a;
 }

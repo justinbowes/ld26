@@ -55,7 +55,7 @@ typedef enum projectile_type {
 static const projectile_config_t projectile_config[] = {
 	{ // 0: pew
 		20,
-		2800,
+		2000,
 		3,
 		RGBA(0xff, 0x00, 0x00, 0xff),
 		0.1f,
@@ -83,7 +83,7 @@ static const projectile_config_t projectile_config[] = {
 	},
 	{ // 1: heavy pew
 		30,
-		2200,
+		1500,
 		4,
 		RGBA(0xff, 0x00, 0xff, 0xff),
 		0.1f,
@@ -102,8 +102,8 @@ static const projectile_config_t projectile_config[] = {
 		0.5f,
 		100.f,
 		
-		25,
-		2,
+		16,
+		1,
 		false,
 		
 		"weapon_1.ogg",
@@ -132,7 +132,7 @@ static const projectile_config_t projectile_config[] = {
 		
 		30,
 		5,
-		true,
+		false,
 		
 		"weapon_2.ogg",
 		"explode_2.ogg"
@@ -160,7 +160,7 @@ static const projectile_config_t projectile_config[] = {
 		
 		60,
 		10,
-		true,
+		false,
 		
 		"weapon_3.ogg",
 		"explode_2.ogg"

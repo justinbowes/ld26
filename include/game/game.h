@@ -27,8 +27,8 @@
 
 #define VELOCITY_SCALE	128.0f
 
-#define INDICATOR_SIZE	8.f
-#define PLAYER_SIZE		16.f
+#define INDICATOR_SIZE	16.f
+#define PLAYER_SIZE		24.f
 
 #define TUTORIAL_PAGES	6
 

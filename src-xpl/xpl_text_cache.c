@@ -195,7 +195,7 @@ static xpl_cached_text_t * text_cache_create(xpl_text_cache_t *text_cache,
                                                             buffer);
 	HASH_ADD_INT(text_cache->this_frame->entries, key, table_entry);
     
-	xpl_text_buffer_add_text(buffer, &position, markup, table_entry->wtext, table_entry->wtext_length);
+	xpl_text_buffer_add_text(buffer, &position, markup, table_entry->wtext, 0);
 	xpl_text_buffer_commit(buffer);
     
     table_entry->value->managed_font = xpl_font_manager_get_from_markup(table_entry->value->buffer->font_manager, markup);
