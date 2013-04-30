@@ -10,12 +10,22 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#include <netdb.h>
 #include <sys/types.h>
+
+#include "xpl.h"
+
+#ifdef WIN32
+#include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <errno.h>
+#else
+#include <netdb.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <stdlib.h>
+#endif
 
 #include "game/camera.h"
 #include "game/game.h"
@@ -55,7 +65,7 @@ typedef struct log {
 #define RESPAWN_COOLDOWN 3.0f
 
 #define HELLO_TIMEOUT	2.0f
-#define ERROR_TIMEOUT	10.0f
+#define ERRORMSG_TIMEOUT	10.0f
 #define POSITION_TIMEOUT 5.0f
 #define POSITION_TIMEOUT_UNDER_THRUST 0.1f
 #define RECEIVE_TIMEOUT	5.0f
@@ -114,12 +124,12 @@ static xvec4                            overlay_color;
 static float                            overlay_strength;
 
 // Audio
-static audio_t							*bgm_stream;
-static audio_t							*damage_audio;
+static audio_t							*bgm_stream = NULL;
+static audio_t							*damage_audio = NULL;
 
 static uint32_t							packet_seq = 0;
-static SOCKET							sock;
-static UDPNET_ADDRESS					*server_addr;
+static int								sock;
+static UDPNET_ADDRESS					*server_addr = NULL;
 
 // Text
 static log_t							ui_log;
@@ -175,7 +185,6 @@ static void player_add_thrust_particle(int i);
 static void player_add_explode_effect(int i);
 static xvec2 player_calculate_oriented_thrust(int i);
 static xvec2 player_get_direction_vector(int i);
-static bool player_in_bounds(int i, int fudge, position_t min, position_t max);
 static void player_init(int i);
 static void player_local_disconnect(void);
 static bool player_local_is_connected(void);
@@ -185,7 +194,6 @@ static void player_local_update_rotation(double time);
 static void player_local_update_thrust(double time);
 static void player_local_update_weapon(void);
 static const char *player_name(int i, bool as_object);
-static float player_rotation_rads_get(int i);
 static void player_update_position(int i);
 static int player_with_client_id_get(uint16_t client_id, bool allow_allocate, bool *was_new_player);
 static xvec2 player_v2velocity_get(int i);
@@ -251,14 +259,18 @@ static void game_engine(xpl_context_t *self, double time, void *data) {
 	}
 	
 	if (game.player_connected[0]) {
-		packet_receive();
+		if (! server_addr) {
+			server_resolve_addr();
+		}
 		
 		network.hello_timeout -= time;
 		if (network.hello_timeout <= 0.f) {
 			network.hello_timeout = HELLO_TIMEOUT;
 			packet_send_hello();
 		}
-		
+
+		packet_receive();
+
 		network.receive_timeout -= time;
 		if (network.receive_timeout <= 0.f) {
 			if (player_local_is_connected()) {
@@ -844,18 +856,19 @@ static void packet_receive(void) {
 	uint8_t buffer[1024];
 	UDPNET_ADDRESS receive_addr;
 	
+
 	while(1) {
 		memset(buffer, 0, 1024);
 		int n = udp_receive(sock, buffer, 1024, &receive_addr);
 		if (n < 0) {
 			int udperr = udp_error();
-			if (udperr == EWOULDBLOCK)	return;
-			if (udperr == EAGAIN)		return;
+			if (udperr == UN_WOULDBLOCK)	return;
+			if (udperr == UN_AGAIN)			return;
 			
 			ui_error_set("Error receiving: %d", udperr);
 			player_local_disconnect();
 		}
-		if (n == 0) return;
+		if (n <= 0) return;
 		
 		network.receive_timeout = RECEIVE_TIMEOUT;
 		
@@ -891,12 +904,12 @@ static void packet_send(packet_t *packet) {
 		int udperr = udp_error();
 		ui_error_set("Error sending packet (%d)", udperr);
 		switch (udperr) {
-			case EAGAIN:
+			case UN_AGAIN:
 				// Rate too high?
 				LOG_DEBUG("EAGAIN");
 				return;
 				
-			case ENOBUFS:
+			case UN_NOBUFS:
 				// Rate too high?
 				LOG_DEBUG("ENOBUFS");
 				return;
@@ -905,27 +918,31 @@ static void packet_send(packet_t *packet) {
 				ui_error_set("Socket lost");
 				break;
 				
-			case ECONNRESET:
+			case UN_CONNRESET:
 				ui_error_set("Connection reset by peer");
 				break;
 				
-			case EACCES:
-			case EHOSTUNREACH:
-			case EMSGSIZE:
-			case ENETDOWN:
-			case ENETUNREACH:
-			case EDESTADDRREQ:
-			case ENOTCONN:
+			case UN_ACCES:
+			case UN_HOSTUNREACH:
+			case UN_MSGSIZE:
+			case UN_NETDOWN:
+			case UN_NETUNREACH:
+			case UN_DESTADDRREQ:
+			case UN_NOTCONN:
 				ui_error_set("Network issues. Check your network connection and the server hostname.");
 				break;
 				
-			case EINTR:
+			case UN_INTR:
 				ui_error_set("Send interrupted");
 				break;
 				
-			case EFAULT:
-			case ENOTSOCK:
-			case EOPNOTSUPP:
+			case UN_FAULT:
+				ui_error_set("Programmer error");
+				break;
+			case UN_NOTSOCK:
+				ui_error_set("Programmer error");
+				break;
+			case UN_OPNOTSUPP:
 				ui_error_set("Programmer error");
 				break;
 				
@@ -1413,7 +1430,7 @@ static bool projectile_type_is_mine(int type) {
 }
 
 static void projectile_update(int i, bool jiffy_elapsed) {
-	long pdx, pdy;
+	int64_t pdx, pdy;
 	game.projectile_position_buffer[i] = xvec2_add(game.projectile_position_buffer[i],
 												   xvec2_set(game.projectile[i].velocity.dx / VELOCITY_SCALE,
 															 game.projectile[i].velocity.dy / VELOCITY_SCALE));
@@ -1434,8 +1451,8 @@ static void projectile_update(int i, bool jiffy_elapsed) {
 		// Are there any non-mine projectiles too close?
 		for (int j = i + 1; j < MAX_PROJECTILES; ++j) {
 			if (game.projectile[j].health) {
-				pdx = (long)game.projectile[i].position.px - (long)game.projectile[j].position.px;
-				pdy = (long)game.projectile[i].position.py - (long)game.projectile[j].position.py;
+				pdx = (int64_t)game.projectile[i].position.px - (int64_t)game.projectile[j].position.px;
+				pdy = (int64_t)game.projectile[i].position.py - (int64_t)game.projectile[j].position.py;
 				if (pdx < 10 && pdy < 10) {
 					// Set both to explode or disappear.
 					game.projectile_local[i].force_detonate = true;
@@ -1466,8 +1483,8 @@ static void projectile_update(int i, bool jiffy_elapsed) {
 		current_explosion_radius = projectile_config[type].explode_radius;
 	}
 	
-	pdx = (long)game.projectile[i].position.px - (long)game.player[0].position.px;
-	pdy = (long)game.projectile[i].position.py - (long)game.player[0].position.py;
+	pdx = (int64_t)game.projectile[i].position.px - (int64_t)game.player[0].position.px;
+	pdy = (int64_t)game.projectile[i].position.py - (int64_t)game.player[0].position.py;
 	int projectile_owner = player_with_client_id_get(game.projectile_local[i].owner, false, NULL);
 
 	float dtt = sqrtf(labs(pdx * pdx) + labs(pdy * pdy));
@@ -1600,6 +1617,7 @@ static float text_get_length(xpl_font_t *font, const char *text, size_t position
 // ------------------------------------------------------------------------------
 
 static void text_particle_add(position_t position, xvec2 velocity, const char *text, xvec4 color, float life) {
+#ifndef XPL_PLATFORM_WINDOWS
 	int i = text_particle_find_new();
 	strncpy(game.text_particle[i].text, text, MAX_TEXT_PARTICLE_CHARS);
 	game.text_particle[i].position = position;
@@ -1610,6 +1628,7 @@ static void text_particle_add(position_t position, xvec2 velocity, const char *t
 	game.text_particle[i].orientation = xpl_frand_range(-M_PI_4, M_PI_4);
 	game.text_particle[i].initial_life = life;
 	game.text_particle[i].life = life;
+#endif
 }
 
 static int text_particle_find_new(void) {
@@ -1664,7 +1683,7 @@ static void ui_error_set(const char *msg, ...) {
 	
 	log_add_text(network.error);
 	
-	network.error_timeout = ERROR_TIMEOUT;
+	network.error_timeout = ERRORMSG_TIMEOUT;
 }
 
 static void ui_error_show(xpl_context_t *self) {
@@ -1674,7 +1693,7 @@ static void ui_error_show(xpl_context_t *self) {
 		xpl_imui_control_label(network.error);
 		xpl_imui_separator_line();
 		if (xpl_imui_control_button(xl("ok"), XPL_IMUI_BUTTON_CANCEL | XPL_IMUI_BUTTON_DEFAULT,
-									network.error_timeout + 2.0f < ERROR_TIMEOUT)) {
+									network.error_timeout + 2.0f < ERRORMSG_TIMEOUT)) {
 			network.error_timeout = 0.0f;
 		}
 	}
@@ -1772,10 +1791,10 @@ static void ui_tutorial_show(xpl_context_t *self, double time) {
 				break;
 				
 			case 6:
-				ui_tutorial_highlight(self, rect, xrect_set(57, 105, 600, 12), time);
-				ui_tutorial_highlight(self, rect, xrect_set(57, 385, 12, 280), time);
-				ui_tutorial_highlight(self, rect, xrect_set(588, 385, 12, 280), time);
-				ui_tutorial_highlight(self, rect, xrect_set(57, 397, 600, 12), time);
+				ui_tutorial_highlight(self, rect, xrect_set(57, 117, 600, 12), time);
+				ui_tutorial_highlight(self, rect, xrect_set(57, 373, 12, 256), time);
+				ui_tutorial_highlight(self, rect, xrect_set(644, 373, 12, 256), time);
+				ui_tutorial_highlight(self, rect, xrect_set(57, 385, 600, 12), time);
 				break;
 
 			default:
@@ -1864,8 +1883,8 @@ static velocity_t velocity_for_v2(xvec2 v) {
 #define POSITION_SCALE 0.01625
 static xvec3 v3_relative_audio(position_t position) {
 	xvec3 r = {{
-		POSITION_SCALE * ((long)position.px - (long)camera.center.px),
-		POSITION_SCALE * ((long)position.py - (long)camera.center.py),
+		POSITION_SCALE * ((int64_t)position.px - (int64_t)camera.center.px),
+		POSITION_SCALE * ((int64_t)position.py - (int64_t)camera.center.py),
 		0.f
 	}};
 	return r;

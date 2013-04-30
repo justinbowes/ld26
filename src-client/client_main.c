@@ -164,7 +164,7 @@ static void main_loop(xpl_app_t *app) {
     LOG_DEBUG("TOTAL Stats: %f FPS (%f average = %f engine + %f render, %lu frames)",
               (double)app->execution_info->frame_count / total_stats.all_time,
               total_stats.all_time, total_stats.engine_time, total_stats.render_time,
-              (long unsigned int)app->execution_info->frame_count);
+              (int64_t unsigned int)app->execution_info->frame_count);
 
 
 }

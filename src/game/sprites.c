@@ -71,8 +71,8 @@ void sprites_playfield_render(xpl_context_t *self, xmat4 *ortho) {
 		// Background stars
 		for (int i = 0; i < STAR_LAYERS; ++i) {
 			for (int j = 0; j < STARS_PER_LAYER; ++j) {
-				long px = (star_layers[i][j].x - (camera.center.px >> (2 * i + 2))) % STAR_LAYER_SIZE;
-				long py = (star_layers[i][j].y - (camera.center.py >> (2 * i + 2))) % STAR_LAYER_SIZE;
+				int64_t px = (star_layers[i][j].x - (camera.center.px >> (2 * i + 2))) % STAR_LAYER_SIZE;
+				int64_t py = (star_layers[i][j].y - (camera.center.py >> (2 * i + 2))) % STAR_LAYER_SIZE;
 				if (px > camera.draw_area.x &&
 					py > camera.draw_area.y &&
 					px < camera.draw_area.x + camera.draw_area.width &&
@@ -157,8 +157,8 @@ void sprites_playfield_render(xpl_context_t *self, xmat4 *ortho) {
 				}
 			} else if (game.indicators_on) {
 				// Draw indicator
-				long dlx = (long)game.player[i].position.px - (long)game.player[0].position.px;
-				long dly = (long)game.player[i].position.py - (long)game.player[0].position.py;
+				int64_t dlx = (int64_t)game.player[i].position.px - (int64_t)game.player[0].position.px;
+				int64_t dly = (int64_t)game.player[i].position.py - (int64_t)game.player[0].position.py;
 				xvec2 d = {{ (float)dlx, (float)dly }};
 				float angle = atan2f(d.y, d.x);
 				d = xvec2_add(d, xvec2_set(camera.draw_area.x + (camera.draw_area.width >> 1),
