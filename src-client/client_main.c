@@ -39,6 +39,7 @@ static void parse_args(xpl_app_t *app) {
                 
             case 'r':
             {
+				LOG_INFO("Reset graphics settings");
                 xpl_app_params_t defaults = xpl_app_params_load(TRUE);
                 xpl_app_params_save(defaults);
                 app->restart = true;

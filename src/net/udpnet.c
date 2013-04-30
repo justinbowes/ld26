@@ -339,7 +339,7 @@ int udp_send(int s, void *data, int size, const char *address,
 	// Set using IOctrl earlier
 	const int flags = 0;
 #else
-	const int flags = MSG_DONTWAIT
+	const int flags = MSG_DONTWAIT;
 #endif
 	if(sendto(s, data, size, flags, receiver, lenaddr) < 0)
 	{

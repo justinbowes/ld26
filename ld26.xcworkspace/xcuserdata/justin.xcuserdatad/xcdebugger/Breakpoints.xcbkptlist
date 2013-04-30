@@ -13,7 +13,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "1174"
          endingLineNumber = "1174"
-         landmarkName = "player_local_update_firing()"
+         landmarkName = "player_local_update_chat()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -39,7 +39,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "668"
          endingLineNumber = "668"
-         landmarkName = "log_advance_line()"
+         landmarkName = "log_add_text()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -52,7 +52,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "1389"
          endingLineNumber = "1389"
-         landmarkName = "projectile_with_pid_get()"
+         landmarkName = "projectile_explode_effect()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -64,9 +64,7 @@
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "1329"
-         endingLineNumber = "1329"
-         landmarkName = "projectile_add()"
-         landmarkType = "7">
+         endingLineNumber = "1329">
       </FileBreakpoint>
       <FileBreakpoint
          shouldBeEnabled = "No"
@@ -102,7 +100,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "623"
          endingLineNumber = "623"
-         landmarkName = "game_reset()"
+         landmarkName = "game_render_playfield()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -115,7 +113,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "717"
          endingLineNumber = "717"
-         landmarkName = "packet_handle_damage()"
+         landmarkName = "packet_handle()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -128,7 +126,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "624"
          endingLineNumber = "624"
-         landmarkName = "game_reset()"
+         landmarkName = "game_render_playfield()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -141,7 +139,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "955"
          endingLineNumber = "955"
-         landmarkName = "packet_send_damage()"
+         landmarkName = "packet_send()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -167,7 +165,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "1085"
          endingLineNumber = "1085"
-         landmarkName = "player_init()"
+         landmarkName = "player_add_explode_effect()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -206,7 +204,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "1388"
          endingLineNumber = "1388"
-         landmarkName = "projectile_with_pid_get()"
+         landmarkName = "projectile_explode_effect()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -219,7 +217,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "1376"
          endingLineNumber = "1376"
-         landmarkName = "projectile_initialize()"
+         landmarkName = "projectile_explode_effect()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -232,7 +230,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "827"
          endingLineNumber = "827"
-         landmarkName = "packet_handle_projectile()"
+         landmarkName = "packet_handle_player()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -245,7 +243,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "835"
          endingLineNumber = "835"
-         landmarkName = "packet_handle_projectile()"
+         landmarkName = "packet_handle_player()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -258,7 +256,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "981"
          endingLineNumber = "981"
-         landmarkName = "packet_send_projectile()"
+         landmarkName = "packet_send_hello()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -414,7 +412,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "523"
          endingLineNumber = "523"
-         landmarkName = "game_render_playfield()"
+         landmarkName = "game_render_log()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -479,7 +477,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "1620"
          endingLineNumber = "1620"
-         landmarkName = "text_particle_find_new()"
+         landmarkName = "text_particle_add()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -492,7 +490,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "1621"
          endingLineNumber = "1621"
-         landmarkName = "text_particle_find_new()"
+         landmarkName = "text_particle_add()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -505,7 +503,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "1624"
          endingLineNumber = "1624"
-         landmarkName = "text_particle_find_new()"
+         landmarkName = "text_particle_add()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -531,7 +529,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "1612"
          endingLineNumber = "1612"
-         landmarkName = "text_particle_add()"
+         landmarkName = "text_get_length()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -544,7 +542,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "1611"
          endingLineNumber = "1611"
-         landmarkName = "text_particle_add()"
+         landmarkName = "text_get_length()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -557,7 +555,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "1641"
          endingLineNumber = "1641"
-         landmarkName = "text_particle_update()"
+         landmarkName = "text_particle_find_new()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -570,7 +568,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "1173"
          endingLineNumber = "1173"
-         landmarkName = "player_local_update_firing()"
+         landmarkName = "player_local_update_chat()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -583,7 +581,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "1226"
          endingLineNumber = "1226"
-         landmarkName = "player_local_update_weapon()"
+         landmarkName = "player_local_update_thrust()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -648,7 +646,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "1417"
          endingLineNumber = "1417"
-         landmarkName = "projectile_update()"
+         landmarkName = "projectile_with_pid_get()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -817,7 +815,7 @@
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "708"
          endingLineNumber = "708"
-         landmarkName = "packet_handle_chat()"
+         landmarkName = "packet_handle()"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
@@ -829,9 +827,7 @@
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
          startingLineNumber = "1240"
-         endingLineNumber = "1240"
-         landmarkName = "player_local_update_weapon()"
-         landmarkType = "7">
+         endingLineNumber = "1240">
       </FileBreakpoint>
       <FileBreakpoint
          shouldBeEnabled = "No"
