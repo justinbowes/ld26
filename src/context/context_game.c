@@ -756,9 +756,9 @@ static void packet_handle_damage(uint16_t client_id, packet_t *packet) {
 
 		
 	} else {
-		log_add_text("%s took %d damage from a misdirected explosion",
-					 player_name(origin, false),
-					 packet->damage.amount);
+//		log_add_text("%s took %d damage from a misdirected explosion",
+//					 player_name(origin, false),
+//					 packet->damage.amount);
 	}
 	
 	if (packet->damage.flags & DAMAGE_FLAG_EXPLODES) {
