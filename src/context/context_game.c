@@ -51,7 +51,7 @@
 
 #define LOG_LINES 3
 #define LOG_LINE_MAX 512
-#define LOG_TIMEOUT 3.f
+#define LOG_TIMEOUT 10.f
 typedef struct log {
 	xpl_text_buffer_t	*buffer;
 	xpl_markup_t		markup;
@@ -154,6 +154,7 @@ static void game_init_text(void);
 static void game_render(xpl_context_t *self, double time, void *data);
 static void game_render_log(xpl_context_t *self);
 static void game_render_playfield(xpl_context_t *self, double time);
+static void game_render_ui(xpl_context_t *self);
 static void game_reset(void);
 static xpl_context_t *game_handoff(xpl_context_t *self, void *data);
 
@@ -399,6 +400,9 @@ static xpl_context_t *game_handoff(xpl_context_t *self, void *data) {
 static void *game_init(xpl_context_t *self) {
 	srand((unsigned int)time(0));
 	random_word("destroyed");
+	random_word("joined");
+	random_word("damaged");
+	random_word("battle");
 	
 	theme = xpl_imui_theme_load_new("ld26");
 	imui = xpl_imui_context_new(theme);
@@ -493,17 +497,9 @@ static void game_render(xpl_context_t *self, double time, void *data) {
 	glClear(GL_COLOR_BUFFER_BIT);
 	glEnable(GL_BLEND);
 	
-	if (network.error_timeout) {
-		ui_error_show(self);
-	} else if (ui_tutorial_page) {
-		ui_tutorial_show(self, time);
-	} else if (! game.player_connected[0] && ! network.error_timeout) {
-		ui_pilot_config_show(self);
-	} else if (player_local_is_connected()) {
+	if (player_local_is_connected()) {
 		game_render_playfield(self, time);
 	}
-	
-	game_render_log(self);
 	
 	// Effect overlay
 	glUseProgram(overlay_shader->id);
@@ -512,7 +508,19 @@ static void game_render(xpl_context_t *self, double time, void *data) {
 	glUniform4fv(xpl_shader_get_uniform(overlay_shader, "color"), 1, overlay_color.data);
 	xpl_vao_program_draw_arrays(effect_vao, overlay_shader, GL_TRIANGLES, 0, (GLsizei)effect_elements);
 	glUseProgram(GL_NONE);
+
+	if (network.error_timeout) {
+		ui_error_show(self);
+	} else if (ui_tutorial_page) {
+		ui_tutorial_show(self, time);
+	} else if (! game.player_connected[0] && ! network.error_timeout) {
+		ui_pilot_config_show(self);
+	} else if (player_local_is_connected()) {
+		game_render_ui(self);
+	}
 	
+	game_render_log(self);
+
 	xpl_text_cache_advance_frame(name_cache);
 }
 
@@ -570,6 +578,12 @@ static void game_render_playfield(xpl_context_t *self, double time) {
 	
 	glDisable(GL_SCISSOR_TEST);
 	
+}
+
+static void game_render_ui(xpl_context_t *self) {
+	xmat4 ortho;
+	xmat4_ortho(0.f, self->size.width, 0.f, self->size.height, -1.f, 1.f, &ortho);
+
 	sprites_ui_render(self, &ortho);
 	
 	int cash = game.player[0].score;
@@ -659,11 +673,13 @@ static bool key_down(const int *key_array) {
 // ------------------------------------------------------------------------------
 
 static void log_add_text(const char *text, ...) {
-	char *target = ui_log.lines[2];
+	char *target = NULL;
+	if (ui_log.lines[2] == 0) target = ui_log.lines[2];
 	if (ui_log.lines[1] == 0) target = ui_log.lines[1];
 	if (ui_log.lines[0] == 0) target = ui_log.lines[0];
 	
-	if (target == ui_log.lines[2]) {
+	if (target == NULL) {
+		target = ui_log.lines[2];
 		log_advance_line();
 	}
 	
@@ -673,6 +689,7 @@ static void log_add_text(const char *text, ...) {
 	va_end(args);
 	
 	ui_log.rebuild = true;
+	ui_log.timeout = LOG_TIMEOUT;
 }
 
 static void log_advance_line(void) {
@@ -751,20 +768,20 @@ static void packet_handle_damage(uint16_t client_id, packet_t *packet) {
 					 player_name(origin, false),
 					 random_word("damaged"),
 					 packet->damage.amount,
-					 player_name(target, origin == target ? true : false),
+					 player_name(target, origin == target),
 					 xl(weapon_name_key));
 
 		
 	} else {
 		log_add_text("%s took %d damage from a misdirected explosion",
-					 player_name(origin, false),
+					 player_name(target, false),
 					 packet->damage.amount);
 	}
 	
 	if (packet->damage.flags & DAMAGE_FLAG_EXPLODES) {
 		player_add_explode_effect(target);
 		game.player_local[target].visible = false;
-		log_add_text("%s %s %s", player_name(origin, false), random_word("destroyed"), player_name(target, true));
+		log_add_text("%s %s %s", player_name(origin, false), random_word("destroyed"), player_name(target, origin == target));
 	}
 	
 	// Destroys projectile, including mines.
@@ -792,7 +809,7 @@ static void packet_handle_hello(uint16_t client_id, packet_t *packet) {
 			LOG_DEBUG("Matching nonce, logged in");
 			game.player_id[0] = packet->hello;
 			player_init(0);
-			log_add_text("You have joined the fray");
+			log_add_text("You have %s the %s", random_word("joined"), random_word("battle"));
 		}
 	} else {
 		// This is a notify packet
@@ -809,7 +826,8 @@ static void packet_handle_hello(uint16_t client_id, packet_t *packet) {
 static void packet_handle_goodbye(uint16_t client_id, packet_t *packet) {
 	int pi = player_with_client_id_get(client_id, false, NULL);
 	if (pi == -1) {
-		LOG_WARN("We didn't know about player %u who left", client_id);
+		LOG_DEBUG("We didn't know about player %u who left", client_id);
+		return;
 	}
 	LOG_DEBUG("Player leaving: %s %u", player_name(pi, false), game.player_id[pi].client_id);
 	log_add_text("%s quit", player_name(pi, false));
@@ -1617,7 +1635,7 @@ static float text_get_length(xpl_font_t *font, const char *text, size_t position
 // ------------------------------------------------------------------------------
 
 static void text_particle_add(position_t position, xvec2 velocity, const char *text, xvec4 color, float life) {
-#ifndef XPL_PLATFORM_WINDOWS
+#ifndef XPL_PLATFORM_WINDOWSXX
 	int i = text_particle_find_new();
 	strncpy(game.text_particle[i].text, text, MAX_TEXT_PARTICLE_CHARS);
 	game.text_particle[i].position = position;

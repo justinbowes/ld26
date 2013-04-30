@@ -87,6 +87,7 @@ static _text_table_entry_t *text_table_entry_new(int markup_key,
     entry->wtext_length = mbstowcs(NULL, entry->text, entry->text_length);
     entry->wtext = xpl_alloc(sizeof(wchar_t) * (entry->wtext_length + 1));
     mbstowcs(entry->wtext, entry->text, entry->wtext_length);
+    entry->wtext[entry->wtext_length] = 0;
     
     entry->value = xpl_calloc_type(xpl_cached_text_t);
 	entry->value->buffer = buffer;

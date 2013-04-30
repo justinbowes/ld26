@@ -40,6 +40,7 @@ size_t packet_encode(packet_t *packet, uint16_t client_id, uint8_t *buffer) {
 			encode(packet->player.orientation, uint8_t, p);
 			encode(packet->player.health, uint8_t, p);
 			encode(packet->player.is_thrust, bool, p);
+			break;
 			
 		case pt_projectile:
 			encode(packet->projectile.pid, uint16_t, p);
@@ -62,6 +63,7 @@ size_t packet_encode(packet_t *packet, uint16_t client_id, uint8_t *buffer) {
 		case pt_chat:
 			memmove(p, packet->chat, CHAT_MAX);
 			p += CHAT_MAX;
+			break;
 			
 		default:
 			break;
