@@ -17,7 +17,7 @@ static prefs_t prefs_default(void) {
 	prefs.skip_tutorial = false;
 	prefs.bgm_on = true;
 	
-	snprintf(prefs.name, NAME_SIZE, "");
+	strncpy(prefs.name, "", NAME_SIZE);
 	snprintf(prefs.server, SERVER_SIZE, "gs.ultrapew.com");
 	prefs.port = 3000;
 	
