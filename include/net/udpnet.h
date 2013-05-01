@@ -8,8 +8,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined WIN32
-#include <winsock.h>
+#include "xpl.h"
+
+#ifdef WIN32
+#include <winsock2.h>
+#include <errno.h>
 #else
 #include <unistd.h>
 #include <netdb.h>
@@ -18,13 +21,48 @@
 #include <arpa/inet.h>
 #endif
 
+#ifdef WIN32
+#define UN_ACCES		WSAEACCES
+#define UN_AGAIN		EAGAIN
+#define UN_WOULDBLOCK 	WSAEWOULDBLOCK
+#define UN_NOBUFS		WSAENOBUFS
+#define UN_CONNRESET	WSAECONNRESET
+#define UN_MSGSIZE		WSAEMSGSIZE
+#define UN_NETDOWN		WSAENETDOWN
+#define UN_NETUNREACH	WSAENETUNREACH
+#define UN_DESTADDRREQ	WSAEDESTADDRREQ
+#define UN_NOTCONN		WSAENOTCONN
+#define UN_NOTSOCK		WSAENOTSOCK
+#define UN_OPNOTSUPP	WSAEOPNOTSUPP
+#define UN_FAULT		WSAEFAULT
+#define UN_HOSTUNREACH	WSAEHOSTUNREACH
+#define UN_INTR			WSAEINTR
+#else
+#define UN_ACCES		EACCES
+#define UN_AGAIN		EAGAIN
+#define UN_WOULDBLOCK 	EWOULDBLOCK
+#define UN_NOBUFS		ENOBUFS
+#define UN_CONNRESET	ECONNRESET
+#define UN_MSGSIZE		EMSGSIZE
+#define UN_NETDOWN		ENETDOWN
+#define UN_NETUNREACH	ENETUNREACH
+#define UN_DESTADDREQ	EDESTADDREQ
+#define UN_NOTCONN		ENOTCONN
+#define UN_NOTSOCK		ENOTSOCK
+#define UN_OPNOTSUPP	EOPNOTSUPP
+#define UN_HOSTUNREACH	EHOSTUNREACH
+#define UN_DESTADDRREQ	EDESTADDRREQ
+#define UN_INTR			EINTR
+#define UN_FAULT		EFAULT
+#endif
+
 typedef struct
 {
 	int port;
 	char address[20];
 } UDPNET_ADDRESS;
 
-typedef int SOCKET;
+// typedef unsigned int SOCKET;
 
 void udp_socket_init(void);
 void udp_socket_exit(void);

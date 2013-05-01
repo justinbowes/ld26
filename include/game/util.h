@@ -12,14 +12,14 @@
 #include "game/game.h"
 
 XPLINLINE bool position_in_bounds(position_t position, int fudge, position_t min, position_t max) {
-	long x = position.px;
-	long y = position.py;
+	int64_t x = position.px;
+	int64_t y = position.py;
 	
-	if (x + fudge < min.px) return false;
-	if (y + fudge < min.py) return false;
+	if (x + (int64_t)fudge < (int64_t)min.px) return false;
+	if (y + (int64_t)fudge < (int64_t)min.py) return false;
 	
-	if (x - fudge > max.px) return false;
-	if (y - fudge > max.py) return false;
+	if (x - (int64_t)fudge > (int64_t)max.px) return false;
+	if (y - (int64_t)fudge > (int64_t)max.py) return false;
 	
 	return true;
 }
@@ -34,6 +34,11 @@ XPLINLINE float player_rotation_rads_get(int i) {
 	orientation /= (float)UINT8_MAX;
 	orientation *= M_2PI;
 	return orientation;
+}
+
+XPLINLINE void position_mod(position_t *pos) {
+	pos->px = pos->px % PLAYFIELD_MAX;
+	pos->py = pos->py % PLAYFIELD_MAX;
 }
 
 const char *random_word(const char *key_prefix);

@@ -102,6 +102,10 @@ static bool l10n_lookup(const char *loc, const char *key, char **l10n_out) {
                 chars_copied = -1;
             }
         }
+        if (chars_copied == 0) {
+        	xpl_free(text);
+        	text = NULL;
+        }
     }
     
     l10n_entry_t *entry = xpl_calloc_type(l10n_entry_t);

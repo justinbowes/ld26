@@ -13,6 +13,8 @@
 
 #include "xpl_vec3.h"
 
+#include "uthash.h"
+
 typedef enum audio_action {
 	aa_stop,
 	aa_play,
@@ -46,7 +48,8 @@ bool audio_is_playing(audio_t *audio);
 
 audio_t *audio_create(const char *resource);
 void audio_destroy(audio_t **ppaudio);
-void audio_quickplay(const char *resource, float volume, xvec3 position);
+void audio_quickplay_pan(const char *resource, float volume, float pan);
+void audio_quickplay_position(const char *resource, float volume, xvec3 position);
 
 void audio_update(void);
 

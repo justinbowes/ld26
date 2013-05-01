@@ -2,7 +2,7 @@
  * udpserver.c - A simple UDP echo server
  * usage: udpserver <port>
  */
-
+#ifndef WIN32
 #include <assert.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -298,3 +298,4 @@ int main(int argc, char **argv) {
 		
 	}
 }
+#endif

@@ -13,32 +13,33 @@
 camera_t camera;
 
 void camera_calculate_center(position_t *center, int nudge_x, int nudge_y) {
-	long x = center->px;
-	long y = center->py;
+	int64_t x = center->px;
+	int64_t y = center->py;
 	x += nudge_x;
 	y += nudge_y;
 	
-	int halfwidth = camera.draw_area.width >> 1;
-	int halfheight = camera.draw_area.height >> 1;
+	int64_t halfwidth = camera.draw_area.width >> 1;
+	int64_t halfheight = camera.draw_area.height >> 1;
 	
-	long minx = x - halfwidth;
+	int64_t minx = x - halfwidth;
 	if (minx < 0) x -= minx;
 	
-	long maxx = x + halfwidth;
-	if (maxx > UINT32_MAX) y -= (maxx - UINT32_MAX);
+	int64_t maxx = x + halfwidth;
+	if (maxx > PLAYFIELD_MAX) x-= (maxx - PLAYFIELD_MAX);
 	
-	long miny = y - halfheight;
+	int64_t miny = y - halfheight;
 	if (miny < 0) y -= miny;
 	
-	long maxy = y + halfheight;
-	if (maxy > UINT32_MAX) y -= (maxy - UINT32_MAX);
+	int64_t maxy = y + halfheight;
+	if (maxy > PLAYFIELD_MAX) y -= (maxy - PLAYFIELD_MAX);
 	
-	camera.center.px = (int)x;
-	camera.center.py = (int)y;
+	camera.center.px = (uint32_t)x;
+	camera.center.py = (uint32_t)y;
 	
-	camera.min.px = camera.center.px - halfwidth;
-	camera.min.py = camera.center.py - halfheight;
+	camera.min.px = (uint32_t)((int64_t)camera.center.px - halfwidth);
+	camera.min.py = (uint32_t)((int64_t)camera.center.py - halfheight);
 	
-	camera.max.px = camera.center.px + halfwidth;
-	camera.max.py = camera.center.py + halfheight;
+	camera.max.px = (uint32_t)((int64_t)camera.center.px + halfwidth);
+	camera.max.py = (uint32_t)((int64_t)camera.center.py + halfheight);
+
 }

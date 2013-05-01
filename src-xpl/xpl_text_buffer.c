@@ -465,7 +465,7 @@ void xpl_text_buffer_render(const xpl_text_buffer_t *self, const GLfloat *mvp) {
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, self->font_manager->atlas->texture_id);
-	glUniform1i(xpl_shader_get_uniform(self->shader, "texture"), 0); // Use texture unit zero.
+	glUniform1i(xpl_shader_get_uniform(self->shader, "tex"), 0); // Use texture unit zero.
 	glUniformMatrix4fv(xpl_shader_get_uniform(self->shader, "mvp"), 1, GL_FALSE, mvp);
 
 	xpl_vao_program_draw_elements(self->vao, self->shader, GL_TRIANGLES, 0);

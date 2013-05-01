@@ -13,10 +13,14 @@
 #include "game/packet.h"
 #include "game/game.h"
 
-
+static const uint16_t ultrapew_magic = 0xff37;
+static const uint8_t protocol_version = 0x02;
 
 size_t packet_encode(packet_t *packet, uint16_t client_id, uint8_t *buffer) {
 	uint8_t *p = buffer;
+	
+	encode(ultrapew_magic, uint16_t, p);
+	encode(protocol_version, uint8_t, p);
 	
 	encode(client_id, uint16_t, p);
 	encode(packet->seq, uint32_t, p);
@@ -32,19 +36,20 @@ size_t packet_encode(packet_t *packet, uint16_t client_id, uint8_t *buffer) {
 			break;
 			
 		case pt_player:
-			encode(packet->player.position.px, uint32_t, p);
-			encode(packet->player.position.py, uint32_t, p);
+			encode(packet->player.position.px, uint16_t, p);
+			encode(packet->player.position.py, uint16_t, p);
 			encode(packet->player.velocity.dx, int16_t, p);
 			encode(packet->player.velocity.dy, int16_t, p);
 			encode(packet->player.score, uint32_t, p);
 			encode(packet->player.orientation, uint8_t, p);
 			encode(packet->player.health, uint8_t, p);
 			encode(packet->player.is_thrust, bool, p);
+			break;
 			
 		case pt_projectile:
 			encode(packet->projectile.pid, uint16_t, p);
-			encode(packet->projectile.position.px, uint32_t, p);
-			encode(packet->projectile.position.py, uint32_t, p);
+			encode(packet->projectile.position.px, uint16_t, p);
+			encode(packet->projectile.position.py, uint16_t, p);
 			encode(packet->projectile.velocity.dx, int16_t, p);
 			encode(packet->projectile.velocity.dy, int16_t, p);
 			encode(packet->projectile.orientation, uint8_t, p);
@@ -62,6 +67,7 @@ size_t packet_encode(packet_t *packet, uint16_t client_id, uint8_t *buffer) {
 		case pt_chat:
 			memmove(p, packet->chat, CHAT_MAX);
 			p += CHAT_MAX;
+			break;
 			
 		default:
 			break;
@@ -72,6 +78,14 @@ size_t packet_encode(packet_t *packet, uint16_t client_id, uint8_t *buffer) {
 
 bool packet_decode(packet_t *packet, uint16_t *client_source, uint8_t *buffer) {
 	uint8_t *p = buffer;
+	
+	uint16_t magic;
+	decode(p, uint16_t, magic);
+	if (magic != ultrapew_magic) return false;
+	
+	uint8_t protocol;
+	decode(p, uint8_t, protocol);
+	if (protocol != protocol_version) return false;
 	
 	decode(p, uint16_t, *client_source);
 	decode(p, uint32_t, packet->seq);
@@ -87,8 +101,8 @@ bool packet_decode(packet_t *packet, uint16_t *client_source, uint8_t *buffer) {
 			break;
 			
 		case pt_player:
-			decode(p, uint32_t, packet->player.position.px);
-			decode(p, uint32_t, packet->player.position.py);
+			decode(p, uint16_t, packet->player.position.px);
+			decode(p, uint16_t, packet->player.position.py);
 			decode(p, int16_t, packet->player.velocity.dx);
 			decode(p, int16_t, packet->player.velocity.dy);
 			decode(p, uint32_t, packet->player.score);

@@ -34,7 +34,7 @@ void main()
 
 //------------------- Fragment.GL32 -------------------------------
 
-uniform sampler2D 	texture;
+uniform sampler2D 	tex;
 uniform vec3 		subpixel;
 
 in float 			vgamma;
@@ -53,15 +53,15 @@ void main()
     // LCD Off
     if (subpixel.z == 1.0) {
         // No GL_ALPHA texture in GL3; use GL_RED
-        float a = texture(texture, vuv).r;
+        float a = texture(tex, vuv).r;
         frag_color = vcolor * pow(a, 1.0 / vgamma);
         return;
     }
 
     // LCD On
 
-    vec4 current  = texture(texture, vuv);
-    vec4 previous = texture(texture, vuv + neg_one_x * subpixel.xy);
+    vec4 current  = texture(tex, vuv);
+    vec4 previous = texture(tex, vuv + neg_one_x * subpixel.xy);
 	vec3 mix_1;
 	vec3 mix_2;
 	float z;
