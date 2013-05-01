@@ -45,10 +45,12 @@ typedef struct client_info {
 	UT_hash_handle		hh;
 } client_info_t;
 
-static client_info_t *clients = NULL;
-static int client_count = 0;
-static uint16_t client_uid_counter = 1;
-static SOCKET sock;
+static client_info_t 	*clients 		= NULL;
+static int 		client_count 		= 0;
+static uint16_t 	client_uid_counter 	= 1;
+static int 		sock			= 0;
+static const char 	*motd 			= "motd.txt";
+static double		uptime			= 0.0;
 
 /*
  * error - wrapper for perror
@@ -97,6 +99,28 @@ static void broadcast_packet(uint16_t subject, packet_t *packet) {
 	broadcast_buffer(buf, (int)size);
 }
 
+static void client_send_motd(client_info_t *client) {
+
+	packet_t packet;
+	packet.type = pt_chat;
+
+	char stat_message[CHAT_MAX] = { 0 };
+	snprintf(stat_message, CHAT_MAX, "Welcome to UltraPew! %d users, uptime %.2f h", client_count, uptime / 3600.0);
+	strncpy(packet.chat, stat_message, CHAT_MAX);
+	pointcast_packet(0, &packet, client);
+
+	size_t bytes_read = 0;
+
+	char file_message[CHAT_MAX] = { 0 };
+	FILE *file = fopen(motd, "r");
+	if (file) {
+		bytes_read = fread(file_message, 1, CHAT_MAX - 1, file);
+		fclose(file);
+	}
+	if (bytes_read) strncpy(packet.chat, file_message, CHAT_MAX);
+	pointcast_packet(0, &packet, client);
+
+}
 
 static client_info_t *get_client(UDPNET_ADDRESS *remote_addr) {
 	client_info_t *client;
@@ -118,14 +142,14 @@ static client_info_t *get_client(UDPNET_ADDRESS *remote_addr) {
 }
 
 static void delete_client(client_info_t *client, const char *reason) {
-	HASH_DEL(clients, client);
-
-	log_event("kick", client, "reason=\"%s\"", reason);
+	log_event("delete", client, "reason=\"%s\"", reason);
 	packet_t bye;
 	memset(&bye, 0, sizeof(bye));
 	bye.type = pt_goodbye;
 	bye.goodbye = client->player_id;
 	broadcast_packet(client->player_id.client_id, &bye);
+
+	HASH_DEL(clients, client);
 
 	--client_count;	
 
@@ -152,6 +176,8 @@ int main(int argc, char **argv) {
 	int n;							/* message byte size */
 	
 	xpl_init_timer();
+
+	double initial_time = xpl_get_time();
 	
 	/*
 	 * check command line arguments
@@ -239,7 +265,7 @@ int main(int argc, char **argv) {
 				log_event("hello", client_info, "nonce=%u", packet.hello.nonce);
 				packet.hello.client_id = client_info->player_id.client_id;
 				pointcast_packet(client_source, &packet, client_info);
-				
+				client_send_motd(client_info);
 				assert(client_source != 0);
 			}
 			strncpy(client_info->player_id.name, packet.hello.name, NAME_SIZE);
@@ -253,19 +279,19 @@ int main(int argc, char **argv) {
 		}
 		
 		if (packet.type == pt_damage) {
-			log_event("damage", client_info, "damage=%u,origin=%u,flags=&u",
+			log_event("damage", client_info, "damage=%u,origin=%u,flags=%u",
 					  packet.damage.amount,
 					  packet.damage.player_id,
 					  packet.damage.flags);
 		}
 		
 		if (client_source != client_info->player_id.client_id) {
-			LOG_WARN("Packet client_id mismatch (claim %u, have %u); dropping packet",
+			LOG_WARN("Packet client_id mismatch (claim %u, have %u); kicking packet",
 					 client_source, client_info->player_id.client_id);
-			continue;
 		}
 		
 		double time = xpl_get_time();
+		uptime = time - initial_time;
 		client_info->last_packet_time = time;
 		
 		broadcast_packet(client_source, &packet);
