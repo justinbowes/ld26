@@ -35,8 +35,8 @@
 #define TUTORIAL_PAGES	6
 
 typedef struct position {
-	uint32_t px;
-	uint32_t py;
+	uint16_t px;
+	uint16_t py;
 } position_t;
 
 typedef struct velocity {

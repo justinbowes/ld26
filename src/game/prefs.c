@@ -19,7 +19,7 @@ static prefs_t prefs_default(void) {
 	
 	strncpy(prefs.name, "", NAME_SIZE);
 	snprintf(prefs.server, SERVER_SIZE, "gs.ultrapew.com");
-	prefs.port = 3000;
+	prefs.port = 3001;
 	
 	return prefs;
 }
