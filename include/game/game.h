@@ -18,6 +18,8 @@
 
 #include "audio/audio.h"
 
+#define PLAYFIELD_MAX	4096
+
 #define MAX_PLAYERS		128
 #define MAX_PROJECTILES	4096
 #define MAX_PARTICLES	4096
@@ -77,6 +79,7 @@ typedef struct projectile_local {
 	uint8_t		trail_timeout;
 	uint16_t	owner;
 	bool		force_detonate;
+	bool		exploded;
 	xvec4		color;
 } projectile_local_t;
 

@@ -70,7 +70,7 @@ typedef struct log {
 #define POSITION_TIMEOUT_UNDER_THRUST 0.1f
 #define RECEIVE_TIMEOUT	5.0f
 
-#define THRUST			0.8f
+#define THRUST			2.0f
 #define TORQUE			192.0f
 #define INITIAL_HEALTH	255
 
@@ -87,6 +87,8 @@ typedef struct log {
 #define SELECT_VOLUME	0.2f
 #define EXPLODE_VOLUME	1.0f
 #define FIRE_VOLUME		0.5f
+
+#define MAX_VELOCITY	6.0f
 
 enum packet_errors {
 	pe_client_id
@@ -198,6 +200,8 @@ static const char *player_name(int i, bool as_object);
 static void player_update_position(int i);
 static int player_with_client_id_get(uint16_t client_id, bool allow_allocate, bool *was_new_player);
 static xvec2 player_v2velocity_get(int i);
+
+static void position_mod(position_t *position);
 
 static void projectile_add(void);
 static void projectile_explode_effect(int pi, int target);
@@ -773,8 +777,9 @@ static void packet_handle_damage(uint16_t client_id, packet_t *packet) {
 
 		
 	} else {
-		log_add_text("%s took %d damage from a misdirected explosion",
+		log_add_text(xl("generic_damage_format"),
 					 player_name(target, false),
+					 random_word("damage"),
 					 packet->damage.amount);
 	}
 	
@@ -1031,6 +1036,8 @@ static void particle_add(position_t position, xvec2 velocity, xvec4 color, int s
 	game.particle[pi].initial_life = life;
 	game.particle[pi].initial_color = color;
 	game.particle[pi].color = color;
+	
+	position_mod(&game.particle[pi].position);
 }
 
 static int particle_find_new(void) {
@@ -1071,6 +1078,8 @@ static void particle_update(int i, double time) {
 	game.particle[i].position.px += (int)trunc.x;
 	game.particle[i].position.py += (int)trunc.y;
 	game.particle[i].orientation += game.particle[i].rotation * time;
+	
+	position_mod(&game.particle[i].position);
 }
 
 
@@ -1117,8 +1126,8 @@ static xvec2 player_get_direction_vector(int i) {
 }
 
 static void player_init(int i) {
-	game.player[i].position.px = (UINT32_MAX / 2) + SPAWN_BOX * xpl_frand() - (SPAWN_BOX / 2);
-	game.player[i].position.py = (UINT32_MAX / 2) + SPAWN_BOX * xpl_frand() - (SPAWN_BOX / 2);
+	game.player[i].position.px = (PLAYFIELD_MAX / 2) + SPAWN_BOX * xpl_frand() - (SPAWN_BOX / 2);
+	game.player[i].position.py = (PLAYFIELD_MAX / 2) + SPAWN_BOX * xpl_frand() - (SPAWN_BOX / 2);
 	game.player[i].health = INITIAL_HEALTH;
 	game.player[i].orientation = xpl_irand_range(0, UINT8_MAX);
 	game.player_local[i].visible = false;
@@ -1253,6 +1262,11 @@ static void player_local_update_thrust(double time) {
 	LOG_DEBUG("Thrust			: %f, %f", oriented_thrust.x, oriented_thrust.y);
 	LOG_DEBUG("Float velocity	: %f, %f", velocity.x, velocity.y);
 	
+	float speed = xvec2_length(velocity);
+	if (speed > MAX_VELOCITY) {
+		velocity = xvec2_scale(xvec2_scale(velocity, 1.f / speed), MAX_VELOCITY);
+	}
+	
 	game.player[0].velocity = velocity_for_v2(velocity);
 }
 
@@ -1300,6 +1314,7 @@ static void player_update_position(int i) {
 		game.player[i].position.py += dy;
 		game.player_position_buffer[i].y -= dy;
 	}
+	position_mod(&game.player[i].position);
 }
 
 static xvec2 player_v2velocity_get(int i) {
@@ -1337,6 +1352,7 @@ static int player_with_client_id_get(uint16_t client_id, bool allow_allocate, bo
 	return empty_slot;
 }
 
+
 // ------------------------------------------------------------------------------
 static void prefs_save_connect(void) {
 	prefs_t prefs = prefs_get();
@@ -1359,6 +1375,8 @@ static void projectile_add(void) {
 	game.projectile[i].position = game.player[0].position;
 	game.projectile[i].position.px += (int)front.x;
 	game.projectile[i].position.py += (int)front.y;
+	
+	position_mod(&game.projectile[i].position);
 	
 	velocity_t velocity = {
 		roundf(projectile_config[weapon].velocity * direction_vector.x),
@@ -1402,6 +1420,7 @@ static void projectile_explode_effect(int pi, int target) {
 					 projectile_config[pt].explode_particle_size,
 					 projectile_config[pt].explode_particle_life, true);
 	}
+	game.projectile_local[pi].exploded = true;
 	audio_quickplay_position(projectile_config[pt].explode_effect, EXPLODE_VOLUME, v3_relative_audio(position));
 
 }
@@ -1413,6 +1432,7 @@ static void projectile_initialize(uint16_t pid, int pi, int ti) {
 	game.projectile_local[pi].trail_timeout = projectile_config[ti].trail_timeout;
 	game.projectile_local[pi].color = color_variant(projectile_config[ti].color, projectile_config[ti].variance);
 	game.projectile_local[pi].force_detonate = false;
+	game.projectile_local[pi].exploded = false;
 }
 
 // Get a projectile. Pass a negative projectile type to prevent creation.
@@ -1448,6 +1468,11 @@ static bool projectile_type_is_mine(int type) {
 }
 
 static void projectile_update(int i, bool jiffy_elapsed) {
+	if (game.projectile_local[i].exploded) {
+		game.projectile[i].health = 0;
+		return;
+	}
+	
 	int64_t pdx, pdy;
 	game.projectile_position_buffer[i] = xvec2_add(game.projectile_position_buffer[i],
 												   xvec2_set(game.projectile[i].velocity.dx / VELOCITY_SCALE,
@@ -1463,11 +1488,14 @@ static void projectile_update(int i, bool jiffy_elapsed) {
 		game.projectile[i].position.py += dy;
 		game.projectile_position_buffer[i].y -= dy;
 	}
+	position_mod(&game.projectile[i].position);
 	
 	int type = game.projectile[i].type;
-	if (type != pt_blackhole && type != pt_repair) {
+	if (projectile_type_is_mine(type) || type == pt_repair) {
 		// Are there any non-mine projectiles too close?
 		for (int j = i + 1; j < MAX_PROJECTILES; ++j) {
+			int other_type = game.projectile[j].type;
+			if (other_type)
 			if (game.projectile[j].health) {
 				pdx = (int64_t)game.projectile[i].position.px - (int64_t)game.projectile[j].position.px;
 				pdy = (int64_t)game.projectile[i].position.py - (int64_t)game.projectile[j].position.py;
@@ -1532,7 +1560,7 @@ static void projectile_update(int i, bool jiffy_elapsed) {
 	
 	could_hit = could_hit || game.projectile_local[i].force_detonate;
 
-	// Don't allow mines to double-detonate.
+	// Don't allow mines to double-damage.
 	if (projectile_type_is_mine(type) && game.projectile[i].health != 2) could_hit = false;
 
 	if (could_hit) {
@@ -1646,6 +1674,8 @@ static void text_particle_add(position_t position, xvec2 velocity, const char *t
 	game.text_particle[i].orientation = xpl_frand_range(-M_PI_4, M_PI_4);
 	game.text_particle[i].initial_life = life;
 	game.text_particle[i].life = life;
+	
+	position_mod(&game.text_particle[i].position);
 #endif
 }
 
@@ -1684,6 +1714,8 @@ static void text_particle_update(int i, double time) {
 	game.text_particle[i].fposition = xvec2_sub(game.text_particle[i].fposition, trunc);
 	game.text_particle[i].position.px += (int)trunc.x;
 	game.text_particle[i].position.py += (int)trunc.y;
+	
+	position_mod(&game.text_particle[i].position);
 }
 
 // ------------------------------------------------------------------------------

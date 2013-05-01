@@ -36,6 +36,11 @@ XPLINLINE float player_rotation_rads_get(int i) {
 	return orientation;
 }
 
+XPLINLINE void position_mod(position_t *pos) {
+	pos->px = pos->px % PLAYFIELD_MAX;
+	pos->py = pos->py % PLAYFIELD_MAX;
+}
+
 const char *random_word(const char *key_prefix);
 
 #endif

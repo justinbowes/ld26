@@ -25,13 +25,13 @@ void camera_calculate_center(position_t *center, int nudge_x, int nudge_y) {
 	if (minx < 0) x -= minx;
 	
 	int64_t maxx = x + halfwidth;
-	if (maxx > UINT32_MAX) y -= (maxx - UINT32_MAX);
+	if (maxx > PLAYFIELD_MAX) x-= (maxx - PLAYFIELD_MAX);
 	
 	int64_t miny = y - halfheight;
 	if (miny < 0) y -= miny;
 	
 	int64_t maxy = y + halfheight;
-	if (maxy > UINT32_MAX) y -= (maxy - UINT32_MAX);
+	if (maxy > PLAYFIELD_MAX) y -= (maxy - PLAYFIELD_MAX);
 	
 	camera.center.px = (uint32_t)x;
 	camera.center.py = (uint32_t)y;
