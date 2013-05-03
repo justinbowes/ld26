@@ -146,7 +146,7 @@ static void populate_video_modes() {
 static void menu_configure_graphics(xpl_app_t *app, xrect area) {
     area = xrect_contract_to(area, 600, 440);
     
-    int window_clicked;
+    int window_clicked = FALSE;
     int save_clicked = FALSE;
 	int reset_clicked;
     int back_clicked;

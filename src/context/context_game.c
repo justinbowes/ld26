@@ -872,6 +872,7 @@ static void packet_handle_projectile(uint16_t client_id, packet_t *packet) {
 	int pi = projectile_with_pid_get(packet->projectile.pid, packet->projectile.type, &is_new);
 	game.projectile_local[pi].owner = client_id;
 	game.projectile[pi] = packet->projectile;
+	LOG_DEBUG("Projectile: %u, %u", game.projectile[pi].position.px, game.projectile[pi].position.py);
 	if (is_new) {
 		int type = game.projectile[pi].type;
 		audio_quickplay_position(projectile_config[type].fire_effect, FIRE_VOLUME, v3_relative_audio(game.projectile[pi].position));
