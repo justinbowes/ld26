@@ -128,7 +128,7 @@ static void *init(xpl_context_t *self) {
     xvec2 pen;
     wchar_t buffer[1024];
     
-    mbstowcs(buffer, "informi labs", 1024);
+    xpl_mbs_to_wcs("informi labs", buffer, 1024);
     pen = xvec2_set(360.f, 480.f);
     xpl_text_buffer_add_text(outline_text, &pen, &outline_markup, buffer, 0);
     xpl_text_buffer_commit(outline_text);
@@ -137,7 +137,7 @@ static void *init(xpl_context_t *self) {
     xpl_text_buffer_add_text(logo_text, &pen, &logo_markup, buffer, 0);
     xpl_text_buffer_commit(logo_text);
 
-	mbstowcs(buffer, "informilabs.com\nultrapew.com", 1024);
+    xpl_mbs_to_wcs("informilabs.com\nultrapew.com", buffer, 1024);
     pen = xvec2_set(360.f, 400.f);
     xpl_text_buffer_add_text(website_text, &pen, &website_markup, buffer, 0);
     xpl_text_buffer_commit(website_text);
@@ -148,7 +148,8 @@ static void *init(xpl_context_t *self) {
         snprintf(key, 64, "logo_copyright%d", line);
         const char *str = xl(key);
         if (strcmp(str, key) == 0) break;
-        mbstowcs(buffer, str, 1024);
+
+        xpl_mbs_to_wcs(str, buffer, 1024);
         pen = xvec2_set(5.f, 160.f - (15.f * line));
         xpl_text_buffer_add_text(copyright_text, &pen, &copyright_markup, buffer, 0);
         ++line;

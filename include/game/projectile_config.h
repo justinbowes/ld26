@@ -66,7 +66,7 @@ static const projectile_config_t projectile_config[] = {
 		0.4f,
 		5,
 		
-		0.f,
+		20.f,
 		100,
 		2,
 		RGBA(0xff, 0x00, 0x00, 0xff),
@@ -94,7 +94,7 @@ static const projectile_config_t projectile_config[] = {
 		0.4f,
 		5,
 		
-		0.f,
+		40.f,
 		150,
 		3,
 		RGBA(0xff, 0x00, 0x00, 0xff),
