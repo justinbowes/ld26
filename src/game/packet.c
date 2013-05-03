@@ -113,8 +113,8 @@ bool packet_decode(packet_t *packet, uint16_t *client_source, uint8_t *buffer) {
 			
 		case pt_projectile:
 			decode(p, uint16_t, packet->projectile.pid);
-			decode(p, uint32_t, packet->projectile.position.px);
-			decode(p, uint32_t, packet->projectile.position.py);
+			decode(p, uint16_t, packet->projectile.position.px);
+			decode(p, uint16_t, packet->projectile.position.py);
 			decode(p, int16_t, packet->projectile.velocity.dx);
 			decode(p, int16_t, packet->projectile.velocity.dy);
 			decode(p, uint8_t, packet->projectile.orientation);
