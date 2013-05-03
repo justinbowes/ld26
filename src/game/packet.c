@@ -13,7 +13,7 @@
 #include "game/packet.h"
 #include "game/game.h"
 
-static const uint16_t ultrapew_magic = 0xff37;
+static const uint16_t ultrapew_magic = (uint16_t)0xff37;
 static const uint8_t protocol_version = 0x02;
 
 size_t packet_encode(packet_t *packet, uint16_t client_id, uint8_t *buffer) {
