@@ -320,6 +320,7 @@ static void game_engine(xpl_context_t *self, double time, void *data) {
 		}
 		
 		if (jiffy_elapsed) {
+			// Blink indicators
 			if (game.indicators_cooldown == 0) {
 				game.indicators_cooldown = INDICATOR_COOLDOWN_JIFFIES;
 				game.indicators_on = !game.indicators_on;
@@ -795,7 +796,7 @@ static void packet_handle_damage(uint16_t client_id, packet_t *packet) {
 	}
 	
 	// Destroys projectile, including mines.
-	if (projectile) {
+	if (projectile >= 0) {
 		projectile_explode_effect(projectile, target);
 		game.projectile[projectile].health = 0;
 	}
