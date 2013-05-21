@@ -298,8 +298,8 @@ static void game_engine(xpl_context_t *self, double time, void *data) {
 		xvec2 pen = {{ 0.f, self->size.height - 4.f }};
 		for (int i = 0; i < LOG_LINES; ++i) {
 			pen.x = 4.f;
-			wchar_t line[LOG_LINE_MAX];
-			mbstowcs(line, ui_log.lines[i], LOG_LINE_MAX);
+			wchar_t line[LOG_LINE_MAX * 2];
+			xpl_mbs_to_wcs(ui_log.lines[i], line, LOG_LINE_MAX * 2);
 			if (wcslen(line)) xpl_text_buffer_add_text(ui_log.buffer, &pen, &ui_log.markup, line, 0);
 			pen.y = floorf(pen.y);
 		}
@@ -321,6 +321,7 @@ static void game_engine(xpl_context_t *self, double time, void *data) {
 		}
 		
 		if (jiffy_elapsed) {
+			// Blink indicators
 			if (game.indicators_cooldown == 0) {
 				game.indicators_cooldown = INDICATOR_COOLDOWN_JIFFIES;
 				game.indicators_on = !game.indicators_on;
@@ -347,6 +348,11 @@ static void game_engine(xpl_context_t *self, double time, void *data) {
 		for (int i = 0; i < MAX_PROJECTILES; ++i) {
 			if (game.projectile[i].health) {
 				projectile_update(i, jiffy_elapsed);
+			}
+		}
+		for (int i = 0; i < MAX_PROJECTILES; ++i) {
+			if (game.projectile_local[i].exploded) {
+				game.projectile[i].health = 0;
 			}
 		}
 		
@@ -791,7 +797,7 @@ static void packet_handle_damage(uint16_t client_id, packet_t *packet) {
 	}
 	
 	// Destroys projectile, including mines.
-	if (projectile) {
+	if (projectile >= 0) {
 		projectile_explode_effect(projectile, target);
 		game.projectile[projectile].health = 0;
 	}
@@ -868,6 +874,7 @@ static void packet_handle_projectile(uint16_t client_id, packet_t *packet) {
 	int pi = projectile_with_pid_get(packet->projectile.pid, packet->projectile.type, &is_new);
 	game.projectile_local[pi].owner = client_id;
 	game.projectile[pi] = packet->projectile;
+	LOG_DEBUG("Projectile: %u, %u", game.projectile[pi].position.px, game.projectile[pi].position.py);
 	if (is_new) {
 		int type = game.projectile[pi].type;
 		audio_quickplay_position(projectile_config[type].fire_effect, FIRE_VOLUME, v3_relative_audio(game.projectile[pi].position));
@@ -894,7 +901,6 @@ static void packet_receive(void) {
 		}
 		if (n <= 0) return;
 		
-		network.receive_timeout = RECEIVE_TIMEOUT;
 		
 		if (strcmp(receive_addr.address, server_addr->address) != 0) {
 			LOG_WARN("Discarding packet from unknown host %s", receive_addr.address);
@@ -904,8 +910,10 @@ static void packet_receive(void) {
 		if (! packet_decode(&packet, &packet_source, buffer)) {
 			ui_error_set("Invalid response from server.");
 			player_local_disconnect();
+		} else {
+			network.receive_timeout = RECEIVE_TIMEOUT;
+			packet_handle(packet_source, &packet);
 		}
-		packet_handle(packet_source, &packet);
 	}
 }
 
@@ -1474,7 +1482,9 @@ static void projectile_update(int i, bool jiffy_elapsed) {
 		return;
 	}
 	
+	int type			 = game.projectile[i].type;
 	int64_t pdx, pdy;
+
 	game.projectile_position_buffer[i] = xvec2_add(game.projectile_position_buffer[i],
 												   xvec2_set(game.projectile[i].velocity.dx / VELOCITY_SCALE,
 															 game.projectile[i].velocity.dy / VELOCITY_SCALE));
@@ -1491,28 +1501,11 @@ static void projectile_update(int i, bool jiffy_elapsed) {
 	}
 	position_mod(&game.projectile[i].position);
 	
-	int type = game.projectile[i].type;
-	if (projectile_type_is_mine(type) || type == pt_repair) {
-		// Are there any non-mine projectiles too close?
-		for (int j = i + 1; j < MAX_PROJECTILES; ++j) {
-			int other_type = game.projectile[j].type;
-			if (other_type)
-			if (game.projectile[j].health) {
-				pdx = (int64_t)game.projectile[i].position.px - (int64_t)game.projectile[j].position.px;
-				pdy = (int64_t)game.projectile[i].position.py - (int64_t)game.projectile[j].position.py;
-				if (pdx < 10 && pdy < 10) {
-					// Set both to explode or disappear.
-					game.projectile_local[i].force_detonate = true;
-					game.projectile_local[j].force_detonate = true;
-				}
-			}
-		}
-	}
 	
 	float current_explosion_radius = 0.f;
 	if (jiffy_elapsed && type != pt_repair) {
-		if (projectile_type_is_mine(type) && game.projectile[i].health == 2) {
-			// Mines linger at 2 health
+		if (projectile_type_is_mine(type) && game.projectile[i].health == 1) {
+			// Mines linger at 1 health
 			game.projectile[i].health++;
 			// They change to trail color when armed
 			game.projectile_local[i].color = color_variant(projectile_config[type].trail_color, projectile_config[type].trail_life);
@@ -1526,10 +1519,6 @@ static void projectile_update(int i, bool jiffy_elapsed) {
 						 projectile_config[type].trail_life, true);
 		}
 	}
-	if (game.projectile[i].health == 0 || game.projectile_local[i].force_detonate) {
-		current_explosion_radius = projectile_config[type].explode_radius;
-	}
-	
 	pdx = (int64_t)game.projectile[i].position.px - (int64_t)game.player[0].position.px;
 	pdy = (int64_t)game.projectile[i].position.py - (int64_t)game.player[0].position.py;
 	int projectile_owner = player_with_client_id_get(game.projectile_local[i].owner, false, NULL);
@@ -1538,8 +1527,41 @@ static void projectile_update(int i, bool jiffy_elapsed) {
 	dtt -= PLAYER_SIZE * 0.5f;
 	dtt = xmax(dtt, 0.f);
 	
+	if (game.projectile[i].health == 0 ||
+			(game.projectile[i].health == 1 && projectile_type_is_mine(type)) ||
+			game.projectile_local[i].force_detonate) {
+		current_explosion_radius = projectile_config[type].explode_radius;
+	}
+
+	bool in_contact = (type == pt_repair) || (dtt <= current_explosion_radius);
+	game.projectile_local[i].force_detonate = game.projectile_local[i].force_detonate || in_contact;
+
+	if (projectile_type_is_mine(type) || type == pt_repair) {
+		// Are there any non-mine projectiles too close or exploding?
+		// Do a complete rescan otherwise we need to do n^3 to cascade backwards
+		for (int j = 0; j < MAX_PROJECTILES; ++j) {
+			if (! game.projectile[j].health) continue;
+			int other_type = game.projectile[j].type;
+			if ((other_type != type) || game.projectile_local[i].force_detonate) {
+				pdx = (int64_t)game.projectile[i].position.px - (int64_t)game.projectile[j].position.px;
+				pdy = (int64_t)game.projectile[i].position.py - (int64_t)game.projectile[j].position.py;
+				float md;
+				if (game.projectile_local[i].force_detonate || game.projectile_local[j].force_detonate) {
+					md = projectile_config[type].explode_radius;
+				} else {
+					md = 2.f * projectile_config[type].size;
+				}
+				if (sqrtf(pdx * pdx + pdy * pdy) < md) {
+					// Set both to explode or disappear.
+					game.projectile_local[i].force_detonate = true;
+					game.projectile_local[j].force_detonate = true;
+				}
+			}
+		}
+	}
+
 	// Black hole accelerates you in
-	if (type == pt_blackhole && game.projectile[i].health == 2) {
+	if (type == pt_blackhole && game.projectile[i].health == 1) {
 		xvec2 direction = {{ pdx, pdy }};
 		float length = dtt;
 		// Fudge because black hole throws you around so fast
@@ -1550,7 +1572,6 @@ static void projectile_update(int i, bool jiffy_elapsed) {
 		LOG_DEBUG("Black hole acceleration: %f %f", acceleration.x, acceleration.y);
 	}
 	
-	bool in_contact = (type == pt_repair) || (dtt <= current_explosion_radius);
 	bool could_hit = in_contact;
 	could_hit = could_hit && (projectile_config[type].can_hit_self || projectile_owner);
 	
@@ -1562,7 +1583,7 @@ static void projectile_update(int i, bool jiffy_elapsed) {
 	could_hit = could_hit || game.projectile_local[i].force_detonate;
 
 	// Don't allow mines to double-damage.
-	if (projectile_type_is_mine(type) && game.projectile[i].health != 2) could_hit = false;
+	if (projectile_type_is_mine(type) && game.projectile[i].health > 0) could_hit = false;
 
 	if (could_hit) {
 		current_explosion_radius = projectile_config[type].explode_radius;
@@ -1601,12 +1622,7 @@ static void projectile_update(int i, bool jiffy_elapsed) {
 		
 		if (damage)	{
 			packet_send_damage(game.projectile_local[i].owner, game.projectile[i].pid, damage, flags);
-			if (projectile_type_is_mine(type)) game.projectile[i].health = 1;
-
-		} else {
-			// Just kill the projectile
-			game.projectile[i].health = 0;
-			// Don't propagate this. The other clients will figure it out too.
+			// if (projectile_type_is_mine(type)) game.projectile[i].health = 1;
 		}
 	}
 }
@@ -1664,7 +1680,8 @@ static float text_get_length(xpl_font_t *font, const char *text, size_t position
 // ------------------------------------------------------------------------------
 
 static void text_particle_add(position_t position, xvec2 velocity, const char *text, xvec4 color, float life) {
-#ifndef XPL_PLATFORM_WINDOWSXX
+	// The hash function is unreasonably slow on windows + debug
+#if !defined(XPL_PLATFORM_WINDOWS) || !defined(DEBUG)
 	int i = text_particle_find_new();
 	strncpy(game.text_particle[i].text, text, MAX_TEXT_PARTICLE_CHARS);
 	game.text_particle[i].position = position;
@@ -1862,7 +1879,7 @@ static void ui_tutorial_show(xpl_context_t *self, double time) {
 		wchar_t buffer[1024];
 		char key_name[64];
 		snprintf(key_name, 64, "tutorial_%d", ui_tutorial_page - 1);
-		mbstowcs(buffer, xl(key_name), 1024);
+		xpl_mbs_to_wcs(xl(key_name), buffer, 1024);
 		xpl_text_buffer_add_text(tutorial_buffer, &pen, &tutorial_markup, buffer, 0);
 		xpl_text_buffer_commit(tutorial_buffer);
 	}
@@ -1889,7 +1906,7 @@ static void ui_tutorial_show(xpl_context_t *self, double time) {
 		wchar_t buffer[1024];
 		char key_name[64];
 		snprintf(key_name, 64, "tutorial_%d", ui_tutorial_page - 1);
-		mbstowcs(buffer, xl(key_name), 1024);
+		xpl_mbs_to_wcs(xl(key_name), buffer, 1024);
 		xpl_text_buffer_add_text(tutorial_buffer, &pen, &tutorial_markup, buffer, 0);
 		xpl_text_buffer_commit(tutorial_buffer);
 	}

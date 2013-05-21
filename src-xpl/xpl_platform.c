@@ -535,3 +535,27 @@ void xpl_resource_resolve_opts(xpl_resolve_resource_opts_t *out, const char *pat
 	xpl_data_resource_path(&out->data_resource_path[0], path_in, PATH_MAX);
 }
 
+#ifndef XPL_PLATFORM_WINDOWS
+size_t xpl_mbs_to_wcs(const char *mbs, wchar_t *wcs, size_t wcs_size) {
+	return mbstowcs(wcs, mbs, wcs_size);
+}
+
+size_t xpl_wcs_to_mbs(const wchar_t *wcs, char *mbs, size_t mbs_size) {
+	return wcstombs(mbs, wcs, mbs_size);
+}
+#else
+size_t xpl_mbs_to_wcs(const char *mbs, wchar_t *wcs, size_t wcs_size) {
+	size_t len = MultiByteToWideChar(CP_UTF8, 0, mbs, strlen(mbs), wcs, wcs_size);
+	if (wcs) wcs[xmin(len, wcs_size)] = 0;
+	return len;
+}
+
+size_t xpl_wcs_to_mbs(const wchar_t *wcs, char *mbs, size_t mbs_size) {
+	size_t len = WideCharToMultiByte(CP_UTF8, 0, wcs, wcslen(wcs), mbs, mbs_size, NULL, NULL);
+	if (mbs) mbs[xmin(len, mbs_size)] = 0;
+	return len;
+}
+
+#endif
+
+

@@ -38,7 +38,9 @@ static xpl_app_params_t                 app_config;
 static GLFWvidmode                      supported_video_modes[MAX_VID_MODES];
 static size_t                           supported_video_mode_count;
 static size_t                           selected_video_mode_index = -1;
-static int                              resolution_is_expanded;
+static int								preferences_is_expanded = 0;
+static int                              resolution_is_expanded = 0;
+static float                            resolution_scroll = 0.f;
 static bool                             video_config_changed = false;
 #endif
 
@@ -150,7 +152,7 @@ static void menu_configure_graphics(xpl_app_t *app, xrect area) {
     area = xrect_contract_to(area, 600, 440);
     
 #ifndef XPL_PLATFORM_IOS
-    int window_clicked;
+    int window_clicked = FALSE;
     int save_clicked = FALSE;
 #endif
 	int reset_clicked;
@@ -166,11 +168,13 @@ static void menu_configure_graphics(xpl_app_t *app, xrect area) {
 				bgm_clicked = xpl_imui_control_check(xl("config_bgm"), prefs.bgm_on, TRUE);
 				reset_clicked = xpl_imui_control_button(xl("config_reset"), 0, TRUE);
 #ifndef XPL_PLATFORM_IOS
-                xpl_imui_separator_line();
-				xpl_imui_control_label(xl("config_graphics_heading"));
-                window_clicked = xpl_imui_control_check(xl("config_graphics_window"), !app_config.is_fullscreen, TRUE);
+            	if (xpl_imui_control_collapse(xl("config_preferences"), "", &preferences_is_expanded, TRUE)) {
+					bgm_clicked = xpl_imui_control_check(xl("config_bgm"), prefs.bgm_on, TRUE);
+					reset_clicked = xpl_imui_control_button(xl("config_reset"), 0, TRUE);
+            	}
                 if (xpl_imui_control_collapse(xl("config_graphics_resolution"), "",
                                               &resolution_is_expanded, supported_video_mode_count > 0)) {
+                    window_clicked = xpl_imui_control_check(xl("config_graphics_window"), !app_config.is_fullscreen, TRUE);
                     for (size_t i = 0; i < supported_video_mode_count; ++i) {
                         char label[64];
                         snprintf(label, 64, "%d x %d, %d bits",
@@ -432,10 +436,10 @@ static void *init(xpl_context_t *self) {
 #ifndef XPL_PLATFORM_IOS
     populate_video_modes();
     resolution_is_expanded = FALSE;
+    preferences_is_expanded = FALSE;
 #endif
-	
     create_background();
-    
+
 	prefs = prefs_get();
     
 #ifndef XPL_PLATFORM_IOS

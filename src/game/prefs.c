@@ -39,7 +39,7 @@ prefs_t prefs_get(void) {
 	prefs.bgm_on = ini_getbool("prefs", "bgm_on", defaults.bgm_on, resource);
 	ini_gets("prefs", "name", defaults.name, prefs.name, NAME_SIZE, resource);
 	ini_gets("prefs", "server", defaults.server, prefs.server, SERVER_SIZE, resource);
-	prefs.port = (unsigned short)ini_getl("prefs", "port", defaults.port, resource);
+	prefs.port = (unsigned short)ini_getl("prefs", "port_v2", defaults.port, resource);
 	
 	return prefs;
 }
@@ -51,6 +51,6 @@ void prefs_set(prefs_t prefs) {
 	ini_puts("prefs", "bgm_on", prefs.bgm_on ? "true" : "false", resource);
 	ini_puts("prefs", "name", prefs.name, resource);
 	ini_puts("prefs", "server", prefs.server, resource);
-	ini_putl("prefs", "port", (unsigned short)prefs.port, resource);
+	ini_putl("prefs", "port_v2", (unsigned short)prefs.port, resource);
 }
 

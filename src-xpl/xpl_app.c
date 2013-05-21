@@ -74,7 +74,13 @@ static void set_common_hints(xpl_app_t *app) {
 int xpl_start_app(xpl_app_t *app) {
 
     int defaults = FALSE;
-	
+
+#if !defined(XPL_PLATFORM_WINDOWS)
+    // won't work
+    // http://msdn.microsoft.com/en-CA/library/x99tb11d(v=vs.80).aspx
+    // need to use MultiByteToWideChar
+    setlocale(LC_CTYPE, "UTF-8");
+#endif
     
 #if defined(XPL_PLATFORM_OSX)
 	// Do this before we grab a real context.

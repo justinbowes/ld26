@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <string.h>
+#include <wchar.h>
 #include <stdint.h>
 #include <math.h>
 
@@ -156,6 +157,8 @@ void xpl_data_resource_path(char *path_out, const char *path_in, size_t length);
 int xpl_resolve_resource(char *path_out, const char *path_in, size_t length);
 int xpl_resource_exists(const char *resource_path);
 void xpl_resource_resolve_opts(xpl_resolve_resource_opts_t *out, const char *path_in);
+size_t xpl_mbs_to_wcs(const char *mbs, wchar_t *wcs, size_t wcs_size);
+size_t xpl_wcs_to_mbs(const wchar_t *wcs, char *mbs, size_t mbs_size);
 
 #if defined(XPL_PLATFORM_IOS) && !defined(XPL_NO_GLFW_STUB_API)
 #	warning GLFW stub api!
