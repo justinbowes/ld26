@@ -94,6 +94,7 @@ enum packet_errors {
 	pe_client_id
 };
 
+
 static const int up[]		= { GLFW_KEY_UP,		'W',	0};
 static const int down[]		= { GLFW_KEY_DOWN,		'S',	0};
 static const int left[]		= { GLFW_KEY_LEFT,		'A',	0};
@@ -1533,7 +1534,7 @@ static void projectile_update(int i, bool jiffy_elapsed) {
 	pdy = (int64_t)game.projectile[i].position.py - (int64_t)game.player[0].position.py;
 	int projectile_owner = player_with_client_id_get(game.projectile_local[i].owner, false, NULL);
 
-	float dtt = sqrtf(labs(pdx * pdx) + labs(pdy * pdy));
+	float dtt = sqrtf(llabs(pdx * pdx) + llabs(pdy * pdy));
 	dtt -= PLAYER_SIZE * 0.5f;
 	dtt = xmax(dtt, 0.f);
 	

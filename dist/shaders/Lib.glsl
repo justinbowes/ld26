@@ -169,18 +169,14 @@ float scanline(float strength) {
 	return scanline;
 }
 
+// ------------------------------------------------------------------------
+// -- Toon
+
+#include "Lib.Constants"
+
 float alias_toon(float value, int steps) {
     float alias = fwidth(value);
-    float result;
-    switch (steps) {
-        case 1:
-            result = step(0.5, value);
-            break;
-            
-        default:
-            result = round(value * steps) / steps;
-            break;
-    }
+    float result = (steps == 1 ? step(0.5, value) : round(value * steps) / steps);
 
     if (abs(result - value) < alias) {
         return mix(result, value, smoothstep(value - alias, value + alias, result));

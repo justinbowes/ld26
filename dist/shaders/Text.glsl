@@ -85,3 +85,53 @@ void main()
 
     frag_color = vec4(gamma_color * vcolor.rgb, dot(gamma_color, one) / 3.0 * vcolor.a);
 }
+
+
+//------------------- Vertex.ES2 -------------------------
+attribute vec3 			position;
+attribute vec4 			color;
+attribute vec2 			uv;
+attribute float			shift;
+attribute float 			gamma;
+
+uniform mat4					mvp;
+
+varying float			vshift;
+varying float				vgamma;
+varying vec4				vcolor;
+varying vec2			vuv;
+
+void main()
+{
+
+    gl_Position = mvp * vec4(position, 1.0);
+    vcolor = color;
+    vshift = shift;
+    vgamma = gamma;
+    vuv = uv;
+}
+
+
+//------------------- Fragment.ES2 -------------------------------
+precision mediump float;
+
+uniform sampler2D 	tex;
+uniform vec3 		subpixel;
+
+varying float 		vgamma;
+varying float 		vshift;
+varying vec4		vcolor;
+varying vec2		vuv;
+
+const vec2			neg_one_x 		= vec2(-1.0, 0.0);
+const vec3			one 			= vec3(1.0, 1.0, 1.0);
+
+vec4				frag_color;
+
+void main()
+{
+
+	float a = texture2D(tex, vuv).r;
+	frag_color = vcolor * pow(a, 1.0 / vgamma);
+	gl_FragColor = frag_color;
+}

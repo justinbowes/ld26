@@ -31,14 +31,16 @@ static menu_select_t                    menu_stack[MENU_STACK_MAX];
 static int                              menu_index = -1;
 
 // Config menu
-#define MAX_VID_MODES   32
+static float                            configure_scroll = 0.f;
 static xpl_app_params_t                 app_config;
+#ifndef XPL_PLATFORM_IOS
+#define MAX_VID_MODES   32
 static GLFWvidmode                      supported_video_modes[MAX_VID_MODES];
 static size_t                           supported_video_mode_count;
 static size_t                           selected_video_mode_index = -1;
 static int                              resolution_is_expanded;
-static float                            resolution_scroll = 0.f;
 static bool                             video_config_changed = false;
+#endif
 
 static xpl_imui_theme_t                 *imui_theme;
 static xpl_imui_context_t               *imui_context;
@@ -112,6 +114,7 @@ static void destroy_background() {
 	audio_destroy(&title_bgm);
 }
 
+#ifndef XPL_PLATFORM_IOS
 static void populate_video_modes() {
     GLFWvidmode current_mode;
     glfwGetDesktopMode(&current_mode);
@@ -141,24 +144,28 @@ static void populate_video_modes() {
         break;
     }
 }
+#endif
 
 static void menu_configure_graphics(xpl_app_t *app, xrect area) {
     area = xrect_contract_to(area, 600, 440);
     
+#ifndef XPL_PLATFORM_IOS
     int window_clicked;
     int save_clicked = FALSE;
+#endif
 	int reset_clicked;
     int back_clicked;
 	int bgm_clicked;
     
     xpl_imui_context_begin(imui_context, app->execution_info, area);
     {
-        xpl_imui_control_scroll_area_begin(xl("config_title"), area.size, &resolution_scroll);
+        xpl_imui_control_scroll_area_begin(xl("config_title"), area.size, &configure_scroll);
         {
             xpl_imui_indent_custom(16.0f);
             {
 				bgm_clicked = xpl_imui_control_check(xl("config_bgm"), prefs.bgm_on, TRUE);
 				reset_clicked = xpl_imui_control_button(xl("config_reset"), 0, TRUE);
+#ifndef XPL_PLATFORM_IOS
                 xpl_imui_separator_line();
 				xpl_imui_control_label(xl("config_graphics_heading"));
                 window_clicked = xpl_imui_control_check(xl("config_graphics_window"), !app_config.is_fullscreen, TRUE);
@@ -183,6 +190,7 @@ static void menu_configure_graphics(xpl_app_t *app, xrect area) {
                     }
 					save_clicked = xpl_imui_control_button(xl("config_save"), XPL_IMUI_BUTTON_DEFAULT, video_config_changed);
                 }
+#endif
                 xpl_imui_separator_line();
                 back_clicked = xpl_imui_control_button(xl("back"), XPL_IMUI_BUTTON_CANCEL, TRUE);
             }
@@ -207,6 +215,7 @@ static void menu_configure_graphics(xpl_app_t *app, xrect area) {
 		prefs = prefs_get();
 	}
 	
+#ifndef XPL_PLATFORM_IOS
     if (window_clicked) {
         app_config.is_fullscreen = !app_config.is_fullscreen;
         video_config_changed = true;
@@ -220,6 +229,7 @@ static void menu_configure_graphics(xpl_app_t *app, xrect area) {
             app->restart = true;
         }
     }
+#endif
     
     if (back_clicked) {
         menu_pop();
@@ -419,14 +429,18 @@ static void *init(xpl_context_t *self) {
     
     app_config = xpl_app_params_load(FALSE);
     
+#ifndef XPL_PLATFORM_IOS
     populate_video_modes();
+    resolution_is_expanded = FALSE;
+#endif
+	
     create_background();
     
-    resolution_is_expanded = FALSE;
-	
 	prefs = prefs_get();
     
+#ifndef XPL_PLATFORM_IOS
     glfwEnable(GLFW_MOUSE_CURSOR);
+#endif
     
     return NULL;
 }

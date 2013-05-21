@@ -4,7 +4,7 @@
 #include <unistd.h>
 
 #include "xpl.h"
-#include "xpl_gl_debug.h"
+#include "xpl_gl.h"
 #include "xpl_app.h"
 #include "xpl_thread.h"
 #include "xpl_engine_info.h"

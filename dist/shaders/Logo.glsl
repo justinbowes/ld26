@@ -21,7 +21,6 @@ void main()
     vcolor = color;
 }
 
-
 //------------------- Brick.Fragment.GL32 -------------------------------
 
 in vec4             vcolor;
@@ -31,3 +30,30 @@ void main()
 {
     frag_color = vcolor;
 }
+
+
+
+//------------------- Vertex.ES2 -------------------------
+
+attribute mediump vec3		position;
+
+uniform mat4				mvp;
+uniform lowp vec4			color;
+
+varying lowp vec4			vcolor;
+
+void main()
+{
+    gl_Position = mvp * vec4(position, 1.0);
+    vcolor = color;
+}
+
+//------------------- Brick.Fragment.ES2 -------------------------------
+
+varying lowp vec4			vcolor;
+
+void main()
+{
+    gl_FragColor = vcolor;
+}
+

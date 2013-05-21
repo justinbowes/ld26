@@ -15,21 +15,32 @@
 
 #define SOIL_CHECK_FOR_GL_ERRORS 0
 
-#include <GL3/gl3w.h>
-
 #ifdef _WIN32
 #       ifndef WIN32_LEAN_AND_MEAN
 #               define WIN32_LEAN_AND_MEAN
 #       endif
+#		include <GL3/gl3w.h>
 #       include <windows.h>
 #       include <wingdi.h>
 #       include <GL/gl.h>
 #elif defined(__APPLE__) || defined(__APPLE_CC__)
 	/*	I can't test this Apple stuff!	*/
+#	include <TargetConditionals.h>
+#   define APIENTRY
+#	if (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
+#		define GLES
+#		if !defined(GL_NUM_EXTENSIONS)
+#			define GL_NUM_EXTENSIONS 0x821D
+#		endif
+#		include <OpenGLES/ES2/gl.h>
+#		include <CoreFoundation/CoreFoundation.h>
+#	else
+#		include <GL3/gl3w.h>
 #       include <OpenGL/gl.h>
 #       include <Carbon/Carbon.h>
-#       define APIENTRY
+#	endif
 #else
+#		include <GL3/gl3w.h>
 #       include <GL/gl.h>
 #       include <GL/glx.h>
 #endif
@@ -1198,12 +1209,19 @@ unsigned int
 		/*	and what type am I using as the internal texture format?	*/
 		switch( channels )
 		{
+#ifdef GLES
+		case 1:
+		case 2:
+			result_string_pointer = "Unsupported channel count";
+			return 0;
+#else
 		case 1:
 			original_texture_format = GL_RED;
 			break;
 		case 2:
 			original_texture_format = GL_RG;
 			break;
+#endif
 		case 3:
 			original_texture_format = GL_RGB;
 			break;
@@ -2078,9 +2096,32 @@ void build_extension_cache(void) {
     if (extension_cache.extension_count) {
         return;
     }
+#ifdef GLES
+	const GLubyte * extension_string = glGetString(GL_EXTENSIONS);
+	int last_start = 0;
+	int extensions_length = strlen((const char *)extension_string);
+	for (int i = 0; i < extensions_length; ++i) {
+		if (extension_string[i] == ' ') {
+			++extension_cache.extension_count;
+			last_start = i;
+			if (extension_cache.extension_count > 0) {
+				extension_cache.extensions = (GLubyte **)realloc(extension_cache.extensions,
+																 extension_cache.extension_count * sizeof(GLubyte *));
+				extension_cache.extensions[i] = (GLubyte *)strndup((const char *)extension_string[i], i - last_start);
+			}
+		}
+	}
+	if (extensions_length > 0) {
+		++extension_cache.extension_count;
+		extension_cache.extensions = (GLubyte **)realloc(extension_cache.extensions,
+														 extension_cache.extension_count * sizeof(GLubyte *));
+		extension_cache.extensions[extension_cache.extension_count - 1] = (GLubyte *)strndup((const char *)extension_string[last_start], extensions_length - last_start);
+	}
+#else
     glGetIntegerv(GL_NUM_EXTENSIONS, &extension_cache.extension_count);
     extension_cache.extensions = (GLubyte **)malloc(extension_cache.extension_count * sizeof(GLubyte *));
     for (GLint i = 0; i < extension_cache.extension_count; ++i) {
         extension_cache.extensions[i] = (GLubyte *)glGetStringi(GL_EXTENSIONS, i);
     }
+#endif
 }
