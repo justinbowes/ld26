@@ -38,7 +38,7 @@
 # undef LOG_ANSI
 #endif
 
-#if defined(XPL_PLATFORM_OSX)
+#if defined(XPL_PLATFORM_OSX) || defined(XPL_PLATFORM_IOS)
 # undef LOG_ANSI
 # define XPL_STDERR stderr
 # define XPL_STDOUT stdout

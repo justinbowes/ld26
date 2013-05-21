@@ -11,7 +11,7 @@
 
 #include "uthash.h"
 
-#include "xpl_gl_debug.h"
+#include "xpl_gl.h"
 #include "xpl_effect_buffer.h"
 #include "xpl_app.h"
 #include "xpl_model.h"
@@ -36,11 +36,45 @@ struct xpl_effect {
     UT_hash_handle hh;
 };
 
+static bool isDepthAttachment(GLenum attachment) {
+#ifdef XPL_PLATFORM_IOS
+	return attachment == GL_DEPTH_ATTACHMENT;
+#else
+	return attachment == GL_DEPTH_ATTACHMENT || attachment == GL_DEPTH_STENCIL_ATTACHMENT;
+#endif
+}
+
 static void create_buffer_texture(xpl_effect_buffer_t *self, size_t texture_index, xpl_buffer_attachment_t *attachment_info) {
     GLenum internal_format;
     GLenum format;
     GLenum type;
     switch (attachment_info->attach_type) {
+#ifdef XPL_PLATFORM_IOS
+		case xbat_rgba8:
+		case xbat_srgba8:
+		case xbat_rgb8:
+			internal_format = GL_RGBA;
+			format = GL_RGBA;
+			type = GL_UNSIGNED_INT;
+			break;
+		case xbat_rgba16f:
+		case xbat_rgba32f:
+		case xbat_rg16f:
+			internal_format = GL_RGBA;
+			format = GL_RGBA;
+			type = GL_FLOAT;
+			break;
+		case xbat_depth24:
+		case xbat_depth32f:
+			internal_format = GL_DEPTH_COMPONENT;
+			format = GL_DEPTH_COMPONENT;
+			type = GL_FLOAT;
+			break;
+		case xbat_depth24_stencil8:
+		case xbat_depth32f_stencil8:
+			// OES_packed_depth_stencil somehow
+			// Fall through to default
+#else
         case xbat_rgba8:
             internal_format = GL_RGBA8;
             format = GL_BGRA;
@@ -94,7 +128,6 @@ static void create_buffer_texture(xpl_effect_buffer_t *self, size_t texture_inde
             format = GL_RED_INTEGER;
             type = GL_UNSIGNED_INT;
             break;
-            
         case xbat_depth24:
             internal_format = GL_DEPTH_COMPONENT24;
             format = GL_DEPTH_COMPONENT;
@@ -118,6 +151,7 @@ static void create_buffer_texture(xpl_effect_buffer_t *self, size_t texture_inde
             format = GL_DEPTH_STENCIL;
             type = GL_FLOAT_32_UNSIGNED_INT_24_8_REV;
             break;
+#endif
 
         default:
             LOG_ERROR("Unrecognized buffer attachment type");
@@ -143,10 +177,11 @@ static void create_buffer_texture(xpl_effect_buffer_t *self, size_t texture_inde
     GL_DEBUG();
 	GL_DEBUG_THIS(glTexImage2D(GL_TEXTURE_2D, 0, internal_format, self->size.width, self->size.height, 0, format, type, NULL));
 
-    if (attachment_info->attachment == GL_DEPTH_ATTACHMENT ||
-        attachment_info->attachment == GL_DEPTH_STENCIL_ATTACHMENT) {
+    if (isDepthAttachment(attachment_info->attachment)) {
+#ifndef XPL_PLATFORM_IOS
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+#endif
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         self->depth_texture_index = (GLuint)texture_index;
@@ -207,9 +242,11 @@ xpl_effect_buffer_t *xpl_effect_buffer_new(xivec2 size, xpl_buffer_attachment_t 
 	glBindFramebuffer(GL_FRAMEBUFFER, buf->fbo);
 	GL_DEBUG();
 
+#ifndef XPL_PLATFORM_IOS
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
 	GL_DEBUG();
+#endif
 
     // Create the textures
     glGenTextures(buf->texture_count, buf->fb_textures);
@@ -218,7 +255,9 @@ xpl_effect_buffer_t *xpl_effect_buffer_new(xivec2 size, xpl_buffer_attachment_t 
     }
     
     //@ SRGB framebuffer?
+#ifndef XPL_PLATFORM_IOS
     glEnable(GL_FRAMEBUFFER_SRGB);
+#endif
 
     // Check whether the arguments create a valid buffer
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);

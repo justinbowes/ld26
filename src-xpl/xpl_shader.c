@@ -266,6 +266,7 @@ GLuint xpl_shader_add(xpl_shader_t *shader, const GLenum shader_type, const char
 	return shader_handle;
 }
 
+#ifndef XPL_GLES
 void xpl_shader_bind_frag_data_location(xpl_shader_t *shader, GLuint color_number, const char *name) {
     assert(shader);
     assert(shader->id);
@@ -277,6 +278,7 @@ void xpl_shader_bind_frag_data_location(xpl_shader_t *shader, GLuint color_numbe
     
     GL_DEBUG();
 }
+#endif
 
 GLuint xpl_shader_link(xpl_shader_t *shader) {
 	assert(shader);
@@ -490,10 +492,14 @@ int xpl_shaders_init(const char *path_prefix, const char *path_suffix) {
 	strcpy(s_shader_suffix, path_suffix);
 
 	// Get the OpenGL version in use and introduce version tokens
+#ifdef XPL_GLES
+	sprintf(s_version_suffix, "ES2");
+#else
 	int major, minor;
 	glGetIntegerv(GL_MAJOR_VERSION, &major);
 	glGetIntegerv(GL_MINOR_VERSION, &minor);
 	sprintf(s_version_suffix, "GL%d%d", major, minor);
+#endif
 
 	glswAddDirectiveToken("GL20", "#version 110");
 	glswAddDirectiveToken("GL21", "#version 120");
@@ -503,7 +509,8 @@ int xpl_shaders_init(const char *path_prefix, const char *path_suffix) {
 	glswAddDirectiveToken("GL32", "#version 150");
 	glswAddDirectiveToken("GL33", "#version 330");
 
-	glswAddDirectiveToken("ES", "/* TODO provide directives for OpenGL ES */");
+	glswAddDirectiveToken("ES1", "/* TODO provide directives for OpenGL ES 1.0 */");
+	glswAddDirectiveToken("ES2", "#version 100");
 
 	return TRUE;
 }

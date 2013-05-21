@@ -11,10 +11,20 @@
 #include "xpl_platform.h"
 #include "xpl_log.h"
 
-#ifdef XPL_PLATFORM_OSX
+#if defined(XPL_PLATFORM_IOS)
+#	import <OpenGLES/EAGL.h>
+#endif
 
-#include <Foundation/Foundation.h>
-#include <Foundation/NSFileManager.h>
+#if defined(XPL_PLATFORM_OSX) || defined(XPL_PLATFORM_IOS)
+#	include <Foundation/Foundation.h>
+#	include <Foundation/NSFileManager.h>
+
+void xpl_resource_path(char *path_out, const char *path_in, size_t length) {
+	NSString *resource_bundle = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"dist"];
+	assert(resource_bundle);
+	const char *resource_bundle_cc = [resource_bundle UTF8String];
+	snprintf(path_out, PATH_MAX, "%s/%s", resource_bundle_cc, path_in);
+}
 
 void xpl_data_resource_path(char *path_out, const char *path_in, size_t length) {
     NSError *error;

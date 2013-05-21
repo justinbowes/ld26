@@ -57,6 +57,9 @@ xpl_font_manager_t *xpl_font_manager_new(int surface_width, int surface_height, 
 	xpl_font_manager_t *self;
 
 	self = xpl_alloc_type(xpl_font_manager_t);
+#ifdef XPL_GLES
+	depth = 1;
+#endif
 	self->atlas = xpl_texture_atlas_new(surface_width, surface_height, depth);
 	self->font_cache = NULL;
 	self->wchar_cache = wcsdup(L" ");

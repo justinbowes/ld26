@@ -458,10 +458,12 @@ void xpl_text_buffer_render(const xpl_text_buffer_t *self, const GLfloat *mvp) {
 	// premultiplied alpha. Premultiply your alpha.
 	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
 	//	}
+#ifndef XPL_PLATFORM_IOS
 	glUniform3f(xpl_shader_get_uniform(self->shader, "subpixel"),
                 1.0f / self->font_manager->atlas->width,
                 1.0f / self->font_manager->atlas->height,
-                (GLfloat)self->font_manager->atlas->depth);
+                self->font_manager->atlas->depth);
+#endif
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, self->font_manager->atlas->texture_id);

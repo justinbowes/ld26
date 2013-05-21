@@ -45,7 +45,10 @@ static GLushort cube_indices[] = {
 #define SKYBOX_ACTIVE_TEXTURE 7
 
 xpl_skybox_t *xpl_skybox_new(const char *texture_group, const xpl_skybox_plane_def_t *format) {
+#ifndef XPL_GLES
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+#endif
+	
 
 	xpl_skybox_t *skybox = xpl_calloc_type(xpl_skybox_t);
 

@@ -11,8 +11,7 @@
 
 #include <stdbool.h>
 
-#include <uthash.h>
-
+#include "uthash.h"
 #include "xpl_bo.h"
 
 #define VATTR_NAME_MAX      64

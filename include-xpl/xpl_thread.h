@@ -37,7 +37,7 @@ void xpl_thread_sleep(int milliseconds);
 size_t xpl_thread_get_pool_size(void);
 void *xpl_thread_get_local_data(void);
 bool xpl_thread_is_primary(void);
-long xpl_thread_get_and_reset_calls(xpl_thread_id tid);
+int64_t xpl_thread_get_and_reset_calls(xpl_thread_id tid);
 
 
 #endif

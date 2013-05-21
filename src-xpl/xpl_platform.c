@@ -100,7 +100,7 @@ void xpl_sleep_seconds(double seconds) {
     Sleep(t);
 }
 
-#elif defined(XPL_PLATFORM_OSX)
+#elif defined(XPL_PLATFORM_OSX) || defined(XPL_PLATFORM_IOS)
 #include <unistd.h>
 #include <sys/types.h>
 #include <sched.h>
@@ -251,7 +251,7 @@ double xpl_get_time(void) {
 #endif
 
 // ------------ Thread support -----------------
-#ifdef XPL_PLATFORM_OSX
+#if defined(XPL_PLATFORM_OSX) || defined(XPL_PLATFORM_IOS)
 // Mostly in xpl_thread, but this shim allows the OSX impl to be the same
 // as the posix one
 #include <pthread.h>
@@ -437,9 +437,11 @@ static void format_resource_path(char *path_out, const char *path_in, const char
     path_out[length - 1] = 0;
 }
 
+#if !defined(XPL_PLATFORM_IOS) && !defined(XPL_PLATFORM_OSX)
 void xpl_resource_path(char *path_out, const char *path_in, size_t length) {
     format_resource_path(path_out, path_in, PLATFORM_APP_RESOURCE_FORMAT, length);
 }
+#endif
 
 void xpl_library_resource_path(char *path_out, const char *path_in, size_t length) {
     format_resource_path(path_out, path_in, PLATFORM_LIBRARY_RESOURCE_FORMAT, length);

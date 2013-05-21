@@ -232,10 +232,12 @@ static inline void vao_program_draw(xpl_vao_t *vao, GLenum draw_mode, GLint star
     GL_DEBUG();
 }
 
+#ifndef XPL_GLES
 static inline void program_draw_instanced(xpl_vao_t *vao, GLenum draw_mode, GLint start, GLsizei count, GLsizei instance_count) {
 	glDrawArraysInstanced(draw_mode, start, count, instance_count);
 	GL_DEBUG();
 }
+#endif
 
 static inline void vao_program_draw_index_count_offset(xpl_vao_t *vao, GLenum draw_mode,
 									   int ibo_index, size_t elements, size_t offset) {
@@ -263,6 +265,7 @@ static inline void vao_program_draw_index(xpl_vao_t *vao, GLenum draw_mode,
 	vao_program_draw_index_count_offset(vao, draw_mode, ibo_index, ibo->client_data->length / sizeof (GLushort), 0);
 }
 
+#ifndef XPL_GLES
 void xpl_vao_program_draw_arrays_instanced(xpl_vao_t *vao, xpl_shader_t *shader, GLenum draw_mode, GLint start, GLsizei element_count, GLsizei instance_count) {
     assert(vao);
     assert(shader && shader->id);
@@ -270,6 +273,7 @@ void xpl_vao_program_draw_arrays_instanced(xpl_vao_t *vao, xpl_shader_t *shader,
     program_draw_instanced(vao, draw_mode, start, element_count, instance_count);
     vao_teardown_program_draw(vao);
 }
+#endif
 
 void xpl_vao_program_draw_arrays(xpl_vao_t *vao, xpl_shader_t *shader,
 								 GLenum draw_mode, GLint start, GLsizei count) {

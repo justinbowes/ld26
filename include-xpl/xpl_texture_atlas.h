@@ -9,9 +9,10 @@
 #ifndef xpl_osx_xpl_texture_atlas_h
 #define xpl_osx_xpl_texture_atlas_h
 
-#include <GL3/gl3.h>
+#include "xpl.h"
+#include "xpl_gl.h"
 
-#include <utlist.h>
+#include "utlist.h"
 
 #include "xpl_dynamic_buffer.h"
 #include "xpl_vec.h"
@@ -35,7 +36,9 @@ typedef struct xpl_texture_atlas {
 
 	int							width;
 	int							height;
+#ifndef XPL_PLATFORM_IOS
 	int							depth;      // buffer depth in bytes (4 = 32 bit)
+#endif
 
 	int							used;       // surface size used
 

@@ -490,12 +490,12 @@ bool xpl_thread_is_primary() {
     return (get_local_data_raw() == ctx);
 }
 
-long xpl_thread_get_and_reset_calls(xpl_thread_id tid) {
+int64_t xpl_thread_get_and_reset_calls(xpl_thread_id tid) {
     assert(ctx);
     assert(tid);
     assert(tid < ctx->thread_pool_size);
     
-    long result = 0L;
+    int64_t result = 0L;
     
     lock_thread(tid);
     result = ctx->thread_pool[tid].calls;

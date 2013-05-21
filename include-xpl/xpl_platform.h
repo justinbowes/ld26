@@ -22,30 +22,38 @@
 
 #define XPL_PLATFORM_WINDOWS_D	1
 #define XPL_PLATFORM_OSX_D		2
-#define XPL_PLATFORM_UNIX_D		3
+#define XPL_PLATFORM_IOS_D		4
+#define XPL_PLATFORM_UNIX_D		8
 
 #ifdef _WIN32
 #undef __STRICT_ANSI__
 #endif
 
 #if defined(_WIN32)
-#define WINVER 0x0501
-#define _WIN32_WINNT 0x0501
-#if ! defined(WIN32_LEAN_AND_MEAN)
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#define XPL_PLATFORM XPL_PLATFORM_WINDOWS_D
-#define XPL_PLATFORM_WINDOWS XPL_PLATFORM
-#define XPL_PLATFORM_STRING "Windows"
+#	define WINVER 0x0501
+#	define _WIN32_WINNT 0x0501
+#	if ! defined(WIN32_LEAN_AND_MEAN)
+#		define WIN32_LEAN_AND_MEAN
+#	endif
+#	include <windows.h>
+#	define XPL_PLATFORM XPL_PLATFORM_WINDOWS_D
+#	define XPL_PLATFORM_WINDOWS XPL_PLATFORM
+#	define XPL_PLATFORM_STRING "Windows"
 #elif defined(__APPLE__)
-#define XPL_PLATFORM XPL_PLATFORM_OSX_D
-#define XPL_PLATFORM_OSX XPL_PLATFORM
-#define XPL_PLATFORM_STRING "OSX"
+#	include <TargetConditionals.h>
+#	if (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
+#		define XPL_PLATFORM XPL_PLATFORM_IOS_D
+#		define XPL_PLATFORM_IOS XPL_PLATFORM
+#		define XPL_PLATFORM_STRING "IOS"
+#	else
+#		define XPL_PLATFORM XPL_PLATFORM_OSX_D
+#		define XPL_PLATFORM_OSX XPL_PLATFORM
+#		define XPL_PLATFORM_STRING "OSX"
+#	endif
 #else
-#define XPL_PLATFORM XPL_PLATFORM_UNIX_D
-#define XPL_PLATFORM_UNIX XPL_PLATFORM
-#define XPL_PLATFORM_STRING "Unix"
+#	define XPL_PLATFORM XPL_PLATFORM_UNIX_D
+#	define XPL_PLATFORM_UNIX XPL_PLATFORM
+#	define XPL_PLATFORM_STRING "Unix"
 #endif
 
 
@@ -73,7 +81,7 @@ float fmaxf(float f1, float f2);
 float roundf(float f);
 #else
 #	define snwprintf swprintf
-#	if defined XPL_PLATFORM_OSX
+#	if defined(XPL_PLATFORM_OSX) || defined(XPL_PLATFORM_IOS)
 #		include <sys/syslimits.h>
 #	else
 #		include <linux/limits.h>
@@ -81,7 +89,7 @@ float roundf(float f);
 #endif
 
 // ------------- thread stuff -------------------
-#ifdef XPL_PLATFORM_OSX
+#if defined(XPL_PLATFORM_OSX) || defined(XPL_PLATFORM_IOS)
 #include <pthread.h>
 int pthread_timedjoin_np(pthread_t td, void **res, struct timespec *ts);
 #endif
@@ -148,6 +156,31 @@ void xpl_data_resource_path(char *path_out, const char *path_in, size_t length);
 int xpl_resolve_resource(char *path_out, const char *path_in, size_t length);
 int xpl_resource_exists(const char *resource_path);
 void xpl_resource_resolve_opts(xpl_resolve_resource_opts_t *out, const char *path_in);
+
+#if defined(XPL_PLATFORM_IOS) && !defined(XPL_NO_GLFW_STUB_API)
+#	warning GLFW stub api!
+#	define GLFW_KEY_UP 'W'
+#	define GLFW_KEY_DOWN 'S'
+#	define GLFW_KEY_LEFT 'A'
+#	define GLFW_KEY_RIGHT 'D'
+#	define GLFW_KEY_LCTRL 0
+#	define GLFW_KEY_LSHIFT 0
+#	define GLFW_KEY_RSHIFT 0
+#	define GLFW_KEY_ENTER 13
+#	define GLFW_KEY_BACKSPACE 0
+#	define GLFW_KEY_DEL	0
+#	define GLFW_KEY_ESC 0
+#	define GLFW_KEY_TAB '\t'
+#	define GLFW_KEY_SPECIAL 80
+#	define GLFW_PRESS 1
+#	define GLFW_RELEASE 2
+#	define GLFW_MOUSE_BUTTON_LEFT
+#	define glfwGetKey(x) (false)
+#	define glfwGetMouseButton(x) (false)
+#	define glfwGetMousePos(xref, yref) {*(xref) = 0; *(yref) = 0; }
+#	define glfwGetMouseWheel() (0)
+#	define glfwSetCharCallback(x)
+#endif
 
 #include "xpl.h"
 

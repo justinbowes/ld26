@@ -26,18 +26,30 @@ void xpl_gl_log_bound_textures() {
     
     for (int i = 0; i < num_texture_units; ++i) {
         glActiveTexture(GL_TEXTURE0 + i);
-        GLint t1d, t1d_array, t2d, t2d_array, t2d_multisample, t2d_multisample_array, t3d, tbuffer, tcube, tcube_array, trectangle;
+        GLint t1d = 0,
+		t1d_array = 0,
+		t2d = 0,
+		t2d_array = 0,
+		t2d_multisample = 0,
+		t2d_multisample_array = 0,
+		t3d = 0,
+		tbuffer = 0,
+		tcube = 0,
+		tcube_array = 0,
+		trectangle = 0;
+        glGetIntegerv(GL_TEXTURE_BINDING_2D, &t2d);
+        glGetIntegerv(GL_TEXTURE_BINDING_CUBE_MAP, &tcube);
+#ifndef XPL_GLES
         glGetIntegerv(GL_TEXTURE_BINDING_1D, &t1d);
         glGetIntegerv(GL_TEXTURE_BINDING_1D_ARRAY, &t1d_array);
-        glGetIntegerv(GL_TEXTURE_BINDING_2D, &t2d);
         glGetIntegerv(GL_TEXTURE_BINDING_2D_ARRAY, &t2d_array);
         glGetIntegerv(GL_TEXTURE_BINDING_2D_MULTISAMPLE, &t2d_multisample);
         glGetIntegerv(GL_TEXTURE_BINDING_2D_MULTISAMPLE_ARRAY, &t2d_multisample_array);
         glGetIntegerv(GL_TEXTURE_BINDING_3D, &t3d);
         glGetIntegerv(GL_TEXTURE_BINDING_BUFFER, &tbuffer);
-        glGetIntegerv(GL_TEXTURE_BINDING_CUBE_MAP, &tcube);
         glGetIntegerv(GL_TEXTURE_BINDING_CUBE_MAP_ARRAY, &tcube_array);
         glGetIntegerv(GL_TEXTURE_BINDING_RECTANGLE, &trectangle);
+#endif
         LOG_DEBUG("Bound texture: GL_TEXTURE%d: 1D %d\t 1DA %d\t 2D %d\t 2DA %d\t 2DM %d\t 2DMA %d\t 3D %d\t B %d\t C %d\t CA %d\t R %d",
                   i, t1d, t1d_array, t2d, t2d_array, t2d_multisample, t2d_multisample_array, t3d, tbuffer, tcube, tcube_array, trectangle);
     }
@@ -50,7 +62,9 @@ const char *xpl_gl_get_error_string(GLenum e) {
             ECASE(GL_INVALID_ENUM);
             ECASE(GL_INVALID_VALUE);
             ECASE(GL_INVALID_OPERATION);
+#ifndef XPL_GLES
             ECASE(GL_INVALID_INDEX);
+#endif
 #ifdef GL_STACK_OVERFLOW
             ECASE(GL_STACK_OVERFLOW);
 #endif
@@ -66,6 +80,13 @@ const char *xpl_gl_get_error_string(GLenum e) {
     }
 }
 
+#ifdef XPL_GLES
+
+void xpl_gl_debug_install() {
+	// unsupported
+}
+
+#else
 XPLINLINE const char *source_type(GLenum type) {
     switch (type) {
             ECASE(GL_DEBUG_SOURCE_API_ARB);
@@ -132,5 +153,7 @@ void xpl_gl_debug_install() {
     glDebugMessageCallbackARB(xpl_gl_debug_callback, NULL);
     GL_DEBUG();
 }
+
+#endif
 
 #endif

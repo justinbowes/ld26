@@ -143,19 +143,3 @@ void xpl_engine_execution_info_destroy(
 	*execution_info = NULL;
 }
 
-// --- xpl_app_info
-
-static char *unset_title = "Unnamed XPL Application";
-
-xpl_app_t *xpl_app_new(int argc, char *argv[]) {
-	xpl_app_t *app_info = xpl_calloc_type(xpl_app_t);
-	app_info->title = unset_title;
-    app_info->argc = argc;
-    app_info->argv = argv;
-	return app_info;
-}
-
-void xpl_app_destroy(xpl_app_t **app_info) {
-	xpl_free(*app_info);
-	*app_info = NULL;
-}
