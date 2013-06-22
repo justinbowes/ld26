@@ -21,6 +21,9 @@
 		D018BBA317765D6F00E295BD /* libfreetype_apple_universal.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D018BA8D177656D400E295BD /* libfreetype_apple_universal.a */; };
 		D018BBA517765D7F00E295BD /* libbz2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D018BBA417765D7F00E295BD /* libbz2.dylib */; };
 		D018BBA717765D8700E295BD /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = D018BBA617765D8700E295BD /* libz.dylib */; };
+		D018BBA9177662DC00E295BD /* xpl_mutex.c in Sources */ = {isa = PBXBuildFile; fileRef = D018BBA8177662DC00E295BD /* xpl_mutex.c */; };
+		D018BBAA177662DC00E295BD /* xpl_mutex.c in Sources */ = {isa = PBXBuildFile; fileRef = D018BBA8177662DC00E295BD /* xpl_mutex.c */; };
+		D018BBAB177662DC00E295BD /* xpl_mutex.c in Sources */ = {isa = PBXBuildFile; fileRef = D018BBA8177662DC00E295BD /* xpl_mutex.c */; };
 		D030EE2B172B80C500DDCF80 /* udpnet.c in Sources */ = {isa = PBXBuildFile; fileRef = D030EE29172B80C500DDCF80 /* udpnet.c */; };
 		D030EE2D172B873200DDCF80 /* udpnet.c in Sources */ = {isa = PBXBuildFile; fileRef = D030EE29172B80C500DDCF80 /* udpnet.c */; };
 		D030EE2E172B8CD100DDCF80 /* client_main.c in Sources */ = {isa = PBXBuildFile; fileRef = D01466E31729AC0800190386 /* client_main.c */; };
@@ -30,7 +33,6 @@
 		D05267FC172AD848001A11D7 /* xpl_hash.c in Sources */ = {isa = PBXBuildFile; fileRef = D01464E81729AC0800190386 /* xpl_hash.c */; };
 		D05267FD172AD848001A11D7 /* xpl_hash_md5.c in Sources */ = {isa = PBXBuildFile; fileRef = D01464E91729AC0800190386 /* xpl_hash_md5.c */; };
 		D05267FE172AD84D001A11D7 /* xpl_file.c in Sources */ = {isa = PBXBuildFile; fileRef = D00341221729BB52003EA1BD /* xpl_file.c */; };
-		D05267FF172AD852001A11D7 /* xpl_critical_section.c in Sources */ = {isa = PBXBuildFile; fileRef = D01464DE1729AC0800190386 /* xpl_critical_section.c */; };
 		D0526800172AD855001A11D7 /* xpl_dynamic_buffer.c in Sources */ = {isa = PBXBuildFile; fileRef = D01464DF1729AC0800190386 /* xpl_dynamic_buffer.c */; };
 		D0526801172AD88F001A11D7 /* xpl_platform.c in Sources */ = {isa = PBXBuildFile; fileRef = D01464F31729AC0800190386 /* xpl_platform.c */; };
 		D0526804172AD8AD001A11D7 /* xpl_platform.m in Sources */ = {isa = PBXBuildFile; fileRef = D01465021729AC0800190386 /* xpl_platform.m */; };
@@ -56,7 +58,6 @@
 		D080BE691741333B000C29C4 /* xpl_bo.c in Sources */ = {isa = PBXBuildFile; fileRef = D01464DB1729AC0800190386 /* xpl_bo.c */; };
 		D080BE6A1741333B000C29C4 /* xpl_command_render.c in Sources */ = {isa = PBXBuildFile; fileRef = D01464DC1729AC0800190386 /* xpl_command_render.c */; };
 		D080BE6B1741333B000C29C4 /* xpl_context.c in Sources */ = {isa = PBXBuildFile; fileRef = D01464DD1729AC0800190386 /* xpl_context.c */; };
-		D080BE6C1741333B000C29C4 /* xpl_critical_section.c in Sources */ = {isa = PBXBuildFile; fileRef = D01464DE1729AC0800190386 /* xpl_critical_section.c */; };
 		D080BE6D1741333B000C29C4 /* xpl_dynamic_buffer.c in Sources */ = {isa = PBXBuildFile; fileRef = D01464DF1729AC0800190386 /* xpl_dynamic_buffer.c */; };
 		D080BE6E1741333B000C29C4 /* xpl_easing.c in Sources */ = {isa = PBXBuildFile; fileRef = D01464E01729AC0800190386 /* xpl_easing.c */; };
 		D080BE701741333B000C29C4 /* xpl_engine_info.c in Sources */ = {isa = PBXBuildFile; fileRef = D01464E21729AC0800190386 /* xpl_engine_info.c */; };
@@ -142,7 +143,6 @@
 		D0FA1AD81729B123008CDA87 /* xpl_bo.c in Sources */ = {isa = PBXBuildFile; fileRef = D01464DB1729AC0800190386 /* xpl_bo.c */; };
 		D0FA1AD91729B123008CDA87 /* xpl_command_render.c in Sources */ = {isa = PBXBuildFile; fileRef = D01464DC1729AC0800190386 /* xpl_command_render.c */; };
 		D0FA1ADA1729B123008CDA87 /* xpl_context.c in Sources */ = {isa = PBXBuildFile; fileRef = D01464DD1729AC0800190386 /* xpl_context.c */; };
-		D0FA1ADB1729B123008CDA87 /* xpl_critical_section.c in Sources */ = {isa = PBXBuildFile; fileRef = D01464DE1729AC0800190386 /* xpl_critical_section.c */; };
 		D0FA1ADC1729B123008CDA87 /* xpl_dynamic_buffer.c in Sources */ = {isa = PBXBuildFile; fileRef = D01464DF1729AC0800190386 /* xpl_dynamic_buffer.c */; };
 		D0FA1ADD1729B123008CDA87 /* xpl_easing.c in Sources */ = {isa = PBXBuildFile; fileRef = D01464E01729AC0800190386 /* xpl_easing.c */; };
 		D0FA1ADE1729B123008CDA87 /* xpl_effect_buffer.c in Sources */ = {isa = PBXBuildFile; fileRef = D01464E11729AC0800190386 /* xpl_effect_buffer.c */; };
@@ -239,7 +239,6 @@
 		D01464DB1729AC0800190386 /* xpl_bo.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = xpl_bo.c; sourceTree = "<group>"; };
 		D01464DC1729AC0800190386 /* xpl_command_render.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = xpl_command_render.c; sourceTree = "<group>"; };
 		D01464DD1729AC0800190386 /* xpl_context.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = xpl_context.c; sourceTree = "<group>"; };
-		D01464DE1729AC0800190386 /* xpl_critical_section.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = xpl_critical_section.c; sourceTree = "<group>"; };
 		D01464DF1729AC0800190386 /* xpl_dynamic_buffer.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = xpl_dynamic_buffer.c; sourceTree = "<group>"; };
 		D01464E01729AC0800190386 /* xpl_easing.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = xpl_easing.c; sourceTree = "<group>"; };
 		D01464E11729AC0800190386 /* xpl_effect_buffer.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = xpl_effect_buffer.c; sourceTree = "<group>"; };
@@ -579,6 +578,7 @@
 		D018BB991776592600E295BD /* ft2build.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ft2build.h; sourceTree = "<group>"; };
 		D018BBA417765D7F00E295BD /* libbz2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libbz2.dylib; path = usr/lib/libbz2.dylib; sourceTree = SDKROOT; };
 		D018BBA617765D8700E295BD /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
+		D018BBA8177662DC00E295BD /* xpl_mutex.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = xpl_mutex.c; sourceTree = "<group>"; };
 		D030EE29172B80C500DDCF80 /* udpnet.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = udpnet.c; sourceTree = "<group>"; };
 		D030EE2A172B80C500DDCF80 /* udpnet.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = udpnet.h; sourceTree = "<group>"; };
 		D05267EE172AD0A0001A11D7 /* EchoServer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = EchoServer; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -918,7 +918,6 @@
 				D01464DB1729AC0800190386 /* xpl_bo.c */,
 				D01464DC1729AC0800190386 /* xpl_command_render.c */,
 				D01464DD1729AC0800190386 /* xpl_context.c */,
-				D01464DE1729AC0800190386 /* xpl_critical_section.c */,
 				D01464DF1729AC0800190386 /* xpl_dynamic_buffer.c */,
 				D01464E01729AC0800190386 /* xpl_easing.c */,
 				D01464E11729AC0800190386 /* xpl_effect_buffer.c */,
@@ -943,6 +942,7 @@
 				D01464F01729AC0800190386 /* xpl_memory.c */,
 				D01464F11729AC0800190386 /* xpl_model.c */,
 				D01464F21729AC0800190386 /* xpl_model_loader.c */,
+				D018BBA8177662DC00E295BD /* xpl_mutex.c */,
 				D01464F31729AC0800190386 /* xpl_platform.c */,
 				D01465021729AC0800190386 /* xpl_platform.m */,
 				D01464F41729AC0800190386 /* xpl_rand.c */,
@@ -2007,7 +2007,6 @@
 				D0FA1AD81729B123008CDA87 /* xpl_bo.c in Sources */,
 				D0FA1AD91729B123008CDA87 /* xpl_command_render.c in Sources */,
 				D0FA1ADA1729B123008CDA87 /* xpl_context.c in Sources */,
-				D0FA1ADB1729B123008CDA87 /* xpl_critical_section.c in Sources */,
 				D0FA1ADC1729B123008CDA87 /* xpl_dynamic_buffer.c in Sources */,
 				D0FA1ADD1729B123008CDA87 /* xpl_easing.c in Sources */,
 				D0FA1ADE1729B123008CDA87 /* xpl_effect_buffer.c in Sources */,
@@ -2056,6 +2055,7 @@
 				D0828CBE172EC61900BC66AC /* prefs.c in Sources */,
 				D0CABC38177621A4003C6DD7 /* xpl_input_glfw.c in Sources */,
 				D0CABC4A17762C49003C6DD7 /* xpl_input.c in Sources */,
+				D018BBA9177662DC00E295BD /* xpl_mutex.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2068,12 +2068,12 @@
 				D05267FC172AD848001A11D7 /* xpl_hash.c in Sources */,
 				D05267FD172AD848001A11D7 /* xpl_hash_md5.c in Sources */,
 				D05267FE172AD84D001A11D7 /* xpl_file.c in Sources */,
-				D05267FF172AD852001A11D7 /* xpl_critical_section.c in Sources */,
 				D0526800172AD855001A11D7 /* xpl_dynamic_buffer.c in Sources */,
 				D0526801172AD88F001A11D7 /* xpl_platform.c in Sources */,
 				D0526804172AD8AD001A11D7 /* xpl_platform.m in Sources */,
 				D052680B172AE51C001A11D7 /* packet.c in Sources */,
 				D030EE2D172B873200DDCF80 /* udpnet.c in Sources */,
+				D018BBAA177662DC00E295BD /* xpl_mutex.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2093,7 +2093,6 @@
 				D080BE691741333B000C29C4 /* xpl_bo.c in Sources */,
 				D080BE6A1741333B000C29C4 /* xpl_command_render.c in Sources */,
 				D080BE6B1741333B000C29C4 /* xpl_context.c in Sources */,
-				D080BE6C1741333B000C29C4 /* xpl_critical_section.c in Sources */,
 				D080BE6D1741333B000C29C4 /* xpl_dynamic_buffer.c in Sources */,
 				D080BE6E1741333B000C29C4 /* xpl_easing.c in Sources */,
 				D080BE701741333B000C29C4 /* xpl_engine_info.c in Sources */,
@@ -2146,6 +2145,7 @@
 				D091983C174B991C00F9CFB9 /* xpl_platform.m in Sources */,
 				D0CABC4E177632CD003C6DD7 /* xpl_input.c in Sources */,
 				D0CABC4F17763882003C6DD7 /* xpl_input_ios.m in Sources */,
+				D018BBAB177662DC00E295BD /* xpl_mutex.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

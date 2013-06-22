@@ -9,6 +9,13 @@
 #ifndef protector_xpl_input_keydefs_h
 #define protector_xpl_input_keydefs_h
 
+// Character control codes are different than keys.
+// The high range of keycodes is Unicode stuff,
+// so use the traditional low control code values.
+#define XPL_CHAR_BACKSPACE	'\b'
+#define XPL_CHAR_NEWLINE	'\n'
+#define XPL_CHAR_DEL		127		// No really, it's actually this
+
 #define XPL_KEY_UNKNOWN      -1
 #define XPL_KEY_SPACE        32
 #define XPL_KEY_SPECIAL      256

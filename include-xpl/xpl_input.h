@@ -30,6 +30,7 @@ bool xpl_input_key_down(int key);
 int xpl_input_add_character_listener(xpl_input_character_func func, void *context);
 void xpl_input_remove_character_listener(int listener_id);
 
+bool xpl_input_keyboard_should_auto_focus(void);
 void xpl_input_enable_keyboard(void);
 void xpl_input_disable_keyboard(void);
 void xpl_input_enable_characters(void);

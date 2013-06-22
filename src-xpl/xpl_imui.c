@@ -325,7 +325,7 @@ XPLINLINE void control_set_active(control_id id) {
 	assert(context_valid());
 	g_context->controls.active_id = id;
 	g_context->controls.went_active = TRUE;
-	control_set_keyboard_active(id);
+	if (xpl_input_keyboard_should_auto_focus()) control_set_keyboard_active(id);
 }
 
 XPLINLINE void control_set_hot(control_id id) {
@@ -460,6 +460,21 @@ static int control_logic_textfield(char *mbsinput, size_t max_len, int *pcursor_
 			}
 			changed = TRUE;
 
+		} else {
+			// Depending on the host, we might not get key down
+			// events, so if we get these as typed characters,
+			// translate them.
+			switch (*typed_ptr) {
+				case XPL_CHAR_BACKSPACE:
+					g_context->keyboard.backspace.active = true;
+					break;
+					
+				case XPL_CHAR_DEL:
+					g_context->keyboard.delete.active = true;
+					
+				default:
+					break;
+			}
 		}
 
 		typed_ptr++;
@@ -1241,7 +1256,7 @@ int xpl_imui_control_textfield(const char *prompt, char *mbsinput, size_t input_
 	int result = enabled && control_logic_button(id, is_over, 0);
 	int value_changed = FALSE;
 
-	if (control_active(id)) {
+	if (control_active(id) || result) {
 		control_set_keyboard_active(id);
 	}
 

@@ -21,7 +21,7 @@ extern void xpl_input__internal__dispatch_character(int character);
 }
 
 -(void) deleteBackward {
-	xpl_input__internal__dispatch_character(XPL_KEY_BACKSPACE);
+	xpl_input__internal__dispatch_character(XPL_CHAR_BACKSPACE);
 }
 
 -(BOOL) hasText {
@@ -56,6 +56,7 @@ void xpl_input_ios_destroy(void) {
 
 void xpl_input_ios_set_touch_began(CGPoint *point, size_t index) {
 	assert(index <= MAX_TOUCHES);
+	LOG_DEBUG("Touch %zu down at [%f,%f]", index, point->x, point->y);
 	states[index] = true;
 	touches[index].x = point->x;
 	touches[index].y = point->y;
@@ -63,6 +64,7 @@ void xpl_input_ios_set_touch_began(CGPoint *point, size_t index) {
 
 void xpl_input_ios_set_touch_moved(CGPoint *point, size_t index) {
 	assert(index <= MAX_TOUCHES);
+	LOG_DEBUG("Touch %zu moved at [%f,%f]", index, point->x, point->y);
 	states[index] = true;
 	deltas[index].x = point->x - touches[index].x;
 	deltas[index].y = point->y - touches[index].y;
@@ -72,9 +74,14 @@ void xpl_input_ios_set_touch_moved(CGPoint *point, size_t index) {
 
 void xpl_input_ios_set_touch_ended(CGPoint *point, size_t index) {
 	assert(index <= MAX_TOUCHES);
+	LOG_DEBUG("Touch %zu up at [%f,%f]", index, point->x, point->y);
 	states[index] = false;
 	touches[index].x = point->x;
 	touches[index].y = point->y;
+}
+
+bool xpl_input_keyboard_should_auto_focus(void) {
+	return false; // annoying on iOS
 }
 
 void xpl_input_enable_keyboard(void) {
