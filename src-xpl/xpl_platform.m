@@ -11,10 +11,6 @@
 #include "xpl_platform.h"
 #include "xpl_log.h"
 
-#if defined(XPL_PLATFORM_IOS)
-#	import <OpenGLES/EAGL.h>
-#endif
-
 #if defined(XPL_PLATFORM_OSX) || defined(XPL_PLATFORM_IOS)
 #	include <Foundation/Foundation.h>
 #	include <Foundation/NSFileManager.h>

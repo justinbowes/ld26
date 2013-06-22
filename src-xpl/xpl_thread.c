@@ -11,7 +11,7 @@
 #include "xpl_log.h"
 #include "xpl_platform.h"
 #include "xpl_memory.h"
-#include "xpl_critical_section.h"
+#include "xpl_mutex.h"
 
 #include "xpl_thread.h"
 
@@ -64,12 +64,12 @@ typedef struct thread_info {
     thread_state_t                  state;
     thread_calls_counter_t          calls;
     thread_t                        thread;
-    xpl_critical_section_t          *critical_section;
+    xpl_mutex_t						*thread_mutex;
     void                            *local_data;
 } thread_info_t;
 
 typedef struct thread_context {
-    xpl_critical_section_t          *singleton_cs;
+    xpl_mutex_t						*singleton_mutex;
     local_data_key_t                local_data_key;
     void                            *primary_thread_local_data;
     
@@ -136,18 +136,18 @@ void lock_thread(xpl_thread_id tid) {
     assert(ctx);
     assert(tid >= 0);
     assert(tid < ctx->thread_pool_size);
-    assert(ctx->thread_pool[tid].critical_section);
+    assert(ctx->thread_pool[tid].thread_mutex);
     
-    xpl_critical_section_enter(ctx->thread_pool[tid].critical_section);
+    xpl_mutex_enter(ctx->thread_pool[tid].thread_mutex);
 }
 
 void unlock_thread(xpl_thread_id tid) {
     assert(ctx);
     assert(tid >= 0);
     assert(tid < ctx->thread_pool_size);
-    assert(ctx->thread_pool[tid].critical_section);
+    assert(ctx->thread_pool[tid].thread_mutex);
     
-    xpl_critical_section_leave(ctx->thread_pool[tid].critical_section);
+    xpl_mutex_leave(ctx->thread_pool[tid].thread_mutex);
 }
 
 int get_thread_state(xpl_thread_id tid) {
@@ -257,6 +257,51 @@ thread_callback_t XPLCALL thread_callback(void *param) {
     return 0;
 }
 
+
+void create_thread(size_t i) {
+	assert(ctx);
+	
+	ctx->thread_pool[i].id                  = (int)i;
+	ctx->thread_pool[i].state               = ts_unassigned;
+	ctx->thread_pool[i].work_function       = NULL;
+	ctx->thread_pool[i].calls               = 0L;
+	ctx->thread_pool[i].thread              = INVALID_THREAD;
+	ctx->thread_pool[i].local_data          = NULL;
+	
+	// Initialize the thread's critical section
+	ctx->thread_pool[i].thread_mutex = xpl_mutex_new();
+	if ((ctx->thread_pool[i].thread_mutex == NULL) ||
+		(!xpl_mutex_is_valid(ctx->thread_pool[i].thread_mutex))) {
+		// Thread allocation failed here. Remember this and quit trying.
+		LOG_ERROR("Failed to create mutex %llu", (long long unsigned)i);
+		ctx->thread_pool_size = i;
+		return;
+	}
+	
+	// Create the thread
+#ifdef XPL_PLATFORM_WINDOWS
+	ctx->thread_pool[i].thread = (thread_t)_beginthreadex(NULL, 0,
+														  thread_callback,
+														  &(ctx->thread_pool[i].id),
+														  0,
+														  NULL);
+	if (ctx->thread_pool[i].thread == INVALID_THREAD) {
+		LOG_ERROR("Failed to create windows thread %d", i);
+		assert(false);
+		ctx->thread_pool_size = i;
+		return;
+	}
+#else
+	if (pthread_create(&(ctx->thread_pool[i].thread), NULL, thread_callback, &(ctx->thread_pool[i].id)) != 0) {
+		LOG_ERROR("Failed to create posix thread %llu", (long long unsigned)i);
+		assert(false);
+		ctx->thread_pool_size = i;
+		return;
+	}
+#endif
+}
+
+
 void cleanup(bool wait_for_termination) {
     assert(ctx);
     for (xpl_thread_id i = 0; i < ctx->thread_pool_size; ++i) {
@@ -281,7 +326,7 @@ void cleanup(bool wait_for_termination) {
         
         pthread_detach(ctx->thread_pool[i].thread);
 #endif
-        xpl_critical_section_destroy(&ctx->thread_pool[i].critical_section);
+        xpl_mutex_destroy(&ctx->thread_pool[i].thread_mutex);
     }
     
     xpl_free(ctx->thread_pool);
@@ -313,54 +358,17 @@ void xpl_threads_init(size_t thread_pool_size, void *primary_thread_local_data) 
     
     ctx = xpl_calloc_type(thread_context_t);
     
-    ctx->singleton_cs = xpl_critical_section_new();
-    assert(xpl_critical_section_is_valid(ctx->singleton_cs));
+    ctx->singleton_mutex = xpl_mutex_new();
+    assert(xpl_mutex_is_valid(ctx->singleton_mutex));
     
-    xpl_critical_section_enter(ctx->singleton_cs);
+    xpl_mutex_enter(ctx->singleton_mutex);
     {
         ctx->thread_pool_size = thread_pool_size;
         ctx->thread_pool = xpl_calloc(thread_pool_size * sizeof(*ctx->thread_pool));
         assert(ctx->thread_pool);
         
         for (xpl_thread_id i = 0; i < thread_pool_size; ++i) {
-            ctx->thread_pool[i].id                  = (int)i;
-            ctx->thread_pool[i].state               = ts_unassigned;
-            ctx->thread_pool[i].work_function       = NULL;
-            ctx->thread_pool[i].calls               = 0L;
-            ctx->thread_pool[i].thread              = INVALID_THREAD;
-            ctx->thread_pool[i].local_data          = NULL;
-            
-            // Initialize the thread's critical section
-            ctx->thread_pool[i].critical_section = xpl_critical_section_new();
-            if ((ctx->thread_pool[i].critical_section == NULL) ||
-                (!xpl_critical_section_is_valid(ctx->thread_pool[i].critical_section))) {
-                // Thread allocation failed here. Remember this and quit trying.
-                LOG_ERROR("Failed to create critical section %d", i);
-                ctx->thread_pool_size = i;
-                break;
-            }
-            
-            // Create the thread
-#ifdef XPL_PLATFORM_WINDOWS
-            ctx->thread_pool[i].thread = (thread_t)_beginthreadex(NULL, 0,
-                                                                    thread_callback,
-                                                                    &(ctx->thread_pool[i].id),
-                                                                    0,
-                                                                    NULL);
-            if (ctx->thread_pool[i].thread == INVALID_THREAD) {
-                LOG_ERROR("Failed to create windows thread %d", i);
-                assert(false);
-                ctx->thread_pool_size = i;
-                break;
-            }
-#else
-            if (pthread_create(&(ctx->thread_pool[i].thread), NULL, thread_callback, &(ctx->thread_pool[i].id)) != 0) {
-                LOG_ERROR("Failed to create posix thread %d", i);
-                assert(false);
-                ctx->thread_pool_size = i;
-                break;
-            }
-#endif
+			create_thread(i);
         }
         
         // Create the local data key
@@ -384,17 +392,17 @@ void xpl_threads_init(size_t thread_pool_size, void *primary_thread_local_data) 
         ctx->primary_thread_local_data = primary_thread_local_data;
 #endif
     }
-    xpl_critical_section_leave(ctx->singleton_cs);
+    xpl_mutex_leave(ctx->singleton_mutex);
 }
 
 void xpl_threads_shutdown() {
     assert(ctx);
-    xpl_critical_section_enter(ctx->singleton_cs);
+    xpl_mutex_enter(ctx->singleton_mutex);
     {
         assert(is_primary_thread());
         cleanup(true);
     }
-    xpl_critical_section_leave(ctx->singleton_cs);
+    xpl_mutex_leave(ctx->singleton_mutex);
     
     xpl_free(ctx);
     ctx = NULL;
@@ -406,7 +414,7 @@ xpl_thread_id xpl_thread_assign_work(xpl_thread_work_function work_func, xpl_thr
     
     xpl_thread_id id = XPL_THREAD_INVALID;
     
-    xpl_critical_section_enter(ctx->singleton_cs);
+    xpl_mutex_enter(ctx->singleton_mutex);
     {
         for (xpl_thread_id i = 0; i < ctx->thread_pool_size; ++i) {
             if (ctx->thread_pool[i].state == ts_unassigned) {
@@ -423,7 +431,7 @@ xpl_thread_id xpl_thread_assign_work(xpl_thread_work_function work_func, xpl_thr
             ctx->thread_pool[id].local_data         = thread_local_data;
         }
     }
-    xpl_critical_section_leave(ctx->singleton_cs);
+    xpl_mutex_leave(ctx->singleton_mutex);
     
     return id;
 }

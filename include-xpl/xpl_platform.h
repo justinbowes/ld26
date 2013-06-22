@@ -37,21 +37,25 @@
 #		define WIN32_LEAN_AND_MEAN
 #	endif
 #	include <windows.h>
+#	define XPL_TOOLKIT_GLFW
 #	define XPL_PLATFORM XPL_PLATFORM_WINDOWS_D
 #	define XPL_PLATFORM_WINDOWS XPL_PLATFORM
 #	define XPL_PLATFORM_STRING "Windows"
 #elif defined(__APPLE__)
 #	include <TargetConditionals.h>
 #	if (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
+#		define XPL_TOOLKIT_IOS
 #		define XPL_PLATFORM XPL_PLATFORM_IOS_D
 #		define XPL_PLATFORM_IOS XPL_PLATFORM
 #		define XPL_PLATFORM_STRING "IOS"
 #	else
+#		define XPL_TOOLKIT_GLFW
 #		define XPL_PLATFORM XPL_PLATFORM_OSX_D
 #		define XPL_PLATFORM_OSX XPL_PLATFORM
 #		define XPL_PLATFORM_STRING "OSX"
 #	endif
 #else
+#	define XPL_TOOLKIT_GLFW
 #	define XPL_PLATFORM XPL_PLATFORM_UNIX_D
 #	define XPL_PLATFORM_UNIX XPL_PLATFORM
 #	define XPL_PLATFORM_STRING "Unix"
@@ -159,31 +163,6 @@ int xpl_resource_exists(const char *resource_path);
 void xpl_resource_resolve_opts(xpl_resolve_resource_opts_t *out, const char *path_in);
 size_t xpl_mbs_to_wcs(const char *mbs, wchar_t *wcs, size_t wcs_size);
 size_t xpl_wcs_to_mbs(const wchar_t *wcs, char *mbs, size_t mbs_size);
-
-#if defined(XPL_PLATFORM_IOS) && !defined(XPL_NO_GLFW_STUB_API)
-#	warning GLFW stub api!
-#	define GLFW_KEY_UP 'W'
-#	define GLFW_KEY_DOWN 'S'
-#	define GLFW_KEY_LEFT 'A'
-#	define GLFW_KEY_RIGHT 'D'
-#	define GLFW_KEY_LCTRL 0
-#	define GLFW_KEY_LSHIFT 0
-#	define GLFW_KEY_RSHIFT 0
-#	define GLFW_KEY_ENTER 13
-#	define GLFW_KEY_BACKSPACE 0
-#	define GLFW_KEY_DEL	0
-#	define GLFW_KEY_ESC 0
-#	define GLFW_KEY_TAB '\t'
-#	define GLFW_KEY_SPECIAL 80
-#	define GLFW_PRESS 1
-#	define GLFW_RELEASE 2
-#	define GLFW_MOUSE_BUTTON_LEFT
-#	define glfwGetKey(x) (false)
-#	define glfwGetMouseButton(x) (false)
-#	define glfwGetMousePos(xref, yref) {*(xref) = 0; *(yref) = 0; }
-#	define glfwGetMouseWheel() (0)
-#	define glfwSetCharCallback(x)
-#endif
 
 #include "xpl.h"
 

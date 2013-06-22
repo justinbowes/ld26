@@ -155,7 +155,7 @@ static void *init(xpl_context_t *self) {
         ++line;
     }
     
-    xmat4_ortho(0.f, (self->size.width / self->size.height) * 720.f, 0.f, 720.f, 1.f, -1.f, &ortho_mvp);
+    xmat4_ortho(0.f, ((float)self->size.height / self->size.width) * 720.f, 0.f, 720.f, 1.f, -1.f, &ortho_mvp);
     
     xvec3 origin = {{ 15.f, 12.f, 20.f }};
     xvec3 target = {{ 6.f, 0.8f, 0.f }};

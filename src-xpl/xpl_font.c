@@ -493,10 +493,12 @@ size_t xpl_font_load_glyphs(xpl_font_t *self, const wchar_t *charcodes) {
 				return charcount - i;
 			}
             
-			error = FT_Glyph_To_Bitmap(&ft_glyph,
-                                       (buffer_depth == 3 ?
-                                        FT_RENDER_MODE_LCD : FT_RENDER_MODE_NORMAL), NULL,
-                                       TRUE);
+#ifndef XPL_PLATFORM_IOS
+			int glyph_to_bitmap_flags = (buffer_depth == 3 ? FT_RENDER_MODE_LCD : FT_RENDER_MODE_NORMAL);
+#else
+			int glyph_to_bitmap_flags = FT_RENDER_MODE_NORMAL;
+#endif
+			error = FT_Glyph_To_Bitmap(&ft_glyph, glyph_to_bitmap_flags, NULL, TRUE);
 			if (error) {
 				LOG_FT_ERROR(error);
 				FT_Done_Face(face);

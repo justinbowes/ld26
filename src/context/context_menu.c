@@ -40,7 +40,6 @@ static size_t                           supported_video_mode_count;
 static size_t                           selected_video_mode_index = -1;
 static int								preferences_is_expanded = 0;
 static int                              resolution_is_expanded = 0;
-static float                            resolution_scroll = 0.f;
 static bool                             video_config_changed = false;
 #endif
 

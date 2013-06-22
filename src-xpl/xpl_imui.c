@@ -13,6 +13,7 @@
 #include <sys/param.h>
 
 #include "xpl_gl.h"
+#include "xpl_input.h"
 #include "xpl_platform.h"
 #include "xpl_memory.h"
 #include "xpl_vec.h"
@@ -84,6 +85,8 @@ struct xpl_imui_context {
 			int active;
 		} backspace, cursor_left, cursor_right, tab, left_shift, right_shift, enter, escape, delete;
 
+		int listener_id;
+		
 	} keyboard;
 
 	struct {
@@ -204,7 +207,7 @@ static void control_clear_scroll(context_scroll_t *cs) {
 }
 
 struct xpl_imui_context *xpl_imui_context_new(xpl_imui_theme_t *theme) {
-	xpl_imui_context_t *context = xpl_alloc_type(xpl_imui_context_t);
+	xpl_imui_context_t *context = xpl_calloc_type(xpl_imui_context_t);
 	xpl_imui_render_init();
 
 	context->bounds.ref = xivec2_set(1280.0f, 720.0f);
@@ -433,7 +436,7 @@ static int control_logic_textfield(char *mbsinput, size_t max_len, int *pcursor_
 		size_t value_len = strlen(mbsinput);
 		cursor_pos = xmin(cursor_pos, (int)value_len);
 
-		if (*typed_ptr < GLFW_KEY_SPECIAL) {
+		if (xpl_input_is_character(*typed_ptr)) {
 
 			if (value_len == max_len) {
 				LOG_DEBUG("Too long; not adding to field");
@@ -523,18 +526,18 @@ static void control_pop_scroll() {
 static int g_waiting_keys[MAX_WAITING_KEYS + 1];
 static size_t g_waiting_key_count;
 
-static void input_handle_char(int unicode_char, int press_release) {
-	if (press_release == GLFW_PRESS) {
-		if (g_waiting_key_count >= MAX_WAITING_KEYS) return;
-		g_waiting_keys[g_waiting_key_count++] = unicode_char;
-	}
+static bool input_handle_char(int unicode_char, void *context) {
+	if (g_waiting_key_count >= MAX_WAITING_KEYS) return false;
+	g_waiting_keys[g_waiting_key_count++] = unicode_char;
+	return true;
 }
 
 static void input_mouse_update() {
-	int lmb_down = glfwGetMouseButton(GLFW_MOUSE_BUTTON_LEFT);
-
-	glfwGetMousePos(&g_context->mouse.pos.x,
-					&g_context->mouse.pos.y);
+	xpl_mouse_button_state_t buttons_down;
+	xpl_input_get_mouse_buttons(&buttons_down);
+	bool lmb_down = buttons_down & xmb_left;
+	xpl_input_get_mouse_position(&g_context->mouse.pos);
+	
 	// Invert mouse y
 	g_context->mouse.pos.y = g_context->bounds.screen.y - g_context->mouse.pos.y;
 
@@ -558,31 +561,32 @@ static void input_mouse_update() {
 		g_context->mouse.drag.offset = xivec2_set(0, 0);
 	}
 
-	int new_scroll = glfwGetMouseWheel();
+	xivec2 scroll_deltas;
+	xpl_input_get_scroll_deltas(&scroll_deltas);
 #    ifdef XPL_PLATFORM_OSX
 	// OSX scroll convention is backwards, sorry, "natural"
-	new_scroll = -new_scroll;
+	scroll_deltas.y = -scroll_deltas.y;
 #    endif
-	g_context->mouse.scroll.delta = new_scroll - g_context->mouse.scroll.pos;
-	g_context->mouse.scroll.pos = new_scroll;
+	g_context->mouse.scroll.delta = scroll_deltas.y;
+	g_context->mouse.scroll.pos += scroll_deltas.y;
 }
 
-XPLINLINE void key_state_transition(int glfw_keycode, struct _keystruct *keystruct) {
-	int key_down = glfwGetKey(glfw_keycode);
+XPLINLINE void key_state_transition(int xpl_keycode, struct _keystruct *keystruct) {
+	int key_down = xpl_input_key_down(xpl_keycode);
 	keystruct->active = key_down && ! keystruct->down;
 	keystruct->down = key_down;
 }
 
 static void input_keyboard_update() {
-	key_state_transition(GLFW_KEY_BACKSPACE, &g_context->keyboard.backspace);
-	key_state_transition(GLFW_KEY_DEL, &g_context->keyboard.delete);
-	key_state_transition(GLFW_KEY_LEFT, &g_context->keyboard.cursor_left);
-	key_state_transition(GLFW_KEY_RIGHT, &g_context->keyboard.cursor_right);
-	key_state_transition(GLFW_KEY_ENTER, &g_context->keyboard.enter);
-	key_state_transition(GLFW_KEY_ESC, &g_context->keyboard.escape);
-	key_state_transition(GLFW_KEY_TAB, &g_context->keyboard.tab);
-	key_state_transition(GLFW_KEY_LSHIFT, &g_context->keyboard.left_shift);
-	key_state_transition(GLFW_KEY_RSHIFT, &g_context->keyboard.right_shift);
+	key_state_transition(XPL_KEY_BACKSPACE, &g_context->keyboard.backspace);
+	key_state_transition(XPL_KEY_DEL, &g_context->keyboard.delete);
+	key_state_transition(XPL_KEY_LEFT, &g_context->keyboard.cursor_left);
+	key_state_transition(XPL_KEY_RIGHT, &g_context->keyboard.cursor_right);
+	key_state_transition(XPL_KEY_ENTER, &g_context->keyboard.enter);
+	key_state_transition(XPL_KEY_ESC, &g_context->keyboard.escape);
+	key_state_transition(XPL_KEY_TAB, &g_context->keyboard.tab);
+	key_state_transition(XPL_KEY_LSHIFT, &g_context->keyboard.left_shift);
+	key_state_transition(XPL_KEY_RSHIFT, &g_context->keyboard.right_shift);
 
 	if (g_waiting_key_count && g_context->controls.keyboard_active_id != CONTROL_NONE) {
 		memcpy(&g_context->keyboard.typed[0], &g_waiting_keys[0], g_waiting_key_count * sizeof (g_waiting_keys[0]));
@@ -753,10 +757,11 @@ void xpl_imui_context_end(xpl_imui_context_t *context) {
 	xpl_imui_render_draw(&g_context->bounds.screen, g_context->rq.queue, g_context->rq.length, g_context->scale, g_context->blend_amount);
 
 	input_clear();
-	if (g_context->controls.keyboard_active_id) {
-		glfwSetCharCallback(&input_handle_char);
-	} else {
-		glfwSetCharCallback(NULL);
+	if (g_context->controls.keyboard_active_id && g_context->controls.went_active) {
+		g_context->keyboard.listener_id = xpl_input_add_character_listener(input_handle_char, g_context);
+	} else if (! g_context->controls.keyboard_active_id) {
+		if (g_context->keyboard.listener_id) xpl_input_remove_character_listener(g_context->keyboard.listener_id);
+		g_context->keyboard.listener_id = 0;
 	}
 	if (g_context->controls.keyboard_active_to_be_id > g_context->controls.widget_id) {
 		LOG_DEBUG("Keyboard target is too high, stopping advance");

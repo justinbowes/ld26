@@ -41,13 +41,14 @@
 #include "xpl_imui.h"
 #include "xpl_rand.h"
 #include "xpl_text_cache.h"
+#include "xpl_text_buffer.h"
+#include "xpl_input.h"
 
 #include "audio/audio.h"
 #include "net/udpnet.h"
 
 #include "models/plane-xy.h"
 
-#include "xpl_text_buffer.h"
 
 #define LOG_LINES 3
 #define LOG_LINE_MAX 512
@@ -95,11 +96,11 @@ enum packet_errors {
 };
 
 
-static const int up[]		= { GLFW_KEY_UP,		'W',	0};
-static const int down[]		= { GLFW_KEY_DOWN,		'S',	0};
-static const int left[]		= { GLFW_KEY_LEFT,		'A',	0};
-static const int right[]	= { GLFW_KEY_RIGHT,		'D',	0};
-static const int fire[]		= { GLFW_KEY_LCTRL,		' ',	GLFW_KEY_ENTER, 0};
+static const int up[]		= { 'W',	0};
+static const int down[]		= { 'S',	0};
+static const int left[]		= { 'A',	0};
+static const int right[]	= { 'D',	0};
+static const int fire[]		= { ' ',	13,		0};
 
 game_t									game;
 network_t								network;
@@ -647,7 +648,7 @@ static void game_render_ui(xpl_context_t *self) {
 			if (chat_reset_focus) {
 				xpl_imui_context_reset_focus();
 				chat_reset_focus = false;
-				if (! glfwGetKey('T')) 	xpl_imui_control_textfield(xl("chat_message"), chat_buffer, CHAT_MAX, &chat_cursor, "", TRUE);
+				if (! xpl_input_key_down('T')) xpl_imui_control_textfield(xl("chat_message"), chat_buffer, CHAT_MAX, &chat_cursor, "", TRUE);
 			} else {
 				xpl_imui_control_textfield(xl("chat_message"), chat_buffer, CHAT_MAX, &chat_cursor, "", TRUE);
 			}
@@ -673,7 +674,7 @@ static void game_reset(void) {
 static bool key_down(const int *key_array) {
 	const int *ptr = key_array;
 	while (*ptr) {
-		if (glfwGetKey(*ptr)) return true;
+		if (xpl_input_key_down(*ptr)) return true;
 		ptr++;
 	}
 	
@@ -1184,7 +1185,7 @@ static bool player_local_is_connected(void) {
 
 static void player_local_update_chat(void) {
 	if (! chat_showing) {
-		if (glfwGetKey('T')) {
+		if (xpl_input_key_down('T')) {
 			chat_buffer[0] = '\0';
 			chat_showing = true;
 			chat_close_wait = false;
@@ -1193,12 +1194,12 @@ static void player_local_update_chat(void) {
 	} else {
 		
 		bool key_down = false;
-		if (glfwGetKey(GLFW_KEY_ESC)) {
+		if (xpl_input_key_down(XPL_KEY_ESC)) {
 			chat_close_wait = true;
 			key_down = true;
 		}
 		
-		if (glfwGetKey(GLFW_KEY_ENTER)) {
+		if (xpl_input_key_down(XPL_KEY_ENTER)) {
 			if (strlen(chat_buffer)) {
 				packet_send_chat();
 				chat_buffer[0] = '\0';
@@ -1285,7 +1286,7 @@ static void player_local_update_weapon(void) {
 	
 	if (! chat_showing) {
 		for (int i = 0; i < keycount; ++i) {
-			if (glfwGetKey(weapon_keys[i]) && game.active_weapon != i) {
+			if (xpl_input_key_down(weapon_keys[i]) && game.active_weapon != i) {
 				game.active_weapon = i;
 				audio_quickplay_pan("select.ogg", SELECT_VOLUME, 0.5f);
 			}
