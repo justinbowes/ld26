@@ -523,6 +523,7 @@ int xpl_shaders_init(const char *path_prefix, const char *path_suffix) {
 		NULL
 	};
 	
+	LOG_DEBUG("Searching for directive for GL version %s", s_version_suffix);
 	for (const char **k = &directive_map[0], **l = &directive_map[1]; **k; k += 2, l += 2) {
 		if ((strcmp(s_version_suffix, *k) == 0) ||
 			(strcmp("", *k) == 0)) {

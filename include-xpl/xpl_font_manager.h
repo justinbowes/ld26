@@ -20,7 +20,7 @@ typedef struct {
 } xpl_font_manager_t;
 
 
-xpl_font_manager_t *xpl_font_manager_new(int surface_width, int surface_height, int depth_bytes);
+xpl_font_manager_t *xpl_font_manager_new(size_t surface_width, size_t surface_height, size_t depth_bytes);
 
 void xpl_font_manager_destroy(xpl_font_manager_t **ppmgr);
 

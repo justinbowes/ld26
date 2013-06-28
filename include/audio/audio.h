@@ -15,6 +15,13 @@
 
 #include "uthash.h"
 
+#define RESOURCE_ID_MAX 256
+
+struct audio_resource_impl;
+struct audio_system_impl;
+struct audio_channel_impl;
+
+
 typedef enum audio_action {
 	aa_stop,
 	aa_play,
@@ -46,7 +53,10 @@ void audio_shutdown(void);
 
 bool audio_is_playing(audio_t *audio);
 
-audio_t *audio_create(const char *resource);
+audio_t *audio_create(const char *resource, bool as_bgm);
+#ifdef XPL_PLATFORM_IOS
+audio_t *audio_bgm_create(const char *resource, float volume, float pan, bool loop);
+#endif
 void audio_destroy(audio_t **ppaudio);
 void audio_quickplay_pan(const char *resource, float volume, float pan);
 void audio_quickplay_position(const char *resource, float volume, xvec3 position);

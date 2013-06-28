@@ -108,9 +108,12 @@ static void create_background() {
 }
 
 static void destroy_background() {
-	xpl_bo_destroy(&effect_vbo);
+	xpl_shader_release(&overlay_shader);
 	xpl_vao_destroy(&effect_vao);
-	// xpl_shader_release(&background_shader);
+	xpl_bo_destroy(&effect_vbo);
+	xpl_sprite_batch_destroy(&bg_batch);
+	xpl_sprite_destroy(&bg_sprite);
+	xpl_sprite_destroy(&up_sprite);
 
 	audio_destroy(&title_bgm);
 }
@@ -147,7 +150,7 @@ static void populate_video_modes() {
 }
 #endif
 
-static void menu_configure_graphics(xpl_app_t *app, xrect area) {
+static void menu_configure(xpl_app_t *app, xrect area) {
     area = xrect_contract_to(area, 600, 440);
     
 #ifndef XPL_PLATFORM_IOS
@@ -240,48 +243,12 @@ static void menu_configure_graphics(xpl_app_t *app, xrect area) {
     
 }
 
-/*
-static void menu_configure(xpl_app_t *app, xrect area) {
-    area = xrect_contract_to(area, 640, 160);
-    
-    int graphics_clicked;
-    int controls_clicked;
-    int back_clicked;
-    
-    float nullscroll = 0.f;
-    xpl_imui_context_begin(imui_context, app->execution_info, area);
-    {
-        xpl_imui_control_scroll_area_begin(xl("config_title"), area.size, &nullscroll);
-        {
-            xpl_imui_indent_custom(16.0f);
-            {
-                graphics_clicked = xpl_imui_control_button(xl("config_button_graphics"), 0, TRUE);
-                controls_clicked = xpl_imui_control_button(xl("config_button_controls"), 0, FALSE);
-                xpl_imui_separator_line();
-                back_clicked = xpl_imui_control_button(xl("back"), XPL_IMUI_BUTTON_CANCEL | XPL_IMUI_BUTTON_DEFAULT, TRUE);
-            }
-            xpl_imui_outdent_custom(16.0f);
-        }
-        xpl_imui_control_scroll_area_end();
-    }
-    xpl_imui_context_end(imui_context);
-    
-    if (graphics_clicked) {
-        menu_push(ms_configure_graphics);
-    }
-    
-    if (back_clicked) {
-        menu_pop();
-    }
-}
- */
-
 static void menu_main(xpl_app_t *app, xrect area) {
     area = xrect_contract_to(area, 600, 210);
     
     int new_clicked;
     int configure_clicked;
-    int exit_clicked;
+    int exit_clicked = FALSE;
     
     float nullscroll = 0.f;
     xpl_imui_context_begin(imui_context, app->execution_info, area);
@@ -295,8 +262,10 @@ static void menu_main(xpl_app_t *app, xrect area) {
                 new_clicked = xpl_imui_control_button(xl("main_new"), 0, TRUE);
                 xpl_imui_separator();
                 configure_clicked = xpl_imui_control_button(xl("main_configure"), 0, TRUE);
+#ifndef XPL_PLATFORM_IOS
                 xpl_imui_separator_line();
                 exit_clicked = xpl_imui_control_button(xl("exit"), 0, TRUE);
+#endif
             }
             xpl_imui_outdent_custom(16.0f);
         }
@@ -405,7 +374,7 @@ static void render(xpl_context_t *self, double time, void *vdata) {
     switch (menu_stack[menu_index]) {
            
         case ms_configure_graphics:
-            mf = menu_configure_graphics;
+            mf = menu_configure;
             break;
             
         case ms_main:

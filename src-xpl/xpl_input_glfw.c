@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#include <GL/glfw.h>
+#include <xpl_gl.h>
 
 #include "xpl_input.h"
 
@@ -39,24 +39,32 @@ static void char_listener(int character, int state) {
 	if (state == GLFW_PRESS) xpl_input__internal__dispatch_character(character);
 }
 
+bool xpl_input_keyboard_should_auto_focus(void) {
+	return true; // default behavior except where keyboard is intrusive
+}
+
 void xpl_input_enable_keyboard(void) {
 	if (keyboard_active) return;
 	glfwSetKeyCallback(key_listener);
+	keyboard_active = true;
 }
 
 void xpl_input_disable_keyboard(void) {
 	if (! keyboard_active) return;
 	glfwSetKeyCallback(NULL);
+	keyboard_active = false;
 }
 
 void xpl_input_enable_characters(void) {
 	if (characters_active) return;
 	glfwSetCharCallback(char_listener);
+	characters_active = true;
 }
 
 void xpl_input_disable_characters(void) {
 	if (! characters_active) return;
 	glfwSetCharCallback(NULL);
+	characters_active = false;
 }
 
 void xpl_input_get_mouse_position(xivec2 *position) {
@@ -78,6 +86,12 @@ void xpl_input_get_scroll_deltas(xivec2 *deltas) {
 	}
 	deltas->x = 0;
 	deltas->y = scroll_position - last_scroll_position;
+}
+
+bool xpl_input_mouse_down_in(xirect rect) {
+	xivec2 position;
+	xpl_input_get_mouse_position(&position);
+	return xirect_in_bounds(rect, position);
 }
 
 

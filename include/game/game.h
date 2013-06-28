@@ -145,9 +145,16 @@ typedef struct game {
 	
 } game_t;
 
-extern game_t							game;
+extern game_t game;
 
 #define SERVER_SIZE		128
+
+typedef struct error {
+	char		msg[256];
+	float		timeout;
+} error_t;
+
+extern error_t error;
 
 typedef struct network {
 	
@@ -155,14 +162,11 @@ typedef struct network {
 	uint16_t	server_port;
 	float		hello_timeout;
 	
-	char		error[256];
-	float		error_timeout;
-	
 	float		position_timeout;
 	float		receive_timeout;
 	
 } network_t;
 
-extern network_t						network;
+extern network_t network;
 
 #endif

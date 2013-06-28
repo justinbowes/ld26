@@ -16,7 +16,7 @@
 #	include <Foundation/NSFileManager.h>
 
 void xpl_resource_path(char *path_out, const char *path_in, size_t length) {
-	NSString *resource_bundle = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"dist"];
+	NSString *resource_bundle = [[NSBundle mainBundle] resourcePath];
 	assert(resource_bundle);
 	const char *resource_bundle_cc = [resource_bundle UTF8String];
 	snprintf(path_out, PATH_MAX, "%s/%s", resource_bundle_cc, path_in);

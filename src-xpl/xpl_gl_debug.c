@@ -35,7 +35,6 @@ void xpl_gl_log_bound_textures() {
 		t3d = 0,
 		tbuffer = 0,
 		tcube = 0,
-		tcube_array = 0,
 		trectangle = 0;
         glGetIntegerv(GL_TEXTURE_BINDING_2D, &t2d);
         glGetIntegerv(GL_TEXTURE_BINDING_CUBE_MAP, &tcube);
@@ -47,11 +46,11 @@ void xpl_gl_log_bound_textures() {
         glGetIntegerv(GL_TEXTURE_BINDING_2D_MULTISAMPLE_ARRAY, &t2d_multisample_array);
         glGetIntegerv(GL_TEXTURE_BINDING_3D, &t3d);
         glGetIntegerv(GL_TEXTURE_BINDING_BUFFER, &tbuffer);
-        glGetIntegerv(GL_TEXTURE_BINDING_CUBE_MAP_ARRAY, &tcube_array);
+//        glGetIntegerv(GL_TEXTURE_BINDING_CUBE_MAP_ARRAY, &tcube_array);
         glGetIntegerv(GL_TEXTURE_BINDING_RECTANGLE, &trectangle);
 #endif
-        LOG_DEBUG("Bound texture: GL_TEXTURE%d: 1D %d\t 1DA %d\t 2D %d\t 2DA %d\t 2DM %d\t 2DMA %d\t 3D %d\t B %d\t C %d\t CA %d\t R %d",
-                  i, t1d, t1d_array, t2d, t2d_array, t2d_multisample, t2d_multisample_array, t3d, tbuffer, tcube, tcube_array, trectangle);
+        LOG_DEBUG("Bound texture: GL_TEXTURE%d: 1D %d\t 1DA %d\t 2D %d\t 2DA %d\t 2DM %d\t 2DMA %d\t 3D %d\t B %d\t C %d\t R %d",
+                  i, t1d, t1d_array, t2d, t2d_array, t2d_multisample, t2d_multisample_array, t3d, tbuffer, tcube, trectangle);
     }
     
     glActiveTexture(active_texture_unit);
@@ -74,13 +73,13 @@ const char *xpl_gl_get_error_string(GLenum e) {
             ECASE(GL_OUT_OF_MEMORY);
             ECASE(GL_INVALID_FRAMEBUFFER_OPERATION);
 #ifdef GL_TABLE_TOO_LARGE
-            ECASE(GL_TABLE_TOO_LARGE)
+            ECASE(GL_TABLE_TOO_LARGE);
 #endif
 		default: return "XPL_GL_UNKNOWN";
     }
 }
 
-#ifdef XPL_GLES
+#if defined(XPL_GLES) || defined(XPL_PLATFORM_OSX)
 
 void xpl_gl_debug_install() {
 	// unsupported

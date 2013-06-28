@@ -13,7 +13,7 @@
 
 #include "xpl.h"
 
-#include "xpl_gl_debug.h"
+#include "xpl_gl.h"
 #include "xpl_texture.h"
 
 #include "xpl_app.h"
@@ -21,9 +21,7 @@
 #include "xpl_l10n.h"
 #include "xpl_app_params.h"
 
-#ifdef XPL_PLATFORM_OSX
-#define GL_ARB_shader_objects
-#include <OpenGL/CGLTypes.h>
+#if defined(XPL_PLATFORM_OSX)
 #include <OpenGL/OpenGL.h>
 
 static void osx_force_discrete_gpu() {
@@ -130,12 +128,14 @@ int xpl_start_app(xpl_app_t *app) {
 
         }
 
+#if ! defined(XPL_PLATFORM_OSX)
 		if (gl3wInit()) {
             LOG_ERROR("Couldn't initialize gl3w");
             exit(XPL_RC_GL3W_INIT_FAILED);
         }
+#endif
         
-        xpl_gl_debug_install(); // No-op if not debug
+        xpl_gl_debug_install(); // No-op if not debug or not supported
 		
         glfwSetWindowTitle(app->title);
         glfwSetWindowSizeCallback(&window_resized);

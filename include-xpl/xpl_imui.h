@@ -36,6 +36,7 @@ enum xpl_imui_button_flags {
 
 typedef uint64_t control_id;
 static const control_id CONTROL_NONE = 0;
+static const control_id CONTROL_MAX = UINT64_MAX;
 
 struct xpl_imui_context;
 typedef struct xpl_imui_context xpl_imui_context_t;

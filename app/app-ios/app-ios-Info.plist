@@ -17,15 +17,16 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.0.23.395</string>
+	<string>0.0.53.869</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
-	<string>395</string>
+	<string>869</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
+		<string>gamekit</string>
 		<string>armv7</string>
 	</array>
 	<key>UIStatusBarHidden</key>

@@ -90,12 +90,13 @@ static void *init(xpl_context_t *self) {
     brick_shader = xpl_shader_get_prepared("LogoBackground", "Logo.Vertex", "Logo.Brick.Fragment");
     quad_shader = xpl_shader_get_prepared("LogoForeground", "Overlay.Vertex", "Overlay.Fragment");
     
-	clip = audio_create("logo.ogg");
+	clip = audio_create("logo", false);
     clip->loop = false;
     clip_started = false;
 	
 	prefs_t prefs = prefs_get();
-	title_bgm = audio_create("title.ogg");
+	title_bgm = audio_create("title", true);
+	
 	title_bgm->loop = true;
 	if (prefs.bgm_on) {
 		title_bgm->volume = 0.5f;
@@ -129,16 +130,16 @@ static void *init(xpl_context_t *self) {
     wchar_t buffer[1024];
     
     xpl_mbs_to_wcs("informi labs", buffer, 1024);
-    pen = xvec2_set(360.f, 480.f);
+    pen = xvec2_set(400.f, 480.f);
     xpl_text_buffer_add_text(outline_text, &pen, &outline_markup, buffer, 0);
     xpl_text_buffer_commit(outline_text);
     
-    pen = xvec2_set(360.f, 480.f);
+    pen = xvec2_set(400.f, 480.f);
     xpl_text_buffer_add_text(logo_text, &pen, &logo_markup, buffer, 0);
     xpl_text_buffer_commit(logo_text);
 
     xpl_mbs_to_wcs("informilabs.com\nultrapew.com", buffer, 1024);
-    pen = xvec2_set(360.f, 400.f);
+    pen = xvec2_set(400.f, 400.f);
     xpl_text_buffer_add_text(website_text, &pen, &website_markup, buffer, 0);
     xpl_text_buffer_commit(website_text);
     
@@ -155,7 +156,7 @@ static void *init(xpl_context_t *self) {
         ++line;
     }
     
-    xmat4_ortho(0.f, ((float)self->size.height / self->size.width) * 720.f, 0.f, 720.f, 1.f, -1.f, &ortho_mvp);
+    xmat4_ortho(0.f, ((float)self->size.width / self->size.height) * 720.f, 0.f, 720.f, 1.f, -1.f, &ortho_mvp);
     
     xvec3 origin = {{ 15.f, 12.f, 20.f }};
     xvec3 target = {{ 6.f, 0.8f, 0.f }};
@@ -256,6 +257,10 @@ static void render(xpl_context_t *self, double time, void *data) {
 
 static void destroy(xpl_context_t *self, void *vdata) {
 	audio_destroy(&clip);
+	xpl_text_buffer_destroy(&logo_text);
+	xpl_text_buffer_destroy(&outline_text);
+	xpl_text_buffer_destroy(&website_text);
+	xpl_text_buffer_destroy(&copyright_text);
 }
 
 static xpl_context_t *handoff(xpl_context_t *self, void *vdata) {

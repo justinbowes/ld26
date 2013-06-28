@@ -43,6 +43,7 @@
 #	define XPL_PLATFORM_STRING "Windows"
 #elif defined(__APPLE__)
 #	include <TargetConditionals.h>
+#	define XPL_TOOLKIT_COCOA
 #	if (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
 #		define XPL_TOOLKIT_IOS
 #		define XPL_PLATFORM XPL_PLATFORM_IOS_D

@@ -42,7 +42,7 @@ typedef struct glyph_vertex {
 
 xpl_text_buffer_t *xpl_text_buffer_new(int surface_width, int surface_height, int lcd_filtering_onoff) {
 	int buffer_depth_bytes = lcd_filtering_onoff; // Yes, this is monstrous
-	xpl_text_buffer_t *result = xpl_text_buffer_shared_font_manager_new(xpl_font_manager_new(512, 512, buffer_depth_bytes));
+	xpl_text_buffer_t *result = xpl_text_buffer_shared_font_manager_new(xpl_font_manager_new(surface_width, surface_height, buffer_depth_bytes));
 	result->shared_font_manager = FALSE;
 	return result;
 }
@@ -446,6 +446,9 @@ void xpl_text_buffer_commit(const xpl_text_buffer_t *self) {
 }
 
 void xpl_text_buffer_render(const xpl_text_buffer_t *self, const GLfloat *mvp) {
+	// lazy atlas
+	if (! self->font_manager->atlas->texture_id) return;
+	
 	glEnable(GL_BLEND);
 	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
 

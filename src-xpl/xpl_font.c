@@ -186,7 +186,7 @@ void font_generate_kerning(xpl_font_t *self) {
 		HASH_ITER(hh, self->glyph_ttable, leading_glyph, t2) {
 			if (leading_glyph->charcode == -1)
 				continue; // Skip special background glyph
-            
+
 			xpl_kerning_t *k;
 			HASH_FIND_INT(trailing_glyph->kerning_table, &leading_glyph->charcode, k);
 			if (k) continue;
@@ -200,7 +200,6 @@ void font_generate_kerning(xpl_font_t *self) {
 			// 26.6 encoding and transform matrix means kerning is in units of 64 * 64
 			k = kerning_new(leading_glyph->charcode, kerning.x / (float) (HRES * HRES));
 			HASH_ADD_INT(trailing_glyph->kerning_table, charcode, k);
-            
 		}
 	}
 	FT_Done_Face(face);
@@ -381,9 +380,9 @@ size_t xpl_font_load_glyphs(xpl_font_t *self, const wchar_t *charcodes) {
 	FT_Bitmap ft_bitmap;
 	FT_Error error;
 #ifndef XPL_PLATFORM_IOS
-	int buffer_depth = self->manager_atlas->depth;
+	size_t buffer_depth = self->manager_atlas->depth;
 #else
-	int buffer_depth = 1;
+	size_t buffer_depth = 1;
 #endif
     
 	FT_UInt glyph_index;
@@ -517,7 +516,7 @@ size_t xpl_font_load_glyphs(xpl_font_t *self, const wchar_t *charcodes) {
 			FT_Stroker_Done(stroker);
 		} // endif stroked
         
-		const int pad_region = buffer_depth;
+		const size_t pad_region = buffer_depth;
 		// Separate each glyph by at least one black pixel.
 		xirect region = xpl_texture_atlas_get_region(self->manager_atlas,
                                                      (bmp_size.width / buffer_depth) + pad_region,
@@ -552,7 +551,7 @@ size_t xpl_font_load_glyphs(xpl_font_t *self, const wchar_t *charcodes) {
 		error = FT_Load_Glyph(face, glyph_index,
                               FT_LOAD_RENDER | FT_LOAD_NO_HINTING);
 		if (error) {
-            
+			xpl_free(glyph);
 			LOG_FT_ERROR(error);
 			FT_Done_FreeType(library);
 			return charcount - i;

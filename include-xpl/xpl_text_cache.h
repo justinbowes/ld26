@@ -20,7 +20,7 @@ typedef struct xpl_cached_text {
 	xpl_font_t *managed_font;
 } xpl_cached_text_t;
 
-struct xpl_text_cache * xpl_text_cache_new();
+struct xpl_text_cache * xpl_text_cache_new(size_t size);
 void xpl_text_cache_destroy(struct xpl_text_cache **ppcache);
 
 void xpl_text_cache_advance_frame(struct xpl_text_cache *self);

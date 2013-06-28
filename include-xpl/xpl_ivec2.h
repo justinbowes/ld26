@@ -85,4 +85,8 @@ XPLINLINE xivec2 xivec2_scale(xivec2 v, float s) {
 	return r;
 }
 
+XPLINLINE int xivec2_length_sq(xivec2 a, xivec2 b) {
+	return (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
+}
+
 #endif

@@ -13,6 +13,8 @@
 #include "xpl_memory.h"
 #include "xpl_dynamic_buffer.h"
 
+#define CHUNK_SIZE 4096
+
 xpl_dynamic_buffer_t *xpl_dynamic_buffer_new(void) {
     xpl_dynamic_buffer_t *buf = xpl_calloc_type(xpl_dynamic_buffer_t);
     return buf;
@@ -34,14 +36,17 @@ void xpl_dynamic_buffer_alloc(xpl_dynamic_buffer_t *self, size_t data_len, int a
     
     if (!data_len) return;
 	
+	size_t alloc_size;
     if (self->content) {
-        self->content = xpl_realloc(self->content, self->capacity + data_len);
+		alloc_size = (self->capacity + data_len + CHUNK_SIZE) / CHUNK_SIZE * CHUNK_SIZE;
+        self->content = xpl_realloc(self->content, alloc_size);
     } else {
+		alloc_size = data_len;
         self->content = xpl_alloc(data_len);
     }
-    memset(self->content + self->capacity, 0, data_len);
+    memset(self->content + self->length, 0, alloc_size - self->length);
     
-    self->capacity += data_len;
+    self->capacity = alloc_size;
     if (as_data) {
     	self->length += data_len;
     	self->dirty_range_max = xmax(self->dirty_range_max, self->length);

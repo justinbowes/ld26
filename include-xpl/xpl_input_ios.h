@@ -22,8 +22,8 @@
 void xpl_input_ios_init(UIView *view);
 void xpl_input_ios_destroy(void);
 
-void xpl_input_ios_set_touch_began(CGPoint *point, size_t index);
-void xpl_input_ios_set_touch_moved(CGPoint *point, size_t index);
-void xpl_input_ios_set_touch_ended(CGPoint *point, size_t index);
+void xpl_input_ios_set_touch_began(CGPoint *point);
+void xpl_input_ios_set_touch_moved(CGPoint *point);
+void xpl_input_ios_set_touch_ended(CGPoint *point);
 
 #endif

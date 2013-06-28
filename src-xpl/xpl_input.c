@@ -27,8 +27,8 @@ typedef struct {
 } xpl_character_listener_t;
 static xpl_character_listener_t *character_listeners = NULL;
 
-bool xpl_input_is_character(int key) {
-	return key > XPL_KEY_SPECIAL;
+bool xpl_input_character_is_printable(int key, bool include_crlf) {
+	return key >= ' ' || (include_crlf && (key == '\n' || key == '\r'));
 }
 
 int xpl_input_add_character_listener(xpl_input_character_func func, void *context) {

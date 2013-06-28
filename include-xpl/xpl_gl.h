@@ -28,8 +28,15 @@
 #	define glDrawArraysInstanced	glDrawArraysInstancedOES
 #	define glGenVertexArrays		glGenVertexArraysOES
 #else
-#	include "GL3/gl3w.h"
-#	include "GL3/gl3.h"
+#	if defined(XPL_PLATFORM_OSX)
+#		include <OpenGL/gl3.h>
+#		include <OpenGL/gl3ext.h>
+#		define GLFW_INCLUDE_GL3
+#		define GLFW_NO_GLU
+#	else
+#		include "GL3/gl3w.h"
+#		include "GL3/gl3.h"
+#	endif
 #	include "GL/glfw.h"
 #endif
 #include "xpl_gl_debug.h"

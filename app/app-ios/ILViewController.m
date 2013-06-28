@@ -19,8 +19,11 @@
 #include "audio/audio.h"
 
 #include "context/context_logo.h"
+#include "context/context_game.h"
 
 #include "xpl_input_ios.h"
+
+#define SKIP_MENU
 
 @interface ILViewController () {
 	xpl_app_t *app;
@@ -55,7 +58,6 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    
     self.context = [[[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2] autorelease];
 
     if (!self.context) {
@@ -63,14 +65,17 @@
     }
     
     GLKView *view = (GLKView *)self.view;
+	[view setMultipleTouchEnabled:YES];
     view.context = self.context;
-    view.drawableDepthFormat = GLKViewDrawableDepthFormat24;
+    view.drawableDepthFormat = GLKViewDrawableDepthFormatNone;
 	
 	xpl_input_ios_init(view);
+	root_view_controller = self;
 	
 	total_time = 0.0;
 	frame_counter = 0;
 	app = xpl_app_new(0, NULL);
+	
 	app->execution_info = xpl_engine_execution_info_new();
 	app->engine_info = xpl_engine_info_new();
 	
@@ -108,8 +113,15 @@
     [EAGLContext setCurrentContext:self.context];
     
 	xpl_shaders_init("shaders/", ".glsl");
-	app->execution_info->screen_size.x = self.view.bounds.size.width;
-	app->execution_info->screen_size.y = self.view.bounds.size.height;
+	if (UIInterfaceOrientationIsLandscape(self.interfaceOrientation)) {
+		app->execution_info->screen_size.x = self.view.bounds.size.height;
+		app->execution_info->screen_size.y = self.view.bounds.size.width;
+	} else {
+		app->execution_info->screen_size.x = self.view.bounds.size.width;
+		app->execution_info->screen_size.y = self.view.bounds.size.height;
+	}
+	
+	glViewport(0, 0, app->execution_info->screen_size.x, app->execution_info->screen_size.y);
 
     [self createInitialContext];
 }
@@ -132,7 +144,11 @@
 - (void)createInitialContext
 {
 	assert(! draw_context);
+#ifndef SKIP_MENU
 	draw_context = xpl_context_new(app, &logo_context_def);
+#else
+	draw_context = xpl_context_new(app, &game_context_def);
+#endif
     context_data = draw_context->functions.init(draw_context);
 }
 
@@ -153,8 +169,7 @@
 	}
 	
 	app->execution_info->current_time = xpl_get_time();
-	app->execution_info->screen_size.x = self.view.bounds.size.width;
-	app->execution_info->screen_size.y = self.view.bounds.size.height;
+	
 	app->execution_info->remaining_time_to_process = self.timeSinceLastUpdate;
 	
 	audio_update();
@@ -181,6 +196,9 @@
 	double engine_time = current_time - initial_time;
 	double render_interval = self.timeSinceLastDraw;
 	app->execution_info->current_time = current_time;
+	app->execution_info->screen_size.x = rect.size.width;
+	app->execution_info->screen_size.y = rect.size.height;
+	draw_context->size = app->execution_info->screen_size;
 	draw_context->functions.render(draw_context, render_interval, context_data);
 	
 	current_time = xpl_get_time();
@@ -197,7 +215,7 @@
 	size_t index = 0;
 	for (UITouch *touch in touches) {
 		CGPoint location = [touch locationInView:self.view];
-		xpl_input_ios_set_touch_began(&location, index);
+		xpl_input_ios_set_touch_began(&location);
 		++index;
 	}
 	[super touchesBegan:touches withEvent:event];
@@ -207,7 +225,7 @@
 	size_t index = 0;
 	for (UITouch *touch in touches) {
 		CGPoint location = [touch locationInView:self.view];
-		xpl_input_ios_set_touch_moved(&location, index);
+		xpl_input_ios_set_touch_moved(&location);
 		++index;
 	}
 	[super touchesMoved:touches withEvent:event];
@@ -218,7 +236,7 @@
 	size_t index = 0;
 	for (UITouch *touch in touches) {
 		CGPoint location = [touch locationInView:self.view];
-		xpl_input_ios_set_touch_ended(&location, index);
+		xpl_input_ios_set_touch_ended(&location);
 		++index;
 	}
 	[super touchesCancelled:touches withEvent:event];
@@ -228,7 +246,7 @@
 	size_t index = 0;
 	for (UITouch *touch in touches) {
 		CGPoint location = [touch locationInView:self.view];
-		xpl_input_ios_set_touch_ended(&location, index);
+		xpl_input_ios_set_touch_ended(&location);
 		++index;
 	}
 	[super touchesEnded:touches withEvent:event];

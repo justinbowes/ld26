@@ -128,9 +128,11 @@ char *basename(const char *name);
 static char __xpl_log_output[LOG_MAX] XPL_UNUSED;
 #	ifdef _WIN32
 /* MinGW points to _iob which the IDEs don't like */
-#		define xpl_log(stream, color, level, file, func, line, ...) printf("[%s%s%s]\t %s %s:%d %s\n", color, level, XPL_COLOR_txtrst, basename(file), func, line, (snprintf(__xpl_log_output, LOG_MAX, __VA_ARGS__), __xpl_log_output)); fflush(stdout)
+#		define xpl_log(stream, color, level, file, func, line, ...) \
+			printf("[%s%s%s]\t %s %s:%d %s\n", color, level, XPL_COLOR_txtrst, basename(file), func, line, (snprintf(__xpl_log_output, LOG_MAX, __VA_ARGS__), __xpl_log_output)); fflush(stdout)
 #	else
-#		define xpl_log(stream, color, level, file, func, line, ...) /* LOG level */ fprintf(stream, "[%s%s%s]\t %s %s:%d %s\n", color, level, XPL_COLOR_txtrst, basename(file), func, line, (snprintf(__xpl_log_output, LOG_MAX, __VA_ARGS__), __xpl_log_output)); fflush(stream)
+#		define xpl_log(stream, color, level, file, func, line, ...) \
+			fprintf(stream, "[%s%s%s]\t %s %s:%d %s\n", color, level, XPL_COLOR_txtrst, basename(file), func, line, (snprintf(__xpl_log_output, LOG_MAX, __VA_ARGS__), __xpl_log_output)); fflush(stream)
 #	endif
 #else
 #define xpl_log(s, c, lv, f, fn, ln, ...)

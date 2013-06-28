@@ -31,9 +31,9 @@ static void texture_atlas_add_initial_node(xpl_texture_atlas_t *self) {
 static void texture_atlas_create_initial_buffer(xpl_texture_atlas_t *self) {
 	xpl_dynamic_buffer_t *buffer = xpl_dynamic_buffer_new();
 #ifdef XPL_PLATFORM_IOS
-	int depth = 1;
+	size_t depth = 1;
 #else
-	int depth = self->depth;
+	size_t depth = self->depth;
 #endif
 	xpl_dynamic_buffer_alloc(buffer, self->width * self->height * depth * sizeof (unsigned char), TRUE);
 	self->data = buffer;
@@ -99,7 +99,7 @@ static void texture_atlas_merge_nodes(xpl_texture_atlas_t *self) {
 	}
 }
 
-xpl_texture_atlas_t *xpl_texture_atlas_new(const int width, const int height, const int depth) {
+xpl_texture_atlas_t *xpl_texture_atlas_new(const size_t width, const size_t height, const size_t depth) {
 	assert((depth == 1) ||
 		   (depth == 3) ||
 		   (depth == 4)
@@ -287,11 +287,11 @@ void xpl_texture_atlas_set_region(xpl_texture_atlas_t *self, xirect region, cons
 	assert((region.y + region.height) <= (self->height - 1));
 
 #ifndef XPL_PLATFORM_IOS
-	int adepth = self->depth;
+	size_t adepth = self->depth;
 #else
-	int adepth = 1;
+	size_t adepth = 1;
 #endif
-	int awidth = self->width;
+	size_t awidth = self->width;
 
 	int swidth = region.width;
 	int sheight = region.height;

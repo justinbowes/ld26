@@ -12,7 +12,6 @@
 
 #include "xpl_text_cache.h"
 
-
 typedef struct _text_table_entry {
 	int key;
 	int markup_key;
@@ -145,11 +144,11 @@ static void text_table_destroy(_text_table_t **pptable) {
 
 // ---------------------------------------------------------------------
 
-xpl_text_cache_t *xpl_text_cache_new() {
+xpl_text_cache_t *xpl_text_cache_new(size_t size) {
 	xpl_text_cache_t *cache = xpl_alloc_type(xpl_text_cache_t);
 	cache->last_frame = text_table_new();
 	cache->this_frame = text_table_new();
-	cache->font_manager = xpl_font_manager_new(1024, 1024, 1);
+	cache->font_manager = xpl_font_manager_new(size, size, 1);
 	return cache;
 }
 
@@ -206,20 +205,26 @@ static xpl_cached_text_t * text_cache_create(xpl_text_cache_t *text_cache,
 xpl_cached_text_t * xpl_text_cache_get(xpl_text_cache_t *text_cache,
                                        xpl_markup_t *markup,
                                        const char *text) {
-#    ifdef DISABLE_CACHES
-	return NULL;
-#    endif
+
+	
+	_text_table_entry_t *entry = NULL;
+#ifndef DISABLE_CACHES
 	int markup_key = font_cache_key(markup);
 	int text_key = text_cache_key(markup_key, text);
-    
-	_text_table_entry_t *entry;
 	HASH_FIND_INT(text_cache->this_frame->entries, &text_key, entry);
-	if (entry) return entry->value;
-    
-	HASH_FIND_INT(text_cache->last_frame->entries, &text_key, entry);
-	if (entry == NULL) return text_cache_create(text_cache, markup, text);
-    
-	HASH_DEL(text_cache->last_frame->entries, entry);
-	HASH_ADD_INT(text_cache->this_frame->entries, key, entry);
+#endif
+	if (!entry) {
+#ifndef DISABLE_CACHES
+		HASH_FIND_INT(text_cache->last_frame->entries, &text_key, entry);
+#endif
+		if (!entry) {
+			return text_cache_create(text_cache, markup, text);
+		}
+		
+		// Move to this frame so it doesn't get purged
+		HASH_DEL(text_cache->last_frame->entries, entry);
+		HASH_ADD_INT(text_cache->this_frame->entries, key, entry);
+	}
 	return entry->value;
+    
 }

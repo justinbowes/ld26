@@ -5,7 +5,7 @@
 #include "xpl_vec2.h"
 #include "xpl_log.h"
 
-#define MAX_TOUCHES 1
+#define MAX_TOUCHES 11 // fingers + 1, iOS doesn't support cock touches
 
 extern void xpl_input__internal__dispatch_character(int character);
 
@@ -41,20 +41,29 @@ extern void xpl_input__internal__dispatch_character(int character);
 
 @end
 
-static xivec2 touches[1];
-static xivec2 deltas[1];
-static bool states[1];
+static xivec2 touches[MAX_TOUCHES];
+static xivec2 deltas[MAX_TOUCHES];
+static bool states[MAX_TOUCHES];
 static XPLKeyInputView *key_input;
 
 void xpl_input_ios_init(UIView *view) {
 	key_input = [[XPLKeyInputView alloc] initWithParentView: view];
+	for (size_t i = 0; i < MAX_TOUCHES; ++i) {
+		states[i] = false;
+		touches[i] = xivec2_set(0, 0);
+		deltas[i] = xivec2_set(0, 0);
+	}
 }
 
 void xpl_input_ios_destroy(void) {
 	[key_input release];
 }
 
-void xpl_input_ios_set_touch_began(CGPoint *point, size_t index) {
+void xpl_input_ios_set_touch_began(CGPoint *point) {
+	size_t index = 0;
+	for (; index < MAX_TOUCHES; ++index) {
+		if (! states[index]) break;
+	}
 	assert(index <= MAX_TOUCHES);
 	LOG_DEBUG("Touch %zu down at [%f,%f]", index, point->x, point->y);
 	states[index] = true;
@@ -62,17 +71,33 @@ void xpl_input_ios_set_touch_began(CGPoint *point, size_t index) {
 	touches[index].y = point->y;
 }
 
-void xpl_input_ios_set_touch_moved(CGPoint *point, size_t index) {
-	assert(index <= MAX_TOUCHES);
+static size_t find_nearest_touch(CGPoint *point) {
+	size_t index = SIZE_T_MAX;
+	int max_distance = INT_MAX;
+	xivec2 touch_pt = {{ point->x, point->y }};
+	for (size_t i = 0; i < MAX_TOUCHES; ++i) {
+		if (! states[i]) continue;
+		int distance = xivec2_length_sq(touch_pt, touches[i]);
+		if (distance < max_distance) {
+			index = i;
+			max_distance = distance;
+		}
+	}
+	assert(index < MAX_TOUCHES);
+	return index;
+}
+
+void xpl_input_ios_set_touch_moved(CGPoint *point) {
+	size_t index = find_nearest_touch(point);
 	LOG_DEBUG("Touch %zu moved at [%f,%f]", index, point->x, point->y);
-	states[index] = true;
 	deltas[index].x = point->x - touches[index].x;
 	deltas[index].y = point->y - touches[index].y;
 	touches[index].x = point->x;
 	touches[index].y = point->y;
 }
 
-void xpl_input_ios_set_touch_ended(CGPoint *point, size_t index) {
+void xpl_input_ios_set_touch_ended(CGPoint *point) {
+	size_t index = find_nearest_touch(point);
 	assert(index <= MAX_TOUCHES);
 	LOG_DEBUG("Touch %zu up at [%f,%f]", index, point->x, point->y);
 	states[index] = false;
@@ -103,6 +128,14 @@ void xpl_input_enable_characters(void) {
 
 void xpl_input_disable_characters(void) {
 	[key_input resignFirstResponder];
+}
+
+bool xpl_input_mouse_down_in(xirect rect) {
+	for (size_t i = 0; i < MAX_TOUCHES; ++i) {
+		if (! states[i]) continue;
+		if (xirect_in_bounds(rect, touches[i])) return true;
+	}
+	return false;
 }
 
 void xpl_input_get_mouse_position(xivec2 *position) {

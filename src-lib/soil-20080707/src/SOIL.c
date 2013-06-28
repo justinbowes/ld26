@@ -35,8 +35,7 @@
 #		include <OpenGLES/ES2/gl.h>
 #		include <CoreFoundation/CoreFoundation.h>
 #	else
-#		include <GL3/gl3w.h>
-#       include <OpenGL/gl.h>
+#       include <xpl_gl.h>
 #       include <Carbon/Carbon.h>
 #	endif
 #else

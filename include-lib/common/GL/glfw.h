@@ -34,7 +34,6 @@
 extern "C" {
 #endif
 
-
 /*************************************************************************
  * Global definitions
  *************************************************************************/
@@ -164,6 +163,7 @@ extern "C" {
   #include <OpenGL/gl3.h>
  #else
   #define GL_GLEXT_LEGACY
+#error FU
   #include <OpenGL/gl.h>
  #endif
  #ifndef GLFW_NO_GLU

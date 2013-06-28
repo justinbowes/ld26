@@ -28,6 +28,8 @@ typedef struct sprites {
 	xpl_sprite_t						*weapon_key_sprites[8];
 	xpl_sprite_t						*control_key_sprites[3];
 	xpl_sprite_t						*ui_coin_sprite;
+	xpl_sprite_t						*fire_button_lit;
+	xpl_sprite_t						*fire_button_dark;
 	
 	xpl_sprite_t						*ui_tutorial_pages[TUTORIAL_PAGES];
 	

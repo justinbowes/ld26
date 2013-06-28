@@ -16,6 +16,8 @@
 #include "game/sprites.h"
 #include "game/util.h"
 #include "game/projectile_config.h"
+#include "game/hotspots.h"
+#include "game/layout.h"
 
 sprites_t						sprites;
 xivec3							star_layers[STAR_LAYERS][STARS_PER_LAYER];
@@ -44,6 +46,8 @@ void sprites_init(void) {
 		sprites.control_key_sprites[i] = xpl_sprite_new(sprites.ui_batch, key_sprites[i], NULL);
 	}
 	sprites.ui_coin_sprite = xpl_sprite_new(sprites.ui_batch, "coin.png", NULL);
+	sprites.fire_button_lit = xpl_sprite_new(sprites.ui_batch, "fire_button_lit.png", NULL);
+	sprites.fire_button_dark = xpl_sprite_new(sprites.ui_batch, "fire_button_dark.png", NULL);
 	
 	for (int i = 0; i < STAR_LAYERS; ++i) {
 		for (int j = 0; j < STARS_PER_LAYER; ++j) {
@@ -191,41 +195,62 @@ void sprites_ui_render(xpl_context_t *self, xmat4 *ortho) {
 		xpl_sprite_draw(sprites.panel_background_sprite, 0.f, 0.f, self->size.width, camera.draw_area.y);
 		xpl_sprite_draw(sprites.panel_background_sprite, 0.f, camera.draw_area.y + camera.draw_area.height, self->size.width, camera.draw_area.y);
 		
+		// Control hotspots
 		for (int i = 0; i < 3; ++i) {
-			xpl_sprite_draw_colored(sprites.control_key_sprites[i], 8 + (TILE_SIZE + 8) * i, 24, TILE_SIZE, TILE_SIZE,
+			xirect area = {{  8 + (TILE_SIZE + 8) * i, 24, TILE_SIZE, TILE_SIZE }};
+			xpl_sprite_draw_colored(sprites.control_key_sprites[i], area.x, area.y, area.width, area.height,
 									game.control_indicator_on[i] ? active_color : inactive_color);
+			hotspot_set("thrust", i, area, self->size);
 		}
 		
-		xpl_sprite_draw_colored(sprites.ui_coin_sprite, 192, 4, 16, 16, coin_color);
+		xpl_sprite_draw_colored(sprites.ui_coin_sprite, weapon_buttons_left(self->size), 4, 16, 16, coin_color);
 		for (int i = 0; i < 8; ++i) {
-			xpl_sprite_draw_colored(sprites.weapon_key_sprites[i], 192 + (TILE_SIZE + 8) * i, 24, TILE_SIZE, TILE_SIZE,
+			xirect area = {{
+				weapon_button_left(self->size, i), 24, TILE_SIZE, TILE_SIZE
+			}};
+			xpl_sprite_draw_colored(sprites.weapon_key_sprites[i], area.x, area.y, area.width, area.height,
 									i == game.active_weapon ? active_color : inactive_color);
+			hotspot_set("weapon", i, area, self->size);
 		}
 		
-		int coin_symbols = xclamp(1 + game.player[0].score / 250, 1, 4);
-		for (int i = 0; i < coin_symbols; ++i) {
-			xpl_sprite_draw_colored(sprites.ui_coin_sprite, self->size.width - 16 - (coin_symbols - i) * 16, 12, 16, 16, coin_color);
-		}
-		
-		// Render health
-		for (int i = 0; i < 256; i += 48) {
-			float y = 8 + 8 * (i / 48);
-			if (i <= game.player[0].health) {
-				xvec4 health_color = xvec4_mix(healthy_color, unhealthy_color, (255.f - i) / 255.f);
-				xpl_sprite_draw_colored(sprites.grid8_sprite, 512, y, 8, 8, health_color);
-			} else {
-				xpl_sprite_draw_colored(sprites.solid_sprite, 512, y, 8, 8, solid_black);
-			}
-		}
 		
 		// Render weapon cooldown
+		const float wcx = weapon_cooldown_left(self->size);
 		for (int i = 0; i < 6; ++i) {
 			float y = 8 + 8 * i;
 			if (game.fire_cooldown < ((int)1 << (8 - i))) {
 				xvec4 health_color = xvec4_mix(healthy_color, unhealthy_color, (6.f - i) / 6.f);
-				xpl_sprite_draw_colored(sprites.grid8_sprite, 176, y, 8, 8, health_color);
+				xpl_sprite_draw_colored(sprites.grid8_sprite, wcx, y, 8, 8, health_color);
 			} else {
-				xpl_sprite_draw_colored(sprites.solid_sprite, 176, y, 8, 8, solid_black);
+				xpl_sprite_draw_colored(sprites.solid_sprite, wcx, y, 8, 8, solid_black);
+			}
+		}
+		
+		// Fire button
+		{
+			xirect area = {{ fire_button_left(self->size), 0, 64, 64 }};
+			xpl_sprite_draw_colored(game.fire_cooldown ? sprites.fire_button_dark : sprites.fire_button_lit, area.x, area.y, area.width, area.height, game.fire_cooldown ? inactive_color : active_color);
+			hotspot_set("fire", 0, area, self->size);
+
+			// Coin symbols on fire button
+			int coin_symbols = xclamp(1 + game.player[0].score / 250, 1, 4);
+			for (int i = 0; i < coin_symbols; ++i) {
+				xpl_sprite_draw_colored(sprites.ui_coin_sprite, area.x + ((area.width - 16 * coin_symbols) / 2) + 16 * i, 20, 16, 16, coin_color);
+			}
+
+		}
+		
+
+
+		// Render health
+		const float hx = health_left(self->size);
+		for (int i = 0; i < 256; i += 48) {
+			float y = 8 + 8 * (i / 48);
+			if (i <= game.player[0].health) {
+				xvec4 health_color = xvec4_mix(healthy_color, unhealthy_color, (255.f - i) / 255.f);
+				xpl_sprite_draw_colored(sprites.grid8_sprite, hx, y, 8, 8, health_color);
+			} else {
+				xpl_sprite_draw_colored(sprites.solid_sprite, hx, y, 8, 8, solid_black);
 			}
 		}
 		

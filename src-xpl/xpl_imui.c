@@ -38,6 +38,13 @@ typedef struct context_scroll {
 	float *val;
 } context_scroll_t;
 
+typedef struct context_control_handle {
+	control_id	current_id;
+	control_id	next_id;
+	int			move_direction;
+	bool		is_new;
+} context_control_handle_t;
+
 struct xpl_imui_context {
 
 	struct {
@@ -90,21 +97,12 @@ struct xpl_imui_context {
 	} keyboard;
 
 	struct {
-		control_id						active_id;
-		control_id						hot_id;
-		control_id						hot_to_be_id;
-
-		// The first control with an id >= this will take active.
-		control_id						keyboard_active_to_be_id;
-		// When 0, the first control that wants the keyboard can set this.
-		control_id						keyboard_active_id;
+		context_control_handle_t		active;
+		context_control_handle_t		hot;
+		context_control_handle_t		keyboard;
 
 		control_id						area_id;
 		control_id						widget_id;
-
-		int								is_hot;
-		int								is_active;
-		int								went_active;
 
 		xrect							widget_area;
 		xrect							widget_area_mark;
@@ -213,29 +211,7 @@ struct xpl_imui_context *xpl_imui_context_new(xpl_imui_theme_t *theme) {
 	context->bounds.ref = xivec2_set(1280.0f, 720.0f);
 	context->rq.length = 0;
 
-	context->mouse.buttons.left.down = FALSE;
-	context->mouse.buttons.left.pressed = FALSE;
-	context->mouse.buttons.left.released = FALSE;
-
-	context->mouse.pos = xivec2_set(0.0f, 0.0f);
-	context->mouse.drag.offset = xivec2_set(0.0f, 0.0f);
-	context->mouse.drag.origin = xivec2_set(0.0f, 0.0f);
 	context->mouse.scroll.scale = 4.0f;
-	context->mouse.scroll.pos = 0;
-	context->mouse.scroll.delta = 0;
-
-	context->controls.area_id = CONTROL_NONE;
-	context->controls.widget_id = CONTROL_NONE;
-	context->controls.active_id = CONTROL_NONE;
-	context->controls.hot_id = CONTROL_NONE;
-	context->controls.hot_to_be_id = CONTROL_NONE;
-	context->controls.keyboard_active_id = CONTROL_NONE;
-	context->controls.keyboard_active_to_be_id = CONTROL_NONE;
-
-	context->controls.is_hot = FALSE;
-	context->controls.is_active = FALSE;
-	context->controls.went_active = FALSE;
-
 	context->controls.widget_area = xrect_set(0.0f, 0.0f, 100.0f, 0.0f);
 
 	for (size_t i = 0; i < SCROLL_STACK_MAX; ++i) {
@@ -272,17 +248,17 @@ void xpl_imui_context_destroy(struct xpl_imui_context **ppcontext) {
 
 XPLINLINE int control_active_any() {
 	assert(context_valid());
-	return g_context->controls.active_id != CONTROL_NONE;
+	return g_context->controls.active.current_id != CONTROL_NONE;
 }
 
 XPLINLINE int control_active(control_id id) {
 	assert(context_valid());
-	return g_context->controls.active_id == id;
+	return g_context->controls.active.current_id == id;
 }
 
 XPLINLINE int control_hot(control_id id) {
 	assert(context_valid());
-	return g_context->controls.hot_id == id;
+	return g_context->controls.hot.current_id == id;
 }
 
 XPLINLINE int mouse_in_rect(xrect rect, int check_scroll) {
@@ -310,27 +286,25 @@ XPLINLINE void input_clear() {
 	g_context->keyboard.escape.active = FALSE;
 }
 
-XPLINLINE void control_active_clear() {
+XPLINLINE void control_deactivate() {
 	assert(context_valid());
-	g_context->controls.active_id = CONTROL_NONE;
-	input_clear();
+	g_context->controls.active.next_id = CONTROL_NONE;
 }
 
-XPLINLINE void control_set_keyboard_active(control_id id) {
+XPLINLINE void control_keyboard_activate(control_id id) {
 	assert(context_valid());
-	g_context->controls.keyboard_active_id = id;
+	g_context->controls.keyboard.next_id = id;
 }
 
-XPLINLINE void control_set_active(control_id id) {
+XPLINLINE void control_activate(control_id id) {
 	assert(context_valid());
-	g_context->controls.active_id = id;
-	g_context->controls.went_active = TRUE;
-	if (xpl_input_keyboard_should_auto_focus()) control_set_keyboard_active(id);
+	g_context->controls.active.next_id = id;
+	if (xpl_input_keyboard_should_auto_focus()) control_keyboard_activate(id);
 }
 
 XPLINLINE void control_set_hot(control_id id) {
 	assert(context_valid());
-	g_context->controls.hot_to_be_id = id;
+	g_context->controls.hot.next_id = id;
 }
 
 static const int TABBED_ARRIVAL = 2;
@@ -338,46 +312,31 @@ static const int TABBED_ARRIVAL = 2;
 XPLINLINE int control_active_keyboard(control_id id) {
 	assert(context_valid());
 
-	// If the active_to_be_id is not equal to the active_id, the active_id moves in the direction
-	// of the active_to_be_id.
-	if (g_context->controls.keyboard_active_to_be_id != CONTROL_NONE) {
-		LOG_DEBUG("Keyboard active state changing");
-		if (g_context->controls.keyboard_active_to_be_id > g_context->controls.keyboard_active_id) {
-			if (id >= g_context->controls.keyboard_active_to_be_id) {
-				LOG_DEBUG("Control %ud is taking over", (unsigned int)id);
-				// Set the active control.
-				control_set_keyboard_active(id);
-				g_context->controls.keyboard_active_to_be_id = CONTROL_NONE;
+	if (g_context->controls.keyboard.move_direction) {
+		if (g_context->controls.keyboard.move_direction < 0) {
+			if (id < g_context->controls.keyboard.current_id) {
+				// Will trigger multiple times, last time on the highest value
+				g_context->controls.keyboard.next_id = id;
 				return TABBED_ARRIVAL;
 			}
-		} else if (g_context->controls.keyboard_active_to_be_id < g_context->controls.keyboard_active_id) {
-			// This takes two frames to resolve.
-			if (id <= g_context->controls.keyboard_active_to_be_id) {
-				// Set the active control.
-				control_set_keyboard_active(id);
-				LOG_DEBUG("Control %ud is tentatively taking over", (unsigned int)id);
+		} else {
+			// Would trigger multiple times, but we reset move direction
+			if (id > g_context->controls.keyboard.current_id) {
+				g_context->controls.keyboard.next_id = id;
+				g_context->controls.keyboard.move_direction = 0;
 				return TABBED_ARRIVAL;
-			} else {
-				// Stop retreating.
-				g_context->controls.keyboard_active_to_be_id = CONTROL_NONE;
-				LOG_DEBUG("Control %ud is ending the retreat, active control is %ud", (unsigned int)id, (unsigned int)g_context->controls.keyboard_active_id);
 			}
 		}
 	} 
-	return g_context->controls.keyboard_active_id == id;
-}
-
-XPLINLINE void control_set_keyboard_active_advance() {
-	assert(context_valid());
-	g_context->controls.keyboard_active_id++;
+	return g_context->controls.keyboard.current_id == id;
 }
 
 XPLINLINE int control_keyboard_active_any() {
-	return g_context->controls.keyboard_active_id != CONTROL_NONE;
+	return g_context->controls.keyboard.current_id != CONTROL_NONE;
 }
 
 XPLINLINE void control_keyboard_active_clear() {
-	g_context->controls.keyboard_active_id = CONTROL_NONE;
+	g_context->controls.keyboard.next_id = CONTROL_NONE;
 }
 
 static int control_logic_button(control_id id, int is_over, int flags) {
@@ -385,39 +344,26 @@ static int control_logic_button(control_id id, int is_over, int flags) {
 
 	int result = FALSE;
 
-	// handle mousedown
-	if (! control_active_any()) {
-		if (is_over) {
-			control_set_hot(id);
-		}
-
-		if (control_hot(id) && g_context->mouse.buttons.left.down) {
-			control_set_active(id);
-		}
-	}
-
 	if ((flags & XPL_IMUI_BUTTON_DEFAULT) && g_context->keyboard.enter.active) result = TRUE;
 	if ((flags & XPL_IMUI_BUTTON_CANCEL) && g_context->keyboard.escape.active) result = TRUE;
-
-	// If active, react on left up
-	if ( control_active(id)) {
-		g_context->controls.is_active = TRUE;
-
-		if (is_over) {
-			control_set_hot(id);
-		}
-
-		if (g_context->mouse.buttons.left.released) {
-			if (control_hot(id)) {
-				// This is a click.
-				result = TRUE;
-			}
-			control_active_clear();
-		}
+	
+	// handle mousedown
+	if (is_over) {
+		control_set_hot(id);
 	}
 
-	if (control_hot(id)) {
-		g_context->controls.is_hot = TRUE;
+	if (control_hot(id) && g_context->mouse.buttons.left.down) {
+		LOG_DEBUG("left-down-hot -> active");
+		control_activate(id);
+	}
+
+	// React on left up
+	if (g_context->mouse.buttons.left.released) {
+		if (control_hot(id)) {
+			// This is a click.
+			result = TRUE;
+		}
+		control_deactivate();
 	}
 
 	return result;
@@ -436,7 +382,7 @@ static int control_logic_textfield(char *mbsinput, size_t max_len, int *pcursor_
 		size_t value_len = strlen(mbsinput);
 		cursor_pos = xmin(cursor_pos, (int)value_len);
 
-		if (xpl_input_is_character(*typed_ptr)) {
+		if (xpl_input_character_is_printable(*typed_ptr, false)) {
 
 			if (value_len == max_len) {
 				LOG_DEBUG("Too long; not adding to field");
@@ -603,23 +549,24 @@ static void input_keyboard_update() {
 	key_state_transition(XPL_KEY_LSHIFT, &g_context->keyboard.left_shift);
 	key_state_transition(XPL_KEY_RSHIFT, &g_context->keyboard.right_shift);
 
-	if (g_waiting_key_count && g_context->controls.keyboard_active_id != CONTROL_NONE) {
-		memcpy(&g_context->keyboard.typed[0], &g_waiting_keys[0], g_waiting_key_count * sizeof (g_waiting_keys[0]));
-		g_context->keyboard.typed[g_waiting_key_count] = 0;
+	if (g_waiting_key_count) {
+		if (g_context->controls.keyboard.current_id != CONTROL_NONE) {
+			memcpy(&g_context->keyboard.typed[0], &g_waiting_keys[0], g_waiting_key_count * sizeof (g_waiting_keys[0]));
+			g_context->keyboard.typed[g_waiting_key_count] = 0;
+		} else {
+			// Should not happen -- character listener should be removed!
+			LOG_DEBUG("No current keyboard focus; keys discarded");
+		}
+		g_waiting_key_count = 0;
 	}
-	g_waiting_key_count = 0;
 
 	if (g_context->keyboard.tab.active) {
+		g_context->controls.keyboard.next_id = CONTROL_NONE;
 		if (g_context->keyboard.left_shift.down || g_context->keyboard.right_shift.down) {
-			if (g_context->controls.keyboard_active_id == CONTROL_NONE) {
-				g_context->controls.keyboard_active_to_be_id = 1;
-			} else {
-				g_context->controls.keyboard_active_to_be_id = g_context->controls.keyboard_active_id - 1;
-			}
+			g_context->controls.keyboard.move_direction = -1;
 		} else {
-			g_context->controls.keyboard_active_to_be_id = g_context->controls.keyboard_active_id + 1;
+			g_context->controls.keyboard.move_direction = 1;
 		}
-		LOG_DEBUG("New target active control: %ud", (unsigned int)g_context->controls.keyboard_active_id);
 	}
 
 }
@@ -698,6 +645,14 @@ XPLINLINE control_id control_gen_default_id() {
 
 //----------------------------------------------------------------------------
 
+static void update_control_selection(context_control_handle_t *handle, bool clear_next) {
+	handle->is_new = (handle->current_id != handle->next_id);
+	handle->current_id = handle->next_id;
+
+	handle->move_direction = 0;
+	if (clear_next) handle->next_id = CONTROL_NONE;
+}
+
 void xpl_imui_context_begin(xpl_imui_context_t *context, xpl_engine_execution_info_t *execution_info, xrect area) {
 	if (context_valid()) {
 		LOG_ERROR("Already have an active context. Call _end() after begin()");
@@ -709,13 +664,10 @@ void xpl_imui_context_begin(xpl_imui_context_t *context, xpl_engine_execution_in
 	input_update();
 	context->bounds.screen = execution_info->screen_size;
 
-	context->controls.hot_id = context->controls.hot_to_be_id;
-	context->controls.hot_to_be_id = CONTROL_NONE;
-
-	context->controls.went_active = FALSE;
-	context->controls.is_active = FALSE;
-	context->controls.is_hot = FALSE;
-
+	update_control_selection(&context->controls.hot, true);
+	update_control_selection(&context->controls.active, true);
+	update_control_selection(&context->controls.keyboard, false);
+	
 	context->controls.widget_area = xrect_set(area.x, area.y + area.height, area.width, area.height);
 
 	context->controls.area_id = 1;
@@ -751,8 +703,8 @@ void xpl_imui_context_area_restore() {
 
 void xpl_imui_context_reset_focus(void) {
 	assert(context_valid());
-	g_context->controls.keyboard_active_id = CONTROL_NONE;
-	g_context->controls.keyboard_active_to_be_id = 1;
+	g_context->controls.keyboard.current_id = CONTROL_NONE;
+	g_context->controls.keyboard.move_direction = 1;
 }
 
 void xpl_imui_context_end(xpl_imui_context_t *context) {
@@ -772,16 +724,22 @@ void xpl_imui_context_end(xpl_imui_context_t *context) {
 	xpl_imui_render_draw(&g_context->bounds.screen, g_context->rq.queue, g_context->rq.length, g_context->scale, g_context->blend_amount);
 
 	input_clear();
-	if (g_context->controls.keyboard_active_id && g_context->controls.went_active) {
+	if (control_keyboard_active_any() && ! g_context->keyboard.listener_id) {
 		g_context->keyboard.listener_id = xpl_input_add_character_listener(input_handle_char, g_context);
-	} else if (! g_context->controls.keyboard_active_id) {
+	} else if (! control_keyboard_active_any() && g_context->keyboard.listener_id) {
 		if (g_context->keyboard.listener_id) xpl_input_remove_character_listener(g_context->keyboard.listener_id);
 		g_context->keyboard.listener_id = 0;
 	}
-	if (g_context->controls.keyboard_active_to_be_id > g_context->controls.widget_id) {
-		LOG_DEBUG("Keyboard target is too high, stopping advance");
-		g_context->controls.keyboard_active_to_be_id = CONTROL_NONE;
+	// If the move direction was set for the whole frame and nobody picked up the text focus...
+	if (g_context->controls.keyboard.move_direction && g_context->controls.keyboard.next_id == CONTROL_NONE) {
+		if (g_context->controls.keyboard.move_direction > 0) {
+			// wrap to beginning
+			xpl_imui_context_reset_focus();
+		} else {
+			g_context->controls.keyboard.current_id = CONTROL_MAX;
+		}
 	}
+	// If the move direction is
 	g_context = NULL;
 }
 
@@ -906,7 +864,7 @@ void xpl_imui_control_scroll_area_end() {
 
 		int is_over = mouse_in_rect(handle_area, FALSE);
 		control_logic_button(handle_id, is_over, 0);
-		if (control_active(handle_id) && (g_context->controls.went_active || g_context->mouse.drag.offset.y)) {
+		if (control_active(handle_id) && (g_context->controls.active.is_new || g_context->mouse.drag.offset.y)) {
 			float mouse_handle_offset = scroll_bar_area.y + track_height - (handle_height / 2) - g_context->mouse.pos.y;
 			LOG_DEBUG("New handle offset: %f", mouse_handle_offset);
 			float u = mouse_handle_offset / max_handle_offset;
@@ -1171,7 +1129,7 @@ int xpl_imui_control_slider(const char *text, float *value, float value_min, flo
 	int result = enabled && control_logic_button(id, is_over, 0);
 	int value_changed = FALSE;
 
-	if (control_active(id) && (g_context->controls.went_active || g_context->mouse.drag.offset.x)) {
+	if (control_active(id) && (g_context->controls.active.is_new || g_context->mouse.drag.offset.x)) {
 		float mouse_handle_offset = g_context->mouse.pos.x - control_area.x - handle_area.width / 2;
 		LOG_DEBUG("New handle offset: %f", mouse_handle_offset);
 		u = mouse_handle_offset / max_handle_offset;
@@ -1185,7 +1143,7 @@ int xpl_imui_control_slider(const char *text, float *value, float value_min, flo
 		// Re-limit in case the limits aren't a multiple of the increment
 		*value = fminf(value_max, *value);
 		*value = fmaxf(value_min, *value);
-		handle_offset = u * max_handle_offset;
+//		handle_offset = u * max_handle_offset;
 		value_changed = TRUE;
 	}
 
@@ -1228,6 +1186,9 @@ int xpl_imui_control_textfield(const char *prompt, char *mbsinput, size_t input_
 
 	// Copy user text to output buffer
 	if (password_char && password_char[0]) {
+		if (g_context->mouse.buttons.left.down) {
+			LOG_DEBUG("LMB down in password field");
+		}
 		for (size_t i = 0; i < strlen(mbsinput); ++i) {
 			strcat(&text[0], &password_char[0]);
 		}
@@ -1256,8 +1217,8 @@ int xpl_imui_control_textfield(const char *prompt, char *mbsinput, size_t input_
 	int result = enabled && control_logic_button(id, is_over, 0);
 	int value_changed = FALSE;
 
-	if (control_active(id) || result) {
-		control_set_keyboard_active(id);
+	if (result) {
+		control_keyboard_activate(id);
 	}
 
 	int has_keyboard_focus = control_active_keyboard(id);
@@ -1267,7 +1228,7 @@ int xpl_imui_control_textfield(const char *prompt, char *mbsinput, size_t input_
 	}
 
 	xpl_font_position_t position_info;
-	if (g_context->controls.went_active) {
+	if (g_context->controls.keyboard.is_new) {
 		if (has_keyboard_focus == TABBED_ARRIVAL) {
 			// Went active via TAB/S-TAB
 			*cursor_pos = (int)strlen(mbsinput);
@@ -1286,7 +1247,7 @@ int xpl_imui_control_textfield(const char *prompt, char *mbsinput, size_t input_
 		position_info.right_offset += text_markup.size * 0.5f;
 	}
 
-	if (has_keyboard_focus) {
+	if (has_keyboard_focus && g_context->controls.hot.next_id == CONTROL_NONE) {
 		control_set_hot(id);
 	}
 

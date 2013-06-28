@@ -51,7 +51,7 @@ void font_entry_destroy(fm_font_entry_t **ppentry) {
 	*ppentry = NULL;
 }
 
-xpl_font_manager_t *xpl_font_manager_new(int surface_width, int surface_height, int depth) {
+xpl_font_manager_t *xpl_font_manager_new(size_t surface_width, size_t surface_height, size_t depth) {
 	assert(depth == 3 || depth == 1); // FT only renders 1 bit, 8 bit or 24 bit LCD.
 
 	xpl_font_manager_t *self;
