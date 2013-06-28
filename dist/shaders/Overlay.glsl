@@ -35,13 +35,11 @@ void main()
     frag_color = vec4(0.0, 0.0, 0.0, darken);
     
     vec2 vignette_uv = 0.4 * vuv + 0.5;
-    darken = 1.0 - vignette(vignette_uv, 1.0);
+    darken = 1.0 - vignette(vignette_uv, 1.1);
     frag_color += vec4(0.0, 0.0, 0.0, darken);
-	
+
     float intensity = color.a * strength;
     frag_color += vec4(color.rgb * intensity, intensity);
-	
-	//frag_color.r = frag_color.a;
 }
 
 
@@ -76,7 +74,7 @@ void main()
     frag_color = vec4(0.0, 0.0, 0.0, darken);
     
     vec2 vignette_uv = 0.4 * vuv + 0.5;
-    darken = 1.0 - vignette(vignette_uv, 1.0);
+    darken = 1.0 - vignette(vignette_uv, 1.1);
     frag_color += vec4(0.0, 0.0, 0.0, darken);
 	
     float intensity = color.a * strength;

@@ -16,6 +16,7 @@
 #include "xpl_rc.h"
 
 #define PATH_SEP '/'
+#define OS_SEP XPL_PATH_SEPARATOR
 
 // ----------~ sleeeeep ~-----------------------
 #if defined(XPL_PLATFORM_WINDOWS)
@@ -329,7 +330,6 @@ static const char *application_root_format() {
     return resource_path_format;
 }
 
-#define OS_SEP '\\'
 #define PLATFORM_RESOURCE_ROOT_FORMAT       application_root_format()
 #define PLATFORM_APP_RESOURCE_FORMAT        "resources\\%s"
 #define PLATFORM_LIBRARY_RESOURCE_FORMAT    "xpl\\%s"
@@ -376,7 +376,6 @@ static const char *bundle_root_format() {
     return resource_path_format;
 }
 
-#define OS_SEP '/'
 #define PLATFORM_RESOURCE_ROOT_FORMAT       bundle_root_format()
 #define PLATFORM_APP_RESOURCE_FORMAT        "resources/%s"
 #define PLATFORM_LIBRARY_RESOURCE_FORMAT    "xpl/%s"
@@ -384,7 +383,6 @@ static const char *bundle_root_format() {
 
 #else
 
-#define OS_SEP '/'
 #define PLATFORM_RESOURCE_ROOT_FORMAT       "%s"
 #define PLATFORM_APP_RESOURCE_FORMAT        "resources/%s"
 #define PLATFORM_LIBRARY_RESOURCE_FORMAT    "xpl/%s"
@@ -557,7 +555,7 @@ size_t xpl_wcs_to_mbs(const wchar_t *wcs, char *mbs, size_t mbs_size) {
 }
 #else
 // setlocale doesn't work on IOS
-// see xpl_platform.m for implementation.
+// see xpl_platform.m for cocoa-based implementation.
 #endif
 
 

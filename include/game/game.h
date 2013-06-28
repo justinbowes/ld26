@@ -165,6 +165,10 @@ typedef struct network {
 	float		position_timeout;
 	float		receive_timeout;
 	
+	double		latency_time;
+	double		latency_timestamp;
+	double		latency;
+	
 } network_t;
 
 extern network_t network;

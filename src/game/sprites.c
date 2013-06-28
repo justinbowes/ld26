@@ -8,6 +8,7 @@
 
 #include "xpl_rand.h"
 #include "xpl_color.h"
+#include "xpl_sprite_sheet.h"
 
 #include "game/game.h"
 
@@ -23,31 +24,34 @@ sprites_t						sprites;
 xivec3							star_layers[STAR_LAYERS][STARS_PER_LAYER];
 
 void sprites_init(void) {
+	
 	sprites.playfield_batch = xpl_sprite_batch_new();
 	sprites.ui_batch = xpl_sprite_batch_new();
+
+	xpl_sprite_sheet_t *playfield_sheet = xpl_sprite_sheet_new(sprites.playfield_batch, "bitmaps/playfield.json");
+	sprites.ship_sprite = xpl_sprite_get(playfield_sheet, "ship.png");
+	sprites.indicator_sprite = xpl_sprite_get(playfield_sheet, "indicator.png");
+	sprites.particle_sprite = xpl_sprite_get(playfield_sheet, "particle.png");
+	sprites.playfield_coin_sprite = xpl_sprite_get(playfield_sheet, "coin.png");
+	sprites.star_sprite = xpl_sprite_get(playfield_sheet, "star.png");
 	
-	sprites.ship_sprite = xpl_sprite_new(sprites.playfield_batch, "ship.png", NULL);
-	sprites.indicator_sprite = xpl_sprite_new(sprites.playfield_batch, "indicator.png", NULL);
-	sprites.particle_sprite = xpl_sprite_new(sprites.playfield_batch, "particle.png", NULL);
-	sprites.playfield_coin_sprite = xpl_sprite_new(sprites.playfield_batch, "coin.png", NULL);
-	sprites.star_sprite = xpl_sprite_new(sprites.playfield_batch, "star.png", NULL);
-	
-	sprites.panel_background_sprite = xpl_sprite_new(sprites.ui_batch, "panel_background.png", NULL);
-	sprites.solid_sprite = xpl_sprite_new(sprites.ui_batch, "tile_solid.png", NULL);
-	sprites.grid8_sprite = xpl_sprite_new(sprites.ui_batch, "tile_grid.png", NULL);
+	xpl_sprite_sheet_t *ui_sheet = xpl_sprite_sheet_new(sprites.ui_batch, "bitmaps/ui.json");
+	sprites.panel_background_sprite = xpl_sprite_get(ui_sheet, "panel_background.png");
+	sprites.solid_sprite = xpl_sprite_get(ui_sheet, "tile_solid.png");
+	sprites.grid8_sprite = xpl_sprite_get(ui_sheet, "tile_grid.png");
 	
 	for (int i = 0; i < 8; ++i) {
 		char resource[PATH_MAX];
 		snprintf(resource, PATH_MAX, "weapon_%d.png", i);
-		sprites.weapon_key_sprites[i] = xpl_sprite_new(sprites.ui_batch, resource, NULL);
+		sprites.weapon_key_sprites[i] = xpl_sprite_get(ui_sheet, resource);
 	}
 	const char *key_sprites[3] = { "key_thrust.png", "key_left.png", "key_right.png" };
 	for (int i = 0; i < 3; ++i) {
-		sprites.control_key_sprites[i] = xpl_sprite_new(sprites.ui_batch, key_sprites[i], NULL);
+		sprites.control_key_sprites[i] = xpl_sprite_get(ui_sheet, key_sprites[i]);
 	}
-	sprites.ui_coin_sprite = xpl_sprite_new(sprites.ui_batch, "coin.png", NULL);
-	sprites.fire_button_lit = xpl_sprite_new(sprites.ui_batch, "fire_button_lit.png", NULL);
-	sprites.fire_button_dark = xpl_sprite_new(sprites.ui_batch, "fire_button_dark.png", NULL);
+	sprites.ui_coin_sprite = xpl_sprite_get(ui_sheet, "coin.png");
+	sprites.fire_button_lit = xpl_sprite_get(ui_sheet, "fire_button_lit.png");
+	sprites.fire_button_dark = xpl_sprite_get(ui_sheet, "fire_button_dark.png");
 	
 	for (int i = 0; i < STAR_LAYERS; ++i) {
 		for (int j = 0; j < STARS_PER_LAYER; ++j) {

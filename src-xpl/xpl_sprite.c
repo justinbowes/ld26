@@ -93,16 +93,6 @@ struct xpl_sprite_batch {
 
 };
 
-struct xpl_sprite_sheet_entry {
-    xpl_sprite_sheet_sprite_t       def;
-    xpl_sprite_t                    *sprite;
-    UT_hash_handle                  hh;
-};
-
-struct xpl_sprite_sheet {
-    const char                      *resource;
-    xpl_sprite_sheet_entry_t        *entries;
-};
 
 static void draw_command(xpl_sprite_batch_t *self, sprite_batch_command_t *cmd) {
 	// port from
@@ -437,10 +427,15 @@ struct xpl_sprite *xpl_sprite_new(xpl_sprite_batch_t *batch, const char *resourc
 		sprite->region = xrect_set(0.f, 0.f, 1.f, 1.f);
 	} else {
 		xvec2 size = xvec2_set(entry->texture->size.x, entry->texture->size.y);
-		sprite->region = xrect_set((region->x + 0.5f) / size.x,
-								   (region->y + 0.5f) / size.y,
-								   (region->width - 1.0f) / size.x,
-								   (region->height - 1.0f) / size.y);
+		sprite->region = xrect_set(region->x / size.x,
+								   region->y / size.y,
+								   region->width / size.x,
+								   region->height / size.y);
+//		This half-pixel fudge is suspiciously unnecessary
+//		sprite->region = xrect_set((region->x + 0.5f) / size.x,
+//								   (region->y + 0.5f) / size.y,
+//								   (region->width - 1.0f) / size.x,
+//								   (region->height - 1.0f) / size.y);
 	}
 
 	return sprite;
@@ -491,63 +486,4 @@ void xpl_sprite_draw_transformed(struct xpl_sprite *sprite,
     cmd->matrix = *((xmat4 *)utarray_back(sprite->batch->matrix_stack));
     cmd->color = (color ? *color : white);
 	cmd->sprite = sprite;
-}
-
-xpl_sprite_sheet_t *xpl_sprite_sheet_new(struct xpl_sprite_batch *batch, const char *resource, const xpl_sprite_sheet_sprite_t *sprite_defs) {
-    xpl_sprite_sheet_t *sheet = xpl_calloc_type(xpl_sprite_sheet_t);
-    sheet->resource = resource;
-    
-    const xpl_sprite_sheet_sprite_t *def = sprite_defs;
-    do {
-        xpl_sprite_sheet_entry_t *entry = xpl_calloc_type(xpl_sprite_sheet_entry_t);
-        entry->def = *def;
-        entry->sprite = xpl_sprite_new(batch, resource, &def->rect);
-        HASH_ADD_INT(sheet->entries, def.sprite_id, entry);
-        def++;
-    } while (def->sprite_id != XPL_SPRITE_SHEET_END);
-    
-    return sheet;
-}
-
-xpl_sprite_sheet_t *xpl_sprite_sheet_new_def(struct xpl_sprite_batch *batch, xpl_sprite_sheet_def_t *def) {
-    int x_size = def->image_dimension.x / def->slices.x;
-    int y_size = def->image_dimension.y / def->slices.y;
-    xivec2 slices = def->slices;
-    xpl_sprite_sheet_sprite_t sprite_defs[slices.x * slices.y + 1];
-    for (int y_slice = 0; y_slice < slices.y; ++y_slice) {
-        for (int x_slice = 0; x_slice < slices.x; ++x_slice) {
-            xirect dims = {{ x_slice * x_size, y_slice * y_size, x_size, y_size }};
-            int index = x_slice + (y_slice * slices.x);
-            int sprite_id = (def->invert_ids_y ?
-                             (slices.y - y_slice - 1) * slices.x + x_slice :
-                             index);
-            sprite_defs[index].rect = dims;
-            sprite_defs[index].sprite_id = sprite_id;
-        }
-    }
-    sprite_defs[slices.x * slices.y].sprite_id = XPL_SPRITE_SHEET_END;
-    
-    return xpl_sprite_sheet_new(batch, def->resource, sprite_defs);
-}
-
-struct xpl_sprite *xpl_sprite_get(struct xpl_sprite_sheet *sheet, int sprite_id) {
-    xpl_sprite_sheet_entry_t *entry;
-    HASH_FIND_INT(sheet->entries, &sprite_id, entry);
-    if (entry) return entry->sprite;
-    return NULL;
-}
-
-void xpl_sprite_sheet_destroy(xpl_sprite_sheet_t **ppsheet) {
-    assert(ppsheet);
-    xpl_sprite_sheet_t *sheet = *ppsheet;
-    assert(sheet);
-    
-    xpl_sprite_sheet_entry_t *el, *tmp;
-    HASH_ITER(hh, sheet->entries, el, tmp) {
-        HASH_DEL(sheet->entries, el);
-        xpl_free(el);
-    }
-    
-    xpl_free(sheet);
-    *ppsheet = NULL;
 }

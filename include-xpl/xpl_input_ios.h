@@ -15,8 +15,12 @@
 #include "xpl_platform.h"
 
 @interface XPLKeyInputView : UIView <UIKeyInput>
-@property(nonatomic, assign) UIView *root_view;
+
+@property(nonatomic, assign, readonly) UIView *root_view;
+@property(nonatomic, assign, readonly) float scale;
+
 -(id) initWithParentView:(UIView *)view;
+
 @end
 
 void xpl_input_ios_init(UIView *view);

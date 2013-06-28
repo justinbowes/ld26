@@ -15,6 +15,7 @@ in float 			shift;
 in float 			gamma;
 
 uniform mat4 		mvp;
+uniform vec4		global_tint;
 
 out float			vshift;
 out float 			vgamma;
@@ -25,7 +26,7 @@ void main()
 {
 
     gl_Position = mvp * vec4(position, 1.0);
-    vcolor = color;
+    vcolor = color * global_tint;
     vshift = shift;
     vgamma = gamma;
     vuv = uv;
@@ -95,6 +96,7 @@ attribute float			shift;
 attribute float 		gamma;
 
 uniform mat4			mvp;
+uniform vec4			global_tint;
 
 varying float			vshift;
 varying float			vgamma;
@@ -105,7 +107,7 @@ void main()
 {
 
     gl_Position = mvp * vec4(position, 1.0);
-    vcolor = color;
+    vcolor = color * global_tint;
     vshift = shift;
     vgamma = gamma;
     vuv = uv;

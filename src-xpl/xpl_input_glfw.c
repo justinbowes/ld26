@@ -90,6 +90,9 @@ void xpl_input_get_scroll_deltas(xivec2 *deltas) {
 
 bool xpl_input_mouse_down_in(xirect rect) {
 	xivec2 position;
+	xpl_mouse_button_state_t buttons;
+	xpl_input_get_mouse_buttons(&buttons);
+	if (! buttons) return false;
 	xpl_input_get_mouse_position(&position);
 	return xirect_in_bounds(rect, position);
 }

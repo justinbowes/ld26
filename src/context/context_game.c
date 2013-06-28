@@ -112,6 +112,8 @@ game_t									game;
 network_t								network;
 error_t									error;
 
+static double							timestep;
+
 // tutorial
 static int								ui_tutorial_page;
 static float							scanline_strength;
@@ -212,7 +214,7 @@ static void player_local_update_rotation(double time);
 static void player_local_update_thrust(double time);
 static void player_local_update_weapon(void);
 static const char *player_name(int i, bool as_object);
-static void player_update_position(int i);
+static void player_update_position(int i, double timestep);
 static int player_with_client_id_get(uint16_t client_id, bool allow_allocate, bool *was_new_player);
 static xvec2 player_v2velocity_get(int i);
 
@@ -221,7 +223,7 @@ static void position_mod(position_t *position);
 static void projectile_add(void);
 static void projectile_explode_effect(int pi, int target);
 static bool projectile_type_is_mine(int type);
-static void projectile_update(int i, bool jiffy_elapsed);
+static void projectile_update(int i, bool jiffy_elapsed, double time);
 static int projectile_with_pid_get(uint16_t pid, int ti, bool *was_new);
 
 static void server_resolve_addr(void);
@@ -273,6 +275,8 @@ static void game_destroy(xpl_context_t *self, void *data) {
 #define INDICATOR_COOLDOWN_JIFFIES 15
 static void game_engine(xpl_context_t *self, double time, void *data) {
 	
+	timestep = self->app->engine_info->timestep;
+	
 	static double jiffy = 0.0;
 	bool jiffy_elapsed = false;
 	jiffy += time;
@@ -280,6 +284,8 @@ static void game_engine(xpl_context_t *self, double time, void *data) {
 		jiffy = JIFFY;
 		jiffy_elapsed = true;
 	}
+	
+	network.latency_time += time;
 	
 	if (game.player_connected[0]) {
 		scanline_strength = DEFAULT_SCANLINE;
@@ -366,7 +372,7 @@ static void game_engine(xpl_context_t *self, double time, void *data) {
 		
 		for (int i = 0; i < MAX_PROJECTILES; ++i) {
 			if (game.projectile[i].health) {
-				projectile_update(i, jiffy_elapsed);
+				projectile_update(i, jiffy_elapsed, time);
 			}
 		}
 		for (int i = 0; i < MAX_PROJECTILES; ++i) {
@@ -390,7 +396,7 @@ static void game_engine(xpl_context_t *self, double time, void *data) {
 		for (int i = 0; i < MAX_PLAYERS; ++i) {
 			if (! game.player_connected[i]) continue;
 			
-			player_update_position(i);
+			player_update_position(i, time);
 			//			LOG_DEBUG("%d: %u,%u", i, game.player[i].position.px, game.player[i].position.py);
 		}
 		
@@ -504,7 +510,7 @@ static void game_init_text(void) {
 	xpl_markup_clear(&name_markup);
 	xpl_markup_set(&name_markup, UI_FONT, 16.f, FALSE, FALSE, xvec4_set(1.f, 1.f, 1.f, 0.5f), xvec4_all(0.f));
 	
-	text_particle_cache = xpl_text_cache_new(128);
+	text_particle_cache = xpl_text_cache_new(256);
 	xpl_markup_clear(&text_particle_markup);
 	xpl_markup_set(&text_particle_markup, UI_FONT, 16.f, FALSE, FALSE, xvec4_set(1.f, 1.f, 1.f, 1.f), xvec4_all(0.f));
 
@@ -591,7 +597,8 @@ static void game_render_playfield(xpl_context_t *self, double time) {
 		if (game.text_particle[i].life <= 0.f) continue;
 		if (! position_in_bounds(game.text_particle[i].position, 64, camera.min, camera.max)) continue;
 		
-		text_particle_markup.foreground_color = game.text_particle[i].color;
+		// This thrashes the cache badly.
+//		text_particle_markup.foreground_color = game.text_particle[i].color;
 		xpl_cached_text_t *text = xpl_text_cache_get(text_particle_cache, &text_particle_markup, game.text_particle[i].text);
 		float text_length = text_get_length(text->managed_font, game.text_particle[i].text, -1);
 		xvec2 v = camera_get_draw_position(game.text_particle[i].position);
@@ -600,7 +607,7 @@ static void game_render_playfield(xpl_context_t *self, double time) {
 		xmat4_translate(&ortho, &pen, &ortho_transform);
 		xmat4_rotate(&ortho_transform, game.text_particle[i].orientation, &xvec3_z_axis, &ortho_transform);
 		
-		xpl_text_buffer_render(text->buffer, ortho_transform.data);
+		xpl_text_buffer_render_tinted(text->buffer, ortho_transform.data, game.text_particle[i].color);
 	}
 	
 	glDisable(GL_SCISSOR_TEST);
@@ -873,7 +880,11 @@ static void packet_handle_player(uint16_t client_id, packet_t *packet) {
 	LOG_DEBUG("Updating player %d", client_id);
 	int pi = player_with_client_id_get(client_id, true, NULL);
 	if (pi == 0) {
-		LOG_DEBUG("Got self packet");
+		double this_latency = network.latency_time - network.latency_timestamp;
+		double sum = network.latency + this_latency;
+		double next = this_latency * (this_latency / sum) + network.latency * (network.latency / sum);
+		network.latency = next;
+		LOG_DEBUG("Got self packet, latency = %f", network.latency);
 	} else {
 		if (game.player[pi].orientation != packet->player.orientation) {
 			game.player_local[pi].rotate_audio->action = aa_play;
@@ -881,6 +892,7 @@ static void packet_handle_player(uint16_t client_id, packet_t *packet) {
 		game.player_local[pi].thrust_audio->action = packet->player.is_thrust ? aa_play : aa_stop;
 		game.player[pi] = packet->player;
 		game.player_local[pi].visible = true;
+		player_update_position(pi, network.latency);
 	}
 }
 
@@ -899,6 +911,7 @@ static void packet_handle_projectile(uint16_t client_id, packet_t *packet) {
 		int type = game.projectile[pi].type;
 		audio_quickplay_position(projectile_config[type].fire_effect, FIRE_VOLUME, v3_relative_audio(game.projectile[pi].position));
 	}
+	projectile_update(pi, false, network.latency);
 }
 
 
@@ -1041,6 +1054,8 @@ static void packet_send_player(void) {
 	packet.type = pt_player;
 	packet.player = game.player[0];
 	packet_send(&packet);
+	
+	network.latency_timestamp = network.latency_time;
 }
 
 static void packet_send_projectile(int i) {
@@ -1331,10 +1346,16 @@ static const char *player_name(int i, bool as_object) {
 }
 
 
-static void player_update_position(int i) {
-	game.player_position_buffer[i] = xvec2_add(game.player_position_buffer[i],
-											   xvec2_set(game.player[i].velocity.dx / VELOCITY_SCALE,
-														 game.player[i].velocity.dy / VELOCITY_SCALE));
+static void player_update_position(int i, double time) {
+	xvec2 velocity = xvec2_set(game.player[i].velocity.dx / VELOCITY_SCALE,
+							   game.player[i].velocity.dy / VELOCITY_SCALE);
+	double scale = time / timestep;
+	if (scale > 1.f) {
+		LOG_DEBUG("Projecting %f ticks ahead", scale);
+	}
+	velocity = xvec2_scale(velocity, scale);
+	
+	game.player_position_buffer[i] = xvec2_add(game.player_position_buffer[i], velocity);
 	
 	int dx = (int)truncf(game.player_position_buffer[i].x);
 	int dy = (int)truncf(game.player_position_buffer[i].y);
@@ -1500,7 +1521,7 @@ static bool projectile_type_is_mine(int type) {
 	return (type == pt_mine || type == pt_blackhole);
 }
 
-static void projectile_update(int i, bool jiffy_elapsed) {
+static void projectile_update(int i, bool jiffy_elapsed, double time) {
 	if (game.projectile_local[i].exploded) {
 		game.projectile[i].health = 0;
 		return;
@@ -1508,10 +1529,14 @@ static void projectile_update(int i, bool jiffy_elapsed) {
 	
 	int type			 = game.projectile[i].type;
 	int64_t pdx, pdy;
+	
+	// Allow non-fixed timestamps so we can do latency compensation
+	xvec2 velocity = xvec2_set(game.projectile[i].velocity.dx / VELOCITY_SCALE,
+							   game.projectile[i].velocity.dy / VELOCITY_SCALE);
+	double scale = time / timestep;
+	velocity = xvec2_scale(velocity, scale);
 
-	game.projectile_position_buffer[i] = xvec2_add(game.projectile_position_buffer[i],
-												   xvec2_set(game.projectile[i].velocity.dx / VELOCITY_SCALE,
-															 game.projectile[i].velocity.dy / VELOCITY_SCALE));
+	game.projectile_position_buffer[i] = xvec2_add(game.projectile_position_buffer[i], velocity);
 	
 	int dx = (int)truncf(game.projectile_position_buffer[i].x);
 	int dy = (int)truncf(game.projectile_position_buffer[i].y);
@@ -1693,7 +1718,7 @@ static float text_get_length(xpl_font_t *font, const char *text, size_t position
 		}
 		
 		xpl_glyph_t *glyph = xpl_font_get_glyph(font, c);
-		len += glyph->advance_x;
+		if (glyph) len += glyph->advance_x;
 		
 		++text;
 		++charno;

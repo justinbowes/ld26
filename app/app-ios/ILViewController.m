@@ -16,6 +16,7 @@
 
 #include "audio/audio.h"
 
+#include "context/context_snapshot.h"
 #include "context/context_logo.h"
 #include "context/context_game.h"
 
@@ -23,12 +24,20 @@
 
 #import "ILViewController.h"
 
+#define SKIP_MENU
+
 @interface ILViewController () {
 	xpl_app_t *app;
+	
 	xpl_context_t *draw_context;
 	void *context_data;
+	bool context_needs_init;
+
+	xpl_context_t *snapshot_context;
+	
 	double total_time;
 	int frame_counter;
+	bool isDrawingSnapshot;
 }
 
 @property (strong, nonatomic) EAGLContext *context;
@@ -65,7 +74,10 @@
     GLKView *view = (GLKView *)self.view;
 	[view setMultipleTouchEnabled:YES];
     view.context = self.context;
+	view.delegate = self;
     view.drawableDepthFormat = GLKViewDrawableDepthFormatNone;
+	
+	isDrawingSnapshot = NO;
 	
 	xpl_input_ios_init(view);
 	root_view_controller = self;
@@ -103,7 +115,16 @@
         self.context = nil;
     }
 
-    // Dispose of any resources that can be recreated.
+	if (! context_needs_init) {
+		draw_context->functions.destroy(draw_context, context_data);
+		context_needs_init = true;
+	}
+}
+
+- (void)updateAppAreaWithRect:(CGRect)rect {
+	float scaleFactor = [UIScreen mainScreen].scale;
+	app->execution_info->screen_size.x = rect.size.width * scaleFactor;
+	app->execution_info->screen_size.y = rect.size.height * scaleFactor;
 }
 
 - (void)setupGL
@@ -111,17 +132,9 @@
     [EAGLContext setCurrentContext:self.context];
     
 	xpl_shaders_init("shaders/", ".glsl");
-	if (UIInterfaceOrientationIsLandscape(self.interfaceOrientation)) {
-		app->execution_info->screen_size.x = self.view.bounds.size.height;
-		app->execution_info->screen_size.y = self.view.bounds.size.width;
-	} else {
-		app->execution_info->screen_size.x = self.view.bounds.size.width;
-		app->execution_info->screen_size.y = self.view.bounds.size.height;
-	}
 	
-	glViewport(0, 0, app->execution_info->screen_size.x, app->execution_info->screen_size.y);
-
-    [self createInitialContext];
+	snapshot_context = xpl_context_new(app, &snapshot_context_def);
+	snapshot_context->functions.init(snapshot_context);
 }
 
 - (void)tearDownGL
@@ -132,6 +145,7 @@
 		draw_context->functions.destroy(draw_context, context_data);
 		draw_context = NULL;
 	}
+	snapshot_context->functions.destroy(snapshot_context, NULL);
 	
 	audio_shutdown();
 	xpl_threads_shutdown();
@@ -147,13 +161,34 @@
 #else
 	draw_context = xpl_context_new(app, &game_context_def);
 #endif
-    context_data = draw_context->functions.init(draw_context);
+	context_needs_init = true;
 }
 
 #pragma mark - GLKView and GLKViewController delegate methods
 
+- (UIImage *)snapshot {
+	isDrawingSnapshot = YES;
+	GLKView *view = (GLKView *)self.view;
+	UIImage *result = [view snapshot];
+	isDrawingSnapshot = NO;
+	return result;
+}
+
 - (void)update
 {
+	if (! draw_context) {
+		// Annoyingly, we don't really have any guaranteee that the rect
+		// we're using here for initialization is the same as the one
+		// used later for rendering.
+		[self createInitialContext];
+	}
+	
+	if (context_needs_init) {
+		context_data = draw_context->functions.init(draw_context);
+		context_needs_init = false;
+		return;
+	}
+	
 	frame_counter++;
 	if (frame_counter >= 1000) {
 		xpl_execution_stats_t stats_out;
@@ -187,15 +222,30 @@
 	}
 }
 
+- (void)drawSnapshot {
+	snapshot_context->functions.engine(snapshot_context, 0.0, NULL);
+	snapshot_context->functions.render(snapshot_context, 0.0, NULL);
+}
+
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect
 {
+	[self updateAppAreaWithRect:rect];
+	glViewport(0, 0, app->execution_info->screen_size.x, app->execution_info->screen_size.y);
+
+	if (isDrawingSnapshot) {
+		[self drawSnapshot];
+		return;
+	}
+	
+	// Draw is called before update. I have a problem with this design.
+	if (! draw_context) return;
+	if (context_needs_init) return;
+
 	double initial_time = app->execution_info->current_time;
 	double current_time = xpl_get_time();
 	double engine_time = current_time - initial_time;
 	double render_interval = self.timeSinceLastDraw;
 	app->execution_info->current_time = current_time;
-	app->execution_info->screen_size.x = rect.size.width;
-	app->execution_info->screen_size.y = rect.size.height;
 	draw_context->size = app->execution_info->screen_size;
 	draw_context->functions.render(draw_context, render_interval, context_data);
 	

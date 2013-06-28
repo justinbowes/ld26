@@ -14,6 +14,7 @@
 #include "xpl_hash.h"
 #include "xpl_rand.h"
 #include "xpl_sprite.h"
+#include "xpl_sprite_sheet.h"
 
 #include "context/context_logo.h"
 #include "context/context_game.h"
@@ -97,8 +98,10 @@ static void create_background() {
     overlay_shader = xpl_shader_get_prepared("Overlay", "Overlay.Vertex", "Overlay.Fragment");
 	
 	bg_batch = xpl_sprite_batch_new();
-	bg_sprite = xpl_sprite_new(bg_batch, "star.png", NULL);
-	up_sprite = xpl_sprite_new(bg_batch, "tile_up.png", NULL);
+	xpl_sprite_sheet_t *bg_sheet = xpl_sprite_sheet_new(bg_batch, "bitmaps/menu.json");
+	
+	bg_sprite = xpl_sprite_get(bg_sheet, "star.png");
+	up_sprite = xpl_sprite_get(bg_sheet, "tile_up.png");
 	for (int i = 0; i < BG_PARTICLE_COUNT; ++i) {
 		bg_particle[i] = xvec2_all(-10.f);
 	}

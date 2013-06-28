@@ -46,13 +46,16 @@ void xpl_data_resource_path(char *path_out, const char *path_in, size_t length) 
 size_t xpl_mbs_to_wcs(const char *mbs, wchar_t *wcs, size_t wcs_size) {
 	NSString *convert = [NSString stringWithUTF8String:mbs];
 	NSData *data = [convert dataUsingEncoding:NSUTF32LittleEndianStringEncoding];
-	size_t len = [data length];
+	size_t len_bytes = [data length];
 	if (wcs_size > 0) {
-		len = xmin(len, sizeof(wchar_t) * wcs_size - 1);
-		memmove(wcs, [data bytes], len);
-		wcs[(len + 1) / sizeof(wchar_t)] = 0;
+		len_bytes = xmin(len_bytes, sizeof(wchar_t) * wcs_size);
+		memmove(wcs, [data bytes], len_bytes);
+		if (wcs_size > [convert length]) {
+			wcs[[convert length]] = 0;
+		}
 	}
-	return len / sizeof(wchar_t);
+	// Return length in characters.
+	return (len_bytes / sizeof(wchar_t));
 }
 
 size_t xpl_wcs_to_mbs(const wchar_t *wcs, char *mbs, size_t mbs_size) {

@@ -73,6 +73,7 @@ audio_t *audio_create(const char *resource, bool as_bgm) {
 audio_t *audio_bgm_create(const char *resource, float volume, float pan, bool loop) {
 	NSString *ns_resource = get_resource_ns(resource);
 	[[OALSimpleAudio sharedInstance] playBg:ns_resource volume:volume pan:pan loop:loop];
+	[[OALSimpleAudio sharedInstance] setBgPaused:YES];
 
 	audio_t *audio = audio_create_default();
 	HASH_ADD_INT(audio_table, instance_id, audio);

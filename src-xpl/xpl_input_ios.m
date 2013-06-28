@@ -13,7 +13,8 @@ extern void xpl_input__internal__dispatch_character(int character);
 
 -(id) initWithParentView:(UIView *)view {
 	if (self = [super init]) {
-		self.root_view = view;
+		_root_view = view;
+		_scale = [UIScreen mainScreen].scale;
 		[self.root_view addSubview:self];
 		[self setHidden:YES];
 	}
@@ -64,17 +65,19 @@ void xpl_input_ios_set_touch_began(CGPoint *point) {
 	for (; index < MAX_TOUCHES; ++index) {
 		if (! states[index]) break;
 	}
+	xivec2 touch_pt = {{
+		point->x * key_input.scale,
+		point->y * key_input.scale
+	}};
 	assert(index <= MAX_TOUCHES);
-	LOG_DEBUG("Touch %zu down at [%f,%f]", index, point->x, point->y);
+	LOG_DEBUG("Touch %zu down at [%d,%d]", index, touch_pt.x, touch_pt.y);
 	states[index] = true;
-	touches[index].x = point->x;
-	touches[index].y = point->y;
+	touches[index] = touch_pt;
 }
 
-static size_t find_nearest_touch(CGPoint *point) {
+static size_t find_nearest_touch(xivec2 touch_pt) {
 	size_t index = SIZE_T_MAX;
 	int max_distance = INT_MAX;
-	xivec2 touch_pt = {{ point->x, point->y }};
 	for (size_t i = 0; i < MAX_TOUCHES; ++i) {
 		if (! states[i]) continue;
 		int distance = xivec2_length_sq(touch_pt, touches[i]);
@@ -88,18 +91,26 @@ static size_t find_nearest_touch(CGPoint *point) {
 }
 
 void xpl_input_ios_set_touch_moved(CGPoint *point) {
-	size_t index = find_nearest_touch(point);
-	LOG_DEBUG("Touch %zu moved at [%f,%f]", index, point->x, point->y);
-	deltas[index].x = point->x - touches[index].x;
-	deltas[index].y = point->y - touches[index].y;
-	touches[index].x = point->x;
-	touches[index].y = point->y;
+	xivec2 touch_pt = {{
+		point->x * key_input.scale,
+		point->y * key_input.scale
+	}};
+	size_t index = find_nearest_touch(touch_pt);
+	LOG_DEBUG("Touch %zu moved at [%d,%d]", index, touch_pt.x, touch_pt.y);
+	deltas[index].x = touch_pt.x - touches[index].x;
+	deltas[index].y = touch_pt.y - touches[index].y;
+	touches[index].x = touch_pt.x;
+	touches[index].y = touch_pt.y;
 }
 
 void xpl_input_ios_set_touch_ended(CGPoint *point) {
-	size_t index = find_nearest_touch(point);
+	xivec2 touch_pt = {{
+		point->x * key_input.scale,
+		point->y * key_input.scale
+	}};
+	size_t index = find_nearest_touch(touch_pt);
 	assert(index <= MAX_TOUCHES);
-	LOG_DEBUG("Touch %zu up at [%f,%f]", index, point->x, point->y);
+	LOG_DEBUG("Touch %zu up at [%d,%d]", index, touch_pt.x, touch_pt.y);
 	states[index] = false;
 	touches[index].x = point->x;
 	touches[index].y = point->y;

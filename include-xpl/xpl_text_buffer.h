@@ -49,6 +49,7 @@ void xpl_text_buffer_clear(xpl_text_buffer_t *self);
 // Commit changes to the buffer to OpenGL.
 void xpl_text_buffer_commit(const xpl_text_buffer_t *self);
 void xpl_text_buffer_render(const xpl_text_buffer_t *self, const GLfloat *mvp);
+void xpl_text_buffer_render_tinted(const xpl_text_buffer_t *self, const GLfloat *mvp, const xvec4 color);
 void xpl_text_buffer_render_no_setup(const xpl_text_buffer_t *self, const GLfloat *mvp);
 
 #endif

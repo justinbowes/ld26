@@ -12,6 +12,7 @@
 #include <stdio.h>
 
 #include "xpl_platform.h"
+#include "xpl_file.h"
 
 // ----------- logging ----------------------
 #define XPL_LOG_LEVEL_TRACE             0
@@ -33,18 +34,12 @@
 
 #define LOG_ANSI
 
-
-#if defined(XPL_PLATFORM_WINDOWS)
+#if defined(XPL_PLATFORM_OSX) || defined(XPL_PLATFORM_IOS) || defined(XPL_PLATFORM_WINDOWS)
 # undef LOG_ANSI
 #endif
 
-#if defined(XPL_PLATFORM_OSX) || defined(XPL_PLATFORM_IOS)
-# undef LOG_ANSI
-# define XPL_STDERR stderr
-# define XPL_STDOUT stdout
-#endif
-
-#if defined(XPL_PLATFORM_UNIX)
+#if defined(XPL_PLATFORM_UNIX) || defined(XPL_PLATFORM_OSX) || defined(XPL_PLATFORM_IOS)
+# include <libgen.h>
 # define XPL_STDERR stderr
 # define XPL_STDOUT stdout
 #endif
@@ -84,10 +79,8 @@
 #define XPL_COLOR_bakcyn ""
 #define XPL_COLOR_bakwht ""
 #define XPL_COLOR_txtrst ""
-char *basename(const char *name);
 
 #else
-#include <libgen.h>
 #define XPL_COLOR_txtblk "\033[0;30m"
 #define XPL_COLOR_txtred "\033[0;31m"
 #define XPL_COLOR_txtgrn "\033[0;32m"

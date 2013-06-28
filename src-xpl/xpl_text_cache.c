@@ -52,7 +52,7 @@ static _text_table_entry_t *text_table_entry_new(int markup_key,
     
 	int hash = text_cache_key(markup_key, text);
 #    ifndef DISABLE_CACHES
-	LOG_DEBUG("New text table entry for %d", hash);
+	LOG_DEBUG("New text table entry for %s (%d)", text, hash);
 #    endif
     
 	entry->key = hash;

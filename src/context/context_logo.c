@@ -62,7 +62,21 @@ static struct {
     xvec4 color;
 } brick[3];
 
+#define SCALEX(x) ((x) * self->size.width / self->size.height)
+
 static void *init(xpl_context_t *self) {
+	
+	// Create a square projection matrix with minimum 720px view area.
+	// This is recalculated on the theory that it might change, and because
+	// it's actually not correct in init. Going to fix that now.
+	float aspect = (float)self->size.width / self->size.height;
+	if (aspect < 1.f) {
+		xmat4_ortho(0.f, 720.f, 0.f, 720.f / aspect, 1.f, -1.f, &ortho_mvp);
+	} else {
+		xmat4_ortho(0.f, aspect * 720.f, 0.f, 720.f, 1.f, -1.f, &ortho_mvp);
+	}
+	
+	
     brick_vbo = xpl_bo_new(GL_ARRAY_BUFFER, GL_STATIC_DRAW);
     xpl_bo_append(brick_vbo, &brick_vertex_data, sizeof(brick_vertex_data));
     xpl_bo_commit(brick_vbo);
@@ -92,21 +106,21 @@ static void *init(xpl_context_t *self) {
     text = xpl_text_buffer_new(512, 512, 1);
     xpl_mbs_to_wcs("informi labs", buffer, 1024);
 	
-    pen = xvec2_set(400.f, 480.f);
+    pen = xvec2_set(SCALEX(400.f), 480.f);
     xpl_markup_clear(&outline_markup);
     xpl_markup_set(&outline_markup, "Candela", 60.f, TRUE, TRUE, xvec4_all(1.f), xvec4_all(0.0f));
     outline_markup.outline = xfo_line;
     outline_markup.outline_thickness = 6.f;
     xpl_text_buffer_add_text(text, &pen, &outline_markup, buffer, 0);
 	
-    pen = xvec2_set(400.f, 480.f);
+    pen = xvec2_set(SCALEX(400.f), 480.f);
     xpl_markup_clear(&logo_markup);
     xpl_markup_set(&logo_markup, "Candela", 60.f, TRUE, TRUE, xvec4_set(0.f, 0.f, 0.4f, 1.f), xvec4_all(0.0f));
     logo_markup.outline = xfo_none;
     xpl_text_buffer_add_text(text, &pen, &logo_markup, buffer, 0);
     
     xpl_mbs_to_wcs("informilabs.com\nultrapew.com", buffer, 1024);
-    pen = xvec2_set(400.f, 400.f);
+    pen = xvec2_set(SCALEX(400.f), 400.f);
     xpl_markup_clear(&website_markup);
     xpl_markup_set(&website_markup, "Chicago", 24.f, FALSE, FALSE, xvec4_set(0.6f, 0.6f, 0.8f, 1.f), xvec4_all(0.0f));
     logo_markup.outline = xfo_none;
@@ -131,8 +145,6 @@ static void *init(xpl_context_t *self) {
         ++line;
     }
 	xpl_text_buffer_commit(copyright_text);
-    
-    xmat4_ortho(0.f, ((float)self->size.width / self->size.height) * 720.f, 0.f, 720.f, 1.f, -1.f, &ortho_mvp);
     
     xvec3 origin = {{ 15.f, 12.f, 20.f }};
     xvec3 target = {{ 6.f, 0.8f, 0.f }};
@@ -169,16 +181,16 @@ static void *init(xpl_context_t *self) {
 	} else {
 		title_bgm->volume = 0.0f;
 	}
-	title_bgm->action = aa_play;
 	
     return NULL;
 }
 
 static void engine(xpl_context_t *self, double time, void *data) {
-    const float delay = 2.5f;
+    const float delay = 0.5f;
     
     total_time += time; // done after x seconds.
-    
+	title_bgm->action = aa_play;
+	
     if (total_time < delay) return; // initialize time
     
 	if (! clip_started) {
@@ -204,9 +216,8 @@ static void engine(xpl_context_t *self, double time, void *data) {
 }
 
 static void render(xpl_context_t *self, double time, void *data) {
+	
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
     glUseProgram(brick_shader->id);
     glBlendFunc(GL_ONE, GL_ONE);
@@ -241,6 +252,12 @@ static void render(xpl_context_t *self, double time, void *data) {
 
 static void destroy(xpl_context_t *self, void *vdata) {
 	audio_destroy(&clip);
+	xpl_vao_destroy(&brick_vao);
+	xpl_bo_destroy(&brick_vbo);
+	xpl_shader_release(&brick_shader);
+	xpl_vao_destroy(&quad_vao);
+	xpl_bo_destroy(&quad_vbo);
+	xpl_shader_release(&quad_shader);
 	xpl_text_buffer_destroy(&text);
 	xpl_text_buffer_destroy(&copyright_text);
 }
