@@ -535,15 +535,7 @@ void xpl_resource_resolve_opts(xpl_resolve_resource_opts_t *out, const char *pat
 	xpl_data_resource_path(&out->data_resource_path[0], path_in, PATH_MAX);
 }
 
-#ifndef XPL_PLATFORM_WINDOWS
-size_t xpl_mbs_to_wcs(const char *mbs, wchar_t *wcs, size_t wcs_size) {
-	return mbstowcs(wcs, mbs, wcs_size);
-}
-
-size_t xpl_wcs_to_mbs(const wchar_t *wcs, char *mbs, size_t mbs_size) {
-	return wcstombs(mbs, wcs, mbs_size);
-}
-#else
+#if defined(XPL_PLATFORM_WINDOWS)
 size_t xpl_mbs_to_wcs(const char *mbs, wchar_t *wcs, size_t wcs_size) {
 	size_t len = MultiByteToWideChar(CP_UTF8, 0, mbs, strlen(mbs), wcs, wcs_size);
 	if (wcs) wcs[xmin(len, wcs_size)] = 0;
@@ -555,7 +547,17 @@ size_t xpl_wcs_to_mbs(const wchar_t *wcs, char *mbs, size_t mbs_size) {
 	if (mbs) mbs[xmin(len, mbs_size)] = 0;
 	return len;
 }
+#elif !defined(XPL_PLATFORM_IOS)
+size_t xpl_mbs_to_wcs(const char *mbs, wchar_t *wcs, size_t wcs_size) {
+	return mbstowcs(wcs, mbs, wcs_size);
+}
 
+size_t xpl_wcs_to_mbs(const wchar_t *wcs, char *mbs, size_t mbs_size) {
+	return wcstombs(mbs, wcs, mbs_size);
+}
+#else
+// setlocale doesn't work on IOS
+// see xpl_platform.m for implementation.
 #endif
 
 

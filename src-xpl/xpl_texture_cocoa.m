@@ -32,6 +32,6 @@ GLuint xpl_texture_load_cgimage(xpl_texture_t *self, CGImageRef cg_image) {
 #if defined(XPL_PLATFORM_IOS)
 GLuint xpl_texture_load_uiimage(xpl_texture_t *self, UIImage *image) {
 	CGImageRef cg_image = image.CGImage;
-	return xpl_texture_load_cgimage(cg_image);
+	return xpl_texture_load_cgimage(self, cg_image);
 }
 #endif

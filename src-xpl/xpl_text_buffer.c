@@ -448,6 +448,7 @@ void xpl_text_buffer_commit(const xpl_text_buffer_t *self) {
 void xpl_text_buffer_render(const xpl_text_buffer_t *self, const GLfloat *mvp) {
 	// lazy atlas
 	if (! self->font_manager->atlas->texture_id) return;
+	if (! self->vertex_count) return;
 	
 	glEnable(GL_BLEND);
 	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);

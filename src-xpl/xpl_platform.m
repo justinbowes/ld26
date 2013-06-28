@@ -40,3 +40,32 @@ void xpl_data_resource_path(char *path_out, const char *path_in, size_t length) 
     snprintf(path_out, PATH_MAX, "%s/%s", url_prefix, path_in);
 }
 #endif
+
+#if defined(XPL_PLATFORM_IOS)
+
+size_t xpl_mbs_to_wcs(const char *mbs, wchar_t *wcs, size_t wcs_size) {
+	NSString *convert = [NSString stringWithUTF8String:mbs];
+	NSData *data = [convert dataUsingEncoding:NSUTF32LittleEndianStringEncoding];
+	size_t len = [data length];
+	if (wcs_size > 0) {
+		len = xmin(len, sizeof(wchar_t) * wcs_size - 1);
+		memmove(wcs, [data bytes], len);
+		wcs[(len + 1) / sizeof(wchar_t)] = 0;
+	}
+	return len / sizeof(wchar_t);
+}
+
+size_t xpl_wcs_to_mbs(const wchar_t *wcs, char *mbs, size_t mbs_size) {
+	NSString *convert = [[NSString alloc] initWithBytes:wcs length:wcslen(wcs) * sizeof(wchar_t) encoding:NSUTF32LittleEndianStringEncoding];
+	const char *utf8 = [convert cStringUsingEncoding:NSUTF8StringEncoding];
+	size_t length = strlen(utf8);
+	if (mbs_size > 0) {
+		length = xmin(length, mbs_size - 1);
+		memmove(mbs, utf8, length);
+		mbs[length + 1] = '\0';
+	}
+	[convert release];
+	return length;
+}
+
+#endif

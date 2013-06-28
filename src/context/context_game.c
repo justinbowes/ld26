@@ -504,7 +504,7 @@ static void game_init_text(void) {
 	xpl_markup_clear(&name_markup);
 	xpl_markup_set(&name_markup, UI_FONT, 16.f, FALSE, FALSE, xvec4_set(1.f, 1.f, 1.f, 0.5f), xvec4_all(0.f));
 	
-	text_particle_cache = xpl_text_cache_new(64);
+	text_particle_cache = xpl_text_cache_new(128);
 	xpl_markup_clear(&text_particle_markup);
 	xpl_markup_set(&text_particle_markup, UI_FONT, 16.f, FALSE, FALSE, xvec4_set(1.f, 1.f, 1.f, 1.f), xvec4_all(0.f));
 

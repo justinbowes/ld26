@@ -43,16 +43,11 @@ static GLsizei      quad_elements;
 static xvec4        overlay_color;
 static float        overlay_strength;
 
-static xpl_text_buffer_t    *logo_text;
+static xpl_text_buffer_t    *text;
+static xpl_text_buffer_t	*copyright_text;
 static xpl_markup_t         logo_markup;
-
-static xpl_text_buffer_t    *website_text;
 static xpl_markup_t         website_markup;
-
-static xpl_text_buffer_t    *outline_text;
 static xpl_markup_t         outline_markup;
-
-static xpl_text_buffer_t    *copyright_text;
 static xpl_markup_t         copyright_markup;
 
 static xmat4        ortho_mvp;
@@ -90,59 +85,39 @@ static void *init(xpl_context_t *self) {
     brick_shader = xpl_shader_get_prepared("LogoBackground", "Logo.Vertex", "Logo.Brick.Fragment");
     quad_shader = xpl_shader_get_prepared("LogoForeground", "Overlay.Vertex", "Overlay.Fragment");
     
-	clip = audio_create("logo", false);
-    clip->loop = false;
-    clip_started = false;
-	
-	prefs_t prefs = prefs_get();
-	title_bgm = audio_create("title", true);
-	
-	title_bgm->loop = true;
-	if (prefs.bgm_on) {
-		title_bgm->volume = 0.5f;
-	} else {
-		title_bgm->volume = 0.0f;
-	}
-	title_bgm->action = aa_play;
-    
-    logo_text = xpl_text_buffer_new(128, 128, 1);
-    xpl_markup_clear(&logo_markup);
-    xpl_markup_set(&logo_markup, "Candela", 60.f, TRUE, TRUE, xvec4_set(0.f, 0.f, 0.4f, 1.f), xvec4_all(0.0f));
-    logo_markup.outline = xfo_none;
-    
-    website_text = xpl_text_buffer_new(128, 128, 1);
-    xpl_markup_clear(&website_markup);
-    xpl_markup_set(&website_markup, "Chicago", 24.f, FALSE, FALSE, xvec4_set(0.6f, 0.6f, 0.8f, 1.f), xvec4_all(0.0f));
-    logo_markup.outline = xfo_none;
-    
-    outline_text = xpl_text_buffer_new(128, 128, 1);
-    xpl_markup_clear(&outline_markup);
-    xpl_markup_set(&outline_markup, "Candela", 60.f, TRUE, TRUE, xvec4_all(1.f), xvec4_all(0.0f));
-    outline_markup.outline = xfo_line;
-    outline_markup.outline_thickness = 6.f;
-    
-    copyright_text = xpl_text_buffer_new(128, 128, 1);
-    xpl_markup_clear(&copyright_markup);
-    xpl_markup_set(&copyright_markup, "CandelaBook", 12.f, FALSE, FALSE, xvec4_all(0.8f), xvec4_all(0.0f));
-    logo_markup.outline = xfo_none;
     
     xvec2 pen;
     wchar_t buffer[1024];
     
+    text = xpl_text_buffer_new(512, 512, 1);
     xpl_mbs_to_wcs("informi labs", buffer, 1024);
+	
     pen = xvec2_set(400.f, 480.f);
-    xpl_text_buffer_add_text(outline_text, &pen, &outline_markup, buffer, 0);
-    xpl_text_buffer_commit(outline_text);
+    xpl_markup_clear(&outline_markup);
+    xpl_markup_set(&outline_markup, "Candela", 60.f, TRUE, TRUE, xvec4_all(1.f), xvec4_all(0.0f));
+    outline_markup.outline = xfo_line;
+    outline_markup.outline_thickness = 6.f;
+    xpl_text_buffer_add_text(text, &pen, &outline_markup, buffer, 0);
+	
+    pen = xvec2_set(400.f, 480.f);
+    xpl_markup_clear(&logo_markup);
+    xpl_markup_set(&logo_markup, "Candela", 60.f, TRUE, TRUE, xvec4_set(0.f, 0.f, 0.4f, 1.f), xvec4_all(0.0f));
+    logo_markup.outline = xfo_none;
+    xpl_text_buffer_add_text(text, &pen, &logo_markup, buffer, 0);
     
-    pen = xvec2_set(400.f, 480.f);
-    xpl_text_buffer_add_text(logo_text, &pen, &logo_markup, buffer, 0);
-    xpl_text_buffer_commit(logo_text);
-
     xpl_mbs_to_wcs("informilabs.com\nultrapew.com", buffer, 1024);
     pen = xvec2_set(400.f, 400.f);
-    xpl_text_buffer_add_text(website_text, &pen, &website_markup, buffer, 0);
-    xpl_text_buffer_commit(website_text);
+    xpl_markup_clear(&website_markup);
+    xpl_markup_set(&website_markup, "Chicago", 24.f, FALSE, FALSE, xvec4_set(0.6f, 0.6f, 0.8f, 1.f), xvec4_all(0.0f));
+    logo_markup.outline = xfo_none;
+    xpl_text_buffer_add_text(text, &pen, &website_markup, buffer, 0);
+
+    xpl_text_buffer_commit(text);
     
+	copyright_text = xpl_text_buffer_new(128, 128, 1);
+    xpl_markup_clear(&copyright_markup);
+    xpl_markup_set(&copyright_markup, "CandelaBook", 12.f, FALSE, FALSE, xvec4_all(0.8f), xvec4_all(0.0f));
+    logo_markup.outline = xfo_none;
     char key[64];
     int line = 1;
     while (1) {
@@ -155,6 +130,7 @@ static void *init(xpl_context_t *self) {
         xpl_text_buffer_add_text(copyright_text, &pen, &copyright_markup, buffer, 0);
         ++line;
     }
+	xpl_text_buffer_commit(copyright_text);
     
     xmat4_ortho(0.f, ((float)self->size.width / self->size.height) * 720.f, 0.f, 720.f, 1.f, -1.f, &ortho_mvp);
     
@@ -179,6 +155,22 @@ static void *init(xpl_context_t *self) {
     
     GL_DEBUG();
     
+	
+	clip = audio_create("logo", false);
+    clip->loop = false;
+    clip_started = false;
+	
+	prefs_t prefs = prefs_get();
+	title_bgm = audio_create("title", true);
+	
+	title_bgm->loop = true;
+	if (prefs.bgm_on) {
+		title_bgm->volume = 0.5f;
+	} else {
+		title_bgm->volume = 0.0f;
+	}
+	title_bgm->action = aa_play;
+	
     return NULL;
 }
 
@@ -231,10 +223,8 @@ static void render(xpl_context_t *self, double time, void *data) {
     }
     glUseProgram(GL_NONE);
 
-    if (total_time > 4.5) {
-        xpl_text_buffer_render(outline_text, ortho_mvp.data);
-		xpl_text_buffer_render(website_text, ortho_mvp.data);
-        xpl_text_buffer_render(logo_text, ortho_mvp.data);
+    if (true || total_time > 4.5) {
+        xpl_text_buffer_render(text, ortho_mvp.data);
         GL_DEBUG();
     }
     
@@ -245,21 +235,13 @@ static void render(xpl_context_t *self, double time, void *data) {
     glUniform4fv(xpl_shader_get_uniform(quad_shader, "color"), 1, overlay_color.data);
     xpl_vao_program_draw_arrays(quad_vao, quad_shader, GL_TRIANGLES, 0, (GLsizei)quad_elements);
     glUseProgram(GL_NONE);
-
-	if (total_time > 4.5) {
-		xpl_text_buffer_render(website_text, ortho_mvp.data);
-        GL_DEBUG();
-    }
-
     
     xpl_text_buffer_render(copyright_text, ortho_mvp.data);
 }
 
 static void destroy(xpl_context_t *self, void *vdata) {
 	audio_destroy(&clip);
-	xpl_text_buffer_destroy(&logo_text);
-	xpl_text_buffer_destroy(&outline_text);
-	xpl_text_buffer_destroy(&website_text);
+	xpl_text_buffer_destroy(&text);
 	xpl_text_buffer_destroy(&copyright_text);
 }
 

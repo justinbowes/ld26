@@ -524,7 +524,7 @@ size_t xpl_font_load_glyphs(xpl_font_t *self, const wchar_t *charcodes) {
         
 		if (region.x < 0) {
 			missed++;
-			LOG_WARN("Texture atlas is full on glyph index %ud", (unsigned int)i);
+			LOG_WARN("Texture atlas is full (%d) on glyph index %ud", region.x, (unsigned int)i);
 			continue;
 		}
         

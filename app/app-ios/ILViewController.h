@@ -6,6 +6,8 @@
 //  Copyright (c) 2013 Informi Software Inc. All rights reserved.
 //
 
+#include "xpl_platform.h"
+
 #if defined(XPL_PLATFORM_IOS)
 #import <UIKit/UIKit.h>
 #import <GLKit/GLKit.h>

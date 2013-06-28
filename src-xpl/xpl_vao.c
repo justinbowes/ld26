@@ -28,6 +28,7 @@ static xpl_vertex_attrib_t *vertex_attrib_new(const char *name, xpl_bo_t *vbo_so
 	strncpy(node->name, name, VATTR_NAME_MAX);
 	node->vbo_source = vbo_source;
 	node->enabled = 1;
+	node->configured = 0;
 
 	node->size = size;
 	node->type = type;
@@ -152,6 +153,7 @@ xpl_vertex_attrib_t *xpl_vao_get_vertex_attrib(xpl_vao_t *vao, const char *name)
 void xpl_vao_enable_vertex_attrib(xpl_vao_t *vao, const char *name) {
 	xpl_vertex_attrib_t *va = xpl_vao_get_vertex_attrib(vao, name);
 	va->enabled = 1;
+	va->configured = 0;
 }
 
 void xpl_vao_disable_vertex_attrib(xpl_vao_t *vao, const char *name) {
@@ -164,6 +166,7 @@ void xpl_vao_disable_vertex_attrib(xpl_vao_t *vao, const char *name) {
 		return;
 	}
 	va->enabled = 0;
+	va->configured = 0;
 }
 
 xpl_bo_t *xpl_vao_set_index_buffer(xpl_vao_t *vao, int buffer_index,
@@ -186,9 +189,10 @@ static void vao_prepare_program_draw(xpl_vao_t *vao, xpl_shader_t *shader) {
 
 	DL_FOREACH(vao->vertex_attribs_list, el) {
 		GLint va_id = xpl_shader_get_va(shader, vao, el->name);
-		if ((va_id != -1) && (!el->enabled)) {
+		if ((va_id != -1) && (! el->enabled) && (! el->configured)) {
 			// Short circuit case: just turn off the enabled VA.
 			glDisableVertexAttribArray(va_id);
+			el->configured = 1;
 			continue;
 		}
 
@@ -207,11 +211,17 @@ static void vao_prepare_program_draw(xpl_vao_t *vao, xpl_shader_t *shader) {
 						"PERF: uncommitted buffer object associated with "
 						"VAO %d attrib %s; committed BO %d", vao->vao_id, el->name, el->vbo_source->bo_id);
 			}
-			glBindBuffer(GL_ARRAY_BUFFER, el->vbo_source->bo_id);
-			glVertexAttribPointer(va_id, el->size, el->type, el->normalize, el->stride, (GLvoid *)(intptr_t)el->offset);
-			glEnableVertexAttribArray(va_id);
+			if (! el->configured) {
+				glBindBuffer(GL_ARRAY_BUFFER, el->vbo_source->bo_id);
+				glVertexAttribPointer(va_id, el->size, el->type, el->normalize, el->stride, (GLvoid *)(intptr_t)el->offset);
+				glEnableVertexAttribArray(va_id);
+				el->configured = 1;
+			}
 		} else {
-			glDisableVertexAttribArray(va_id);
+			if (! el->configured) {
+				glDisableVertexAttribArray(va_id);
+				el->configured = 1;
+			}
 		}
 
 	}

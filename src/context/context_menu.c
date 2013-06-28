@@ -151,7 +151,7 @@ static void populate_video_modes() {
 #endif
 
 static void menu_configure(xpl_app_t *app, xrect area) {
-    area = xrect_contract_to(area, 600, 440);
+    area = xrect_contract_to(area, xmin(600, area.width), xmin(440, area.height));
     
 #ifndef XPL_PLATFORM_IOS
     int window_clicked = FALSE;
@@ -244,7 +244,7 @@ static void menu_configure(xpl_app_t *app, xrect area) {
 }
 
 static void menu_main(xpl_app_t *app, xrect area) {
-    area = xrect_contract_to(area, 600, 210);
+    area = xrect_contract_to(area, xmin(area.width, 600), xmin(area.height, 210));
     
     int new_clicked;
     int configure_clicked;

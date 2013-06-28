@@ -6,8 +6,6 @@
 //  Copyright (c) 2013 Informi Software Inc. All rights reserved.
 //
 
-#import "ILViewController.h"
-
 #include "xpl.h"
 #include "xpl_gl.h"
 #include "xpl_app.h"
@@ -23,7 +21,7 @@
 
 #include "xpl_input_ios.h"
 
-#define SKIP_MENU
+#import "ILViewController.h"
 
 @interface ILViewController () {
 	xpl_app_t *app;

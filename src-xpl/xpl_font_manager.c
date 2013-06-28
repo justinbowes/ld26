@@ -29,14 +29,22 @@
 typedef struct fm_font_entry {
 	int					key;
 	xpl_font_t			*font;
+	xpl_markup_t		markup;
 	UT_hash_handle		hh;
 
 } fm_font_entry_t;
 
-static fm_font_entry_t *font_entry_new(const int key, xpl_texture_atlas_t *atlas, const char *filename, const float size) {
+static fm_font_entry_t *font_entry_new(const int key, xpl_texture_atlas_t *atlas, const xpl_markup_t *markup) {
 	fm_font_entry_t *entry = xpl_alloc_type(fm_font_entry_t);
 	entry->key = key;
-	entry->font = xpl_font_new(atlas, filename, size);
+	entry->markup = *markup;
+
+	char filename[FONT_NAME_MAX];
+	char *bold_s = markup->bold ? "Bold" : "";
+	char *italic_s = markup->italic ? "Italic" : "";
+	sprintf(filename, "%s%s%s", markup->family, bold_s, italic_s);
+
+	entry->font = xpl_font_new(atlas, filename, markup->size);
 	return entry;
 }
 
@@ -87,96 +95,50 @@ void xpl_font_manager_destroy(xpl_font_manager_t **ppmgr) {
 	mgr = NULL;
 }
 
-// Bold/italic accounted for in filename.
-
-int is_same_fontspec(const char *rname1, const float size1, const char *rname2, const float size2) {
-	return ((strcmp(rname1, rname2) == 0) &&
-			(size1 == size2));
-}
-
-//int is_same_font(xpl_font_t *font1, xpl_font_t *font2) {
-//	assert(font1);
-//	assert(font2);
-//	return is_same_fontspec(font1->filename, font1->size, font2->filename, font2->size);
-//}
-
-XPLINLINE int key_for_fontspec(const char *filename, const float size) {
-	int hash = XPL_HASH_INIT;
-	hash = xpl_hashs(filename, hash);
-	hash = xpl_hashf(size, hash);
-	return hash;
-}
-
-XPLINLINE int key_for_font(xpl_font_t *font) {
-	return key_for_fontspec(font->filename, font->size);
-}
-
 void xpl_font_manager_delete_font(xpl_font_manager_t *self, xpl_font_t **ppfont) {
 	assert(self);
 
 	xpl_font_t *font = *ppfont;
 	assert(font);
 
-	int hash_key = key_for_font(font);
-	fm_font_entry_t *stored_entry;
-	HASH_FIND_INT(self->font_cache, &hash_key, stored_entry);
-	assert(stored_entry);
-
-	HASH_DEL(self->font_cache, stored_entry);
-	font_entry_destroy(&stored_entry);
-
-	xpl_font_destroy(&font);
-	*ppfont = NULL;
-}
-
-xpl_font_t *xpl_font_manager_get_from_resource_name(xpl_font_manager_t *self, const char *resource_name, float size) {
-	fm_font_entry_t *entry = NULL;
-	assert(self);
-
-	// Return matching font if present.
-	int key = key_for_fontspec(resource_name, size);
-	HASH_FIND_INT(self->font_cache, &key, entry);
-	if (entry) {
-		return entry->font;
+	fm_font_entry_t *stored_entry, *tmp;
+	HASH_ITER(hh, self->font_cache, stored_entry, tmp) {
+		if (stored_entry->font == font) {
+			HASH_DEL(self->font_cache, stored_entry);
+			font_entry_destroy(&stored_entry);
+			xpl_font_destroy(&font);
+			*ppfont = NULL;
+			return;
+		}
 	}
-
-	// Not found. Create new.
-	entry = font_entry_new(key, self->atlas, resource_name, size);
-	if (! entry->font) {
-		LOG_ERROR("Couldn't create font %s %f", resource_name, size);
-		return NULL;
-	}
-	HASH_ADD_INT(self->font_cache, key, entry);
-	xpl_font_load_glyphs(entry->font, self->wchar_cache);
-	return entry->font;
+	
+	LOG_WARN("Didn't find font to destroy");
 }
 
-xpl_font_t *xpl_font_manager_get_from_description(xpl_font_manager_t *self, const char *family, const float size, const int bold, const int italic) {
-	assert(self);
-
-	char font_name[FONT_NAME_MAX];
-	char *bold_s = bold ? "Bold" : "";
-	char *italic_s = italic ? "Italic" : "";
-
-	sprintf(font_name, "%s%s%s", family, bold_s, italic_s);
-
-	return xpl_font_manager_get_from_resource_name(self, font_name, size);
-}
-
-xpl_font_t *xpl_font_manager_get_from_markup(xpl_font_manager_t *self, const xpl_markup_t *markup) {
+xpl_font_t *xpl_font_manager_get_from_markup(xpl_font_manager_t *self, xpl_markup_t *markup) {
 	assert(self);
 	assert(markup);
 
-	xpl_font_t *result;
-
-	if (! (result = xpl_font_manager_get_from_description(self, markup->family, markup->size, markup->bold, markup->italic))) {
-		LOG_ERROR("Couldn't get font from markup: [%s] bold=%d italic=%d (%f)", markup->family, markup->bold, markup->italic, markup->size);
-        assert(0);
+	fm_font_entry_t *entry = NULL;
+	// Return matching font if present.
+	int key = xpl_markup_hash(markup);
+	HASH_FIND_INT(self->font_cache, &key, entry);
+	if (! entry) {
+		entry = font_entry_new(key, self->atlas, markup);
+		if (! entry->font) {
+			LOG_ERROR("Couldn't get font from markup: [%s] bold=%d italic=%d (%f)", markup->family, markup->bold, markup->italic, markup->size);
+			assert(0);
+		}
+		HASH_ADD_INT(self->font_cache, key, entry);
 	}
+	
+	// If we have a cached font for this hash and it doesn't match the markup
+	// overwrite what's in the markup. Either we don't own the font (markup
+	// used in multiple managers) or the markup was mutated.
+	if (markup->font != entry->font) markup->font = entry->font;
+	xpl_font_apply_markup(markup->font, markup);
 
-	xpl_font_apply_markup(result, markup);
-
-	return result;
+	return markup->font;
 }
 
 

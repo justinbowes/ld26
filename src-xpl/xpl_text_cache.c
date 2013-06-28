@@ -38,27 +38,6 @@ struct xpl_text_cache {
 
 // ---------------------------------------------------------------------
 
-XPLINLINE int font_cache_key(const xpl_markup_t *markup) {
-	int hash = XPL_HASH_INIT;
-	hash = xpl_hashs(markup->family, hash);
-	hash = xpl_hashf(markup->size, hash);
-	hash = xpl_hashi(markup->bold, hash);
-	hash = xpl_hashi(markup->italic, hash);
-    hash = xpl_hashi(markup->outline, hash);
-	hash = xpl_hashf(markup->foreground_color.r, hash);
-	hash = xpl_hashf(markup->foreground_color.g, hash);
-	hash = xpl_hashf(markup->foreground_color.b, hash);
-	hash = xpl_hashf(markup->foreground_color.a, hash);
-	hash = xpl_hashf(markup->background_color.r, hash);
-	hash = xpl_hashf(markup->background_color.g, hash);
-	hash = xpl_hashf(markup->background_color.b, hash);
-	hash = xpl_hashf(markup->background_color.a, hash);
-    
-	return hash;
-}
-
-// ---------------------------------------------------------------------
-
 
 XPLINLINE int text_cache_key(int markup_key, const char *text) {
 	int hash = XPL_HASH_INIT;
@@ -189,7 +168,7 @@ static xpl_cached_text_t * text_cache_create(xpl_text_cache_t *text_cache,
                                           const char *text) {
 	xpl_text_buffer_t *buffer = xpl_text_buffer_shared_font_manager_new(text_cache->font_manager);
 	xvec2 position = xvec2_set(0, 0);
-	int markup_key = font_cache_key(markup);
+	int markup_key = xpl_markup_hash(markup);
     
 	_text_table_entry_t *table_entry = text_table_entry_new(markup_key, text,
                                                             buffer);
@@ -209,7 +188,7 @@ xpl_cached_text_t * xpl_text_cache_get(xpl_text_cache_t *text_cache,
 	
 	_text_table_entry_t *entry = NULL;
 #ifndef DISABLE_CACHES
-	int markup_key = font_cache_key(markup);
+	int markup_key = xpl_markup_hash(markup);
 	int text_key = text_cache_key(markup_key, text);
 	HASH_FIND_INT(text_cache->this_frame->entries, &text_key, entry);
 #endif
