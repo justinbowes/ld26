@@ -207,7 +207,9 @@
 	
 	audio_update();
 
-	while(app->execution_info->remaining_time_to_process >= app->engine_info->timestep) {
+	int engine_steps = 0;
+	while ((app->execution_info->remaining_time_to_process >= app->engine_info->timestep) &&
+		   (engine_steps < 10)) {
 		xpl_context_t *next_context = draw_context->functions.handoff(draw_context, context_data);
 		if (next_context != draw_context) {
 			draw_context->functions.destroy(draw_context, context_data);
@@ -219,7 +221,9 @@
 		}
 		draw_context->functions.engine(draw_context, app->engine_info->timestep, context_data);
 		app->execution_info->remaining_time_to_process -= app->engine_info->timestep;
+		++engine_steps;
 	}
+	LOG_DEBUG("Engine steps: %d, engine lag %f", engine_steps, app->execution_info->remaining_time_to_process);
 }
 
 - (void)drawSnapshot {

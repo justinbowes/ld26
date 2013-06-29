@@ -81,7 +81,7 @@ typedef struct log {
 #define TORQUE			192.0f
 #define INITIAL_HEALTH	255
 
-#define SPAWN_BOX		1024
+#define SPAWN_BOX		64
 
 #define DEFAULT_SCANLINE	0.7f
 
@@ -273,6 +273,9 @@ static void game_destroy(xpl_context_t *self, void *data) {
 }
 
 #define INDICATOR_COOLDOWN_JIFFIES 15
+
+static double latency_manual = 0.0;
+
 static void game_engine(xpl_context_t *self, double time, void *data) {
 	
 	timestep = self->app->engine_info->timestep;
@@ -286,6 +289,14 @@ static void game_engine(xpl_context_t *self, double time, void *data) {
 	}
 	
 	network.latency_time += time;
+	
+	if (xpl_input_key_down('Z')) {
+		latency_manual -= 0.01;
+		LOG_DEBUG("Manual latency: %f", latency_manual);
+	} else if (xpl_input_key_down('X')) {
+		latency_manual += 0.01;
+		LOG_DEBUG("Manual latency: %f", latency_manual);
+	}
 	
 	if (game.player_connected[0]) {
 		scanline_strength = DEFAULT_SCANLINE;
@@ -891,22 +902,37 @@ static void packet_handle_player(uint16_t client_id, packet_t *packet) {
 		}
 		game.player_local[pi].thrust_audio->action = packet->player.is_thrust ? aa_play : aa_stop;
 		
-		xvec2 v2 = v2_for_velocity(game.player[pi].velocity);
-		double speed = xvec2_length(v2);
-		double latency = network.latency;
-		if (speed > 0.f) {
-			// How far is the player from their packet position, at their last velocity?
-			int dx = packet->player.position.px - game.player[pi].position.px;
-			int dy = packet->player.position.py - game.player[pi].position.py;
-			double distance = sqrt(dx * dx + dy * dy);
-			latency = distance / speed;
-		}
-		game.player_local[pi].latency = (game.player_local[pi].latency + latency) / 2;
-		LOG_DEBUG("New remote latency: %f", game.player_local[pi].latency);
+//		xvec2 v2 = v2_for_velocity(game.player[pi].velocity);
+//		double speed = xvec2_length(v2);
+//		double latency = network.latency;
+//		if (speed > 0.f) {
+//			// Where did we project the player to be?
+//			position_t projected_position = game.player[pi].position;
+//			
+//			// Where would the player have been without a latency projection?
+//			player_update_position(pi, -game.player_local[pi].latency);
+//			position_t original_position = game.player[pi].position;
+//
+//			// How far is the player from their packet position, at their last velocity?
+//			int dx = (packet->player.position.px - game.player[pi].position.px);
+//			int dy = (packet->player.position.py - game.player[pi].position.py);
+//			double distance = sqrt(dx * dx + dy * dy) / VELOCITY_SCALE;
+//			latency = (distance / speed);
+//			// Undo revert
+//			player_update_position(pi, game.player_local[pi].latency);
+//			LOG_DEBUG("Approximated latency: %f", latency);
+//		}
+		//double latency = latency_manual ? latency_manual : 2.0 * network.latency;
+//		double latency = latency_manual;
+		double latency = 2.0 * network.latency;
 		
-		game.player[pi] = packet->player;
+		// Overwrite the player data with the packet, which we'll have to re-advance.
 		game.player_local[pi].visible = true;
-		player_update_position(pi, network.latency + game.player_local[pi].latency);
+//		player_update_position(pi, -game.player_local[pi].latency);
+		game.player[pi] = packet->player;
+		game.player_local[pi].latency = latency;
+		LOG_DEBUG("New remote latency: %f", game.player_local[pi].latency);
+		player_update_position(pi, game.player_local[pi].latency);
 	}
 }
 
@@ -1189,6 +1215,8 @@ static void player_init(int i) {
 	game.player[i].health = INITIAL_HEALTH;
 	game.player[i].orientation = xpl_irand_range(0, UINT8_MAX);
 	game.player_local[i].visible = false;
+	game.player[i].velocity.dx = 150;
+	game.player[i].velocity.dy = 0;
 	
 	if (! game.player_local[i].rotate_audio) {
 		game.player_local[i].rotate_audio = audio_create("rotate", false);
@@ -1364,8 +1392,8 @@ static void player_update_position(int i, double time) {
 	xvec2 velocity = xvec2_set(game.player[i].velocity.dx / VELOCITY_SCALE,
 							   game.player[i].velocity.dy / VELOCITY_SCALE);
 	double scale = time / timestep;
-	if (scale > 1.f) {
-		LOG_DEBUG("Projecting %f ticks ahead", scale);
+	if (scale < 0.f || scale > 1.f) {
+		LOG_DEBUG("Projecting %f ticks", scale);
 	}
 	velocity = xvec2_scale(velocity, scale);
 	
