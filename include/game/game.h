@@ -55,6 +55,7 @@ typedef struct player {
 
 typedef struct player_local {
 	xvec2		position_buffer;
+	double		latency;
 	bool		visible;
 	audio_t		*thrust_audio;
 	audio_t		*rotate_audio;

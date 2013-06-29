@@ -2251,7 +2251,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = /Users/justin/Projects/Informi/Tools/scripts/plist_version_update.rb;
+			shellScript = $SRCROOT/../build/scripts/plist_version_update.rb;
 		};
 		D0CABC3317761E3B003C6DD7 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -2264,7 +2264,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = /Users/justin/Projects/Informi/Tools/scripts/header_version_update.rb;
+			shellScript = $SRCROOT/../build/scripts/header_version_update.rb;
 		};
 		D0CABC3417761EC4003C6DD7 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -2277,7 +2277,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = /Users/justin/Projects/Informi/Tools/scripts/header_version_update.rb;
+			shellScript = $SRCROOT/../build/scripts/header_version_update.rb;
 		};
 		D0CABC3517761FC0003C6DD7 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -2290,7 +2290,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = /Users/justin/Projects/Informi/Tools/scripts/plist_version_update.rb;
+			shellScript = $SRCROOT/../build/scripts/plist_version_update.rb;
 		};
 		D0FA1AC31729B010008CDA87 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;

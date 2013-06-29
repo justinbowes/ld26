@@ -890,9 +890,23 @@ static void packet_handle_player(uint16_t client_id, packet_t *packet) {
 			game.player_local[pi].rotate_audio->action = aa_play;
 		}
 		game.player_local[pi].thrust_audio->action = packet->player.is_thrust ? aa_play : aa_stop;
+		
+		xvec2 v2 = v2_for_velocity(game.player[pi].velocity);
+		double speed = xvec2_length(v2);
+		double latency = network.latency;
+		if (speed > 0.f) {
+			// How far is the player from their packet position, at their last velocity?
+			int dx = packet->player.position.px - game.player[pi].position.px;
+			int dy = packet->player.position.py - game.player[pi].position.py;
+			double distance = sqrt(dx * dx + dy * dy);
+			latency = distance / speed;
+		}
+		game.player_local[pi].latency = (game.player_local[pi].latency + latency) / 2;
+		LOG_DEBUG("New remote latency: %f", game.player_local[pi].latency);
+		
 		game.player[pi] = packet->player;
 		game.player_local[pi].visible = true;
-		player_update_position(pi, network.latency);
+		player_update_position(pi, network.latency + game.player_local[pi].latency);
 	}
 }
 
