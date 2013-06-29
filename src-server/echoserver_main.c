@@ -55,7 +55,7 @@ static double		uptime			= 0.0;
 /*
  * error - wrapper for perror
  */
-static void error(char *msg) {
+static void exit_error(char *msg) {
 	LOG_ERROR("%s", msg);
 	exit(1);
 }
@@ -202,7 +202,7 @@ int main(int argc, char **argv) {
 	udp_socket_init();
 	sock = udp_create_endpoint(portno);
 	if (sock < 0) {
-		error("Couldn't bind endpoint");
+		exit_error("Couldn't bind endpoint");
 	}
 	
 	LOG_INFO("Socket bound on port %d", portno);
@@ -221,7 +221,7 @@ int main(int argc, char **argv) {
 				xpl_sleep_seconds(0.01);
 				continue;
 			}
-			error("Error code from socket on receive");
+			exit_error("Error code from socket on receive");
 		}
 		
 		LOG_DEBUG("Received packet");

@@ -1,3 +1,4 @@
 #!/bin/sh
-nohup ./server_spawner.sh
+nohup ./server_spawner.sh >> spawner.out
+
 
