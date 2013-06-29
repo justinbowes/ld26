@@ -72,6 +72,63 @@ void xpl_l10n_set_fallback_locale(const char *set_locale) {
     clear_l10n_table();
 }
 
+static char * unescape(const char *input) {
+	char *output = xpl_calloc(strlen(input) + 1);
+	bool is_escape = false;
+	int j = 0, value = 0, chars_consumed = 0;
+	const char *i = input;
+	while (*i) {
+		if (! is_escape) {
+			if (*i == '\\') {
+				is_escape = true;
+			} else {
+				output[j++] = *i;
+			}
+			i++;
+		} else {
+			// parse embedded sequences
+			switch (*i) {
+				case '0':
+				{
+					sscanf(i, "%3o%n", &value, &chars_consumed);
+					output[j++] = value;
+					i += chars_consumed;
+					break;
+				}
+				case 'x':
+				case 'X':
+				{
+					sscanf(i, "%x%n", &value, &chars_consumed);
+					output[j++] = value;
+					i += chars_consumed;
+					break;
+				}
+				case 'u':
+				case 'U':
+				{
+					// unsupported
+					break;
+				}
+					
+				case '\'':	output[j++] = '\'';	i++; break;
+				case '"':	output[j++] = '"';	i++; break;
+				case '?':	output[j++] = '?';	i++; break;
+				case '\\':	output[j++] = '\\';	i++; break;
+				case 'a':	output[j++] = '\a';	i++; break;
+				case 'b':	output[j++] = '\b';	i++; break;
+				case 'f':	output[j++] = '\f';	i++; break;
+				case 'n':	output[j++] = '\n';	i++; break;
+				case 'r':	output[j++] = '\r';	i++; break;
+					
+				default:
+					break;
+			}
+			is_escape = false;
+		}
+	}
+	return output;
+}
+
 static bool l10n_lookup(const char *loc, const char *key, char **l10n_out) {
     *l10n_out = NULL;
     
@@ -96,6 +153,7 @@ static bool l10n_lookup(const char *loc, const char *key, char **l10n_out) {
         size_t buffer_size = 64;
         while (chars_copied == -1) {
             text = xpl_realloc(text, buffer_size * sizeof(char));
+			text[0] = 0;
             chars_copied = ini_gets("l10n", key, "", text, (int)buffer_size, filename);
             if (chars_copied == buffer_size - 1) {
                 buffer_size *= 1.5;
@@ -107,10 +165,15 @@ static bool l10n_lookup(const char *loc, const char *key, char **l10n_out) {
         	text = NULL;
         }
     }
-    
+	char *unescaped = NULL;
+	if (chars_copied > 0) {
+		unescaped = unescape(text);
+		xpl_free(text);
+	}
+	
     l10n_entry_t *entry = xpl_calloc_type(l10n_entry_t);
     strncpy(entry->key, locale_key, L10N_KEYLEN);
-    entry->mbs_value = text;
+    entry->mbs_value = unescaped;
     HASH_ADD_STR(l10n_table, key, entry);
     
     *l10n_out = entry->mbs_value;

@@ -8,9 +8,8 @@
 #ifndef XPL_SKYBOX_H_
 #define XPL_SKYBOX_H_
 
-#include "GL3/gl3.h"
-
 #include "xpl.h"
+#include "xpl_gl.h"
 #include "xpl_vao.h"
 #include "xpl_texture.h"
 #include "xpl_bo.h"

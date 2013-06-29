@@ -78,8 +78,8 @@ static const projectile_config_t projectile_config[] = {
 		-1,
 		false,
 		
-		"weapon_0.ogg",
-		"explode_4.ogg"
+		"weapon_0",
+		"explode_4"
 	},
 	{ // 1: heavy pew
 		30,
@@ -106,8 +106,8 @@ static const projectile_config_t projectile_config[] = {
 		1,
 		false,
 		
-		"weapon_1.ogg",
-		"explode_4.ogg"
+		"weapon_1",
+		"explode_4"
 	},
 	{ // 2: missile
 		45,
@@ -134,8 +134,8 @@ static const projectile_config_t projectile_config[] = {
 		5,
 		false,
 		
-		"weapon_2.ogg",
-		"explode_2.ogg"
+		"weapon_2",
+		"explode_2"
 	},
 	{ // 3: heavy missile
 		90,
@@ -162,8 +162,8 @@ static const projectile_config_t projectile_config[] = {
 		10,
 		false,
 		
-		"weapon_3.ogg",
-		"explode_2.ogg"
+		"weapon_3",
+		"explode_2"
 	},
 	{ // 4: nuke
 		255,
@@ -190,8 +190,8 @@ static const projectile_config_t projectile_config[] = {
 		250,
 		true,
 		
-		"weapon_4.ogg",
-		"explode_0.ogg"
+		"weapon_4",
+		"explode_0"
 	},
 	{ // 5: mine
 		90,
@@ -218,8 +218,8 @@ static const projectile_config_t projectile_config[] = {
 		10,
 		true,
 		
-		"weapon_5.ogg",
-		"explode_2.ogg"
+		"weapon_5",
+		"explode_2"
 	},
 	{ // 6: black hole
 		120,
@@ -246,8 +246,8 @@ static const projectile_config_t projectile_config[] = {
 		500,
 		true,
 		
-		"weapon_6.ogg",
-		"explode_3.ogg"
+		"weapon_6",
+		"explode_3"
 	},
 	{ // 7: repair
 		128,
@@ -274,7 +274,7 @@ static const projectile_config_t projectile_config[] = {
 		250,
 		true,
 		
-		"weapon_7.ogg",
+		"weapon_7",
 		NULL
 	},
 };

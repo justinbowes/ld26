@@ -266,7 +266,7 @@ const char* glswGetShader(const char* pEffectKey)
                     // Check for a version mapping.
                     if (gc->TokenMap)
                     {
-                        struct bstrList* version_tokens = bsplit(shaderKey, '.');
+                        struct bstrList* version_tokens = bsplit(effectKey, '.');
                         glswList* pTokenMapping = gc->TokenMap;
 
                         while (pTokenMapping)

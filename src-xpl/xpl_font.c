@@ -186,7 +186,7 @@ void font_generate_kerning(xpl_font_t *self) {
 		HASH_ITER(hh, self->glyph_ttable, leading_glyph, t2) {
 			if (leading_glyph->charcode == -1)
 				continue; // Skip special background glyph
-            
+
 			xpl_kerning_t *k;
 			HASH_FIND_INT(trailing_glyph->kerning_table, &leading_glyph->charcode, k);
 			if (k) continue;
@@ -200,18 +200,19 @@ void font_generate_kerning(xpl_font_t *self) {
 			// 26.6 encoding and transform matrix means kerning is in units of 64 * 64
 			k = kerning_new(leading_glyph->charcode, kerning.x / (float) (HRES * HRES));
 			HASH_ADD_INT(trailing_glyph->kerning_table, charcode, k);
-            
 		}
 	}
 	FT_Done_Face(face);
 	FT_Done_FreeType(library);
 }
 
+#ifndef XPL_PLATFORM_IOS
 static int lcd_filter_default[] = { 0x10, 0x40, 0x70, 0x40, 0x10 };
 /*
  static int lcd_filter_light[]       = { 0x00, 0x55, 0x56, 0x55, 0x00 };
  */
 #define FILTER lcd_filter_default
+#endif
 #define EXTRA_PRECISION 100.0f
 
 xpl_font_t *xpl_font_new(xpl_texture_atlas_t *atlas, const char *name,
@@ -240,6 +241,8 @@ xpl_font_t *xpl_font_new(xpl_texture_atlas_t *atlas, const char *name,
 	self->outline_type = xfo_none;
 	self->outline_thickness = 0.0f;
 	self->hinting = TRUE;
+	
+#ifndef XPL_PLATFORM_IOS
 	self->lcd_filtering = TRUE;
     
 	self->lcd_weights[0] = FILTER[0];
@@ -247,6 +250,7 @@ xpl_font_t *xpl_font_new(xpl_texture_atlas_t *atlas, const char *name,
 	self->lcd_weights[2] = FILTER[2];
 	self->lcd_weights[3] = FILTER[3];
 	self->lcd_weights[4] = FILTER[4];
+#endif
     
 	// Try to get high-res font metrics
 	FT_Library library;
@@ -358,7 +362,7 @@ xpl_glyph_t *xpl_font_get_glyph(xpl_font_t *self, wchar_t charcode) {
 	wchar_t buffer[2] = { charcode, 0 };
 	if (xpl_font_load_glyphs(self, buffer)) {
 		// We only asked for one glyph, and the missed list was nonzero.
-		return NULL ;
+		return NULL;
 	}
     
 	// That worked. Look up and return the glyph.
@@ -375,7 +379,11 @@ size_t xpl_font_load_glyphs(xpl_font_t *self, const wchar_t *charcodes) {
 	size_t charcount = wcslen(charcodes);
 	FT_Bitmap ft_bitmap;
 	FT_Error error;
-	int buffer_depth = self->manager_atlas->depth;
+#ifndef XPL_PLATFORM_IOS
+	size_t buffer_depth = self->manager_atlas->depth;
+#else
+	size_t buffer_depth = 1;
+#endif
     
 	FT_UInt glyph_index;
 	xpl_glyph_t *glyph;
@@ -405,6 +413,7 @@ size_t xpl_font_load_glyphs(xpl_font_t *self, const wchar_t *charcodes) {
                   FT_LOAD_FORCE_AUTOHINT :
                   (FT_LOAD_NO_HINTING | FT_LOAD_NO_AUTOHINT));
         
+#ifndef XPL_PLATFORM_IOS
 		if (buffer_depth == 3) {
 			// Buffoonery: If the texture atlas depth is 3 bytes, we surmise that the
 			// user wants subpixel rendering.
@@ -413,6 +422,7 @@ size_t xpl_font_load_glyphs(xpl_font_t *self, const wchar_t *charcodes) {
 			if (self->lcd_filtering)
 				FT_Library_SetLcdFilterWeights(library, self->lcd_weights);
 		}
+#endif
         
 		error = FT_Load_Glyph(face, glyph_index, flags);
 		if (error) {
@@ -482,10 +492,12 @@ size_t xpl_font_load_glyphs(xpl_font_t *self, const wchar_t *charcodes) {
 				return charcount - i;
 			}
             
-			error = FT_Glyph_To_Bitmap(&ft_glyph,
-                                       (buffer_depth == 3 ?
-                                        FT_RENDER_MODE_LCD : FT_RENDER_MODE_NORMAL), NULL,
-                                       TRUE);
+#ifndef XPL_PLATFORM_IOS
+			int glyph_to_bitmap_flags = (buffer_depth == 3 ? FT_RENDER_MODE_LCD : FT_RENDER_MODE_NORMAL);
+#else
+			int glyph_to_bitmap_flags = FT_RENDER_MODE_NORMAL;
+#endif
+			error = FT_Glyph_To_Bitmap(&ft_glyph, glyph_to_bitmap_flags, NULL, TRUE);
 			if (error) {
 				LOG_FT_ERROR(error);
 				FT_Done_Face(face);
@@ -504,7 +516,7 @@ size_t xpl_font_load_glyphs(xpl_font_t *self, const wchar_t *charcodes) {
 			FT_Stroker_Done(stroker);
 		} // endif stroked
         
-		const int pad_region = buffer_depth;
+		const size_t pad_region = buffer_depth;
 		// Separate each glyph by at least one black pixel.
 		xirect region = xpl_texture_atlas_get_region(self->manager_atlas,
                                                      (bmp_size.width / buffer_depth) + pad_region,
@@ -512,7 +524,7 @@ size_t xpl_font_load_glyphs(xpl_font_t *self, const wchar_t *charcodes) {
         
 		if (region.x < 0) {
 			missed++;
-			LOG_WARN("Texture atlas is full on glyph index %ud", (unsigned int)i);
+			LOG_WARN("Texture atlas is full (%d) on glyph index %ud", region.x, (unsigned int)i);
 			continue;
 		}
         
@@ -539,7 +551,7 @@ size_t xpl_font_load_glyphs(xpl_font_t *self, const wchar_t *charcodes) {
 		error = FT_Load_Glyph(face, glyph_index,
                               FT_LOAD_RENDER | FT_LOAD_NO_HINTING);
 		if (error) {
-            
+			xpl_free(glyph);
 			LOG_FT_ERROR(error);
 			FT_Done_FreeType(library);
 			return charcount - i;

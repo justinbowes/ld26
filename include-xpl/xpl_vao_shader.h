@@ -11,8 +11,7 @@
 
 #include <stdbool.h>
 
-#include <uthash.h>
-
+#include "uthash.h"
 #include "xpl_bo.h"
 
 #define VATTR_NAME_MAX      64
@@ -25,6 +24,7 @@ typedef struct xpl_vertex_attrib {
 	char                        name[VATTR_NAME_MAX];
 	xpl_bo_t                    *vbo_source;
 	int                         enabled;
+	int							configured;
 
 	GLint                       size;
 	GLenum                      type;

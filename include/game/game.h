@@ -55,6 +55,7 @@ typedef struct player {
 
 typedef struct player_local {
 	xvec2		position_buffer;
+	double		latency;
 	bool		visible;
 	audio_t		*thrust_audio;
 	audio_t		*rotate_audio;
@@ -145,9 +146,16 @@ typedef struct game {
 	
 } game_t;
 
-extern game_t							game;
+extern game_t game;
 
 #define SERVER_SIZE		128
+
+typedef struct error {
+	char		msg[256];
+	float		timeout;
+} error_t;
+
+extern error_t error;
 
 typedef struct network {
 	
@@ -155,14 +163,15 @@ typedef struct network {
 	uint16_t	server_port;
 	float		hello_timeout;
 	
-	char		error[256];
-	float		error_timeout;
-	
 	float		position_timeout;
 	float		receive_timeout;
 	
+	double		latency_time;
+	double		latency_timestamp;
+	double		latency;
+	
 } network_t;
 
-extern network_t						network;
+extern network_t network;
 
 #endif

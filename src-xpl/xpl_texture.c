@@ -59,6 +59,7 @@ GLuint xpl_texture_load(xpl_texture_t *self, const char *resource_name, bool all
 	return self->texture_id;
 }
 
+#ifndef XPL_GLES
 GLuint xpl_texture_load_array(xpl_texture_t *self, ...) {
 	GLint original_unpack_alignment;
 	glGetIntegerv(GL_UNPACK_ALIGNMENT, &original_unpack_alignment);
@@ -162,6 +163,7 @@ GLuint xpl_texture_load_array(xpl_texture_t *self, ...) {
     
 	return self->texture_id;
 }
+#endif
 
 xpl_texture_region_t *xpl_texture_region_new(xpl_texture_t *texture,
 		xirect *region) {

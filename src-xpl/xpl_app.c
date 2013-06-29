@@ -8,11 +8,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <locale.h>
 
 #include "xpl.h"
 
-#include "xpl_gl_debug.h"
+#include "xpl_gl.h"
 #include "xpl_texture.h"
 
 #include "xpl_app.h"
@@ -20,9 +21,7 @@
 #include "xpl_l10n.h"
 #include "xpl_app_params.h"
 
-#ifdef XPL_PLATFORM_OSX
-#define GL_ARB_shader_objects
-#include <OpenGL/CGLTypes.h>
+#if defined(XPL_PLATFORM_OSX)
 #include <OpenGL/OpenGL.h>
 
 static void osx_force_discrete_gpu() {
@@ -45,7 +44,7 @@ static void set_platform_hints() {
     glfwOpenWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 }
 
-#else
+#elif !defined(XPL_PLATFORM_IOS)
 static void set_platform_hints() {
     glfwOpenWindowHint(GLFW_OPENGL_VERSION_MAJOR, 3);
     glfwOpenWindowHint(GLFW_OPENGL_VERSION_MINOR, 2);
@@ -53,6 +52,7 @@ static void set_platform_hints() {
 }
 #endif
 
+#if !defined(XPL_PLATFORM_IOS)
 void GLFWCALL window_resized(int width, int height) {
     LOG_DEBUG("Window resized to %d x %d", width, height);
 	glViewport(0, 0, width, height);
@@ -63,10 +63,11 @@ static void set_common_hints(xpl_app_t *app) {
 	if (app->allow_resize) {
 		glfwSetWindowSizeCallback(window_resized);
 	}
-#ifdef GL_DEBUG
+#	ifdef GL_DEBUG
     glfwOpenWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
-#endif
+#	endif
 }
+#endif
 
 int xpl_start_app(xpl_app_t *app) {
 
@@ -84,17 +85,20 @@ int xpl_start_app(xpl_app_t *app) {
 	osx_force_discrete_gpu();
 #endif
 
+#ifndef XPL_PLATFORM_IOS
     if (glfwInit() != GL_TRUE) {
         LOG_ERROR("Couldn't initialize GLFW");
         exit(XPL_RC_GLFW_INIT_FAILED);
     }
-
+#endif
+	
     do {
         if (app->restart) {
             app->restart = false;
             app->did_restart = true;
         }
 
+#ifndef XPL_PLATFORM_IOS
         LOG_DEBUG("Loading %sapp parameters", defaults ? "default " : "");
         xpl_app_params_t display_params = xpl_app_params_load(defaults);
 
@@ -124,12 +128,14 @@ int xpl_start_app(xpl_app_t *app) {
 
         }
 
+#if ! defined(XPL_PLATFORM_OSX)
 		if (gl3wInit()) {
             LOG_ERROR("Couldn't initialize gl3w");
             exit(XPL_RC_GL3W_INIT_FAILED);
         }
+#endif
         
-        xpl_gl_debug_install(); // No-op if not debug
+        xpl_gl_debug_install(); // No-op if not debug or not supported
 		
         glfwSetWindowTitle(app->title);
         glfwSetWindowSizeCallback(&window_resized);
@@ -163,14 +169,17 @@ int xpl_start_app(xpl_app_t *app) {
 
         glfwSwapInterval(display_params.is_framelimit ? 1 : 0);
         GL_DEBUG();
-        
+
         app->display_params = display_params;
+#endif
         
         xpl_l10n_set_fallback_locale("en");
         xpl_l10n_load_saved_locale();
 
     	app->execution_info = xpl_engine_execution_info_new();
+#ifndef XPL_PLATFORM_IOS
         app->execution_info->screen_size = xivec2_set(width, height);
+#endif
         app->engine_info = xpl_engine_info_new();
 
         app->init_func(app);
@@ -181,11 +190,13 @@ int xpl_start_app(xpl_app_t *app) {
 
         LOG_INFO("Main loop shut down.");
 
+#ifndef XPL_PLATFORM_IOS
         glfwCloseWindow();
         
         if ( ! app->restart) {
             glfwTerminate();
         }
+#endif
 
         xpl_engine_execution_info_destroy(&app->execution_info);
 
@@ -194,4 +205,22 @@ int xpl_start_app(xpl_app_t *app) {
     xpl_app_destroy(&app);
     
     return 0;
+}
+
+// --- xpl_app_info
+
+static char *unset_title = "Unnamed XPL Application";
+
+xpl_app_t *xpl_app_new(int argc, char *argv[]) {
+	xpl_app_t *app_info = xpl_calloc_type(xpl_app_t);
+	app_info->title = unset_title;
+    app_info->argc = argc;
+    app_info->argv = argv;
+	setlocale(LC_CTYPE, "UTF-8");
+	return app_info;
+}
+
+void xpl_app_destroy(xpl_app_t **app_info) {
+	xpl_free(*app_info);
+	*app_info = NULL;
 }

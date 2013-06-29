@@ -30,7 +30,12 @@ static void texture_atlas_add_initial_node(xpl_texture_atlas_t *self) {
 
 static void texture_atlas_create_initial_buffer(xpl_texture_atlas_t *self) {
 	xpl_dynamic_buffer_t *buffer = xpl_dynamic_buffer_new();
-	xpl_dynamic_buffer_alloc(buffer, self->width * self->height * self->depth * sizeof (unsigned char), TRUE);
+#ifdef XPL_PLATFORM_IOS
+	size_t depth = 1;
+#else
+	size_t depth = self->depth;
+#endif
+	xpl_dynamic_buffer_alloc(buffer, self->width * self->height * depth * sizeof (unsigned char), TRUE);
 	self->data = buffer;
 }
 
@@ -94,7 +99,7 @@ static void texture_atlas_merge_nodes(xpl_texture_atlas_t *self) {
 	}
 }
 
-xpl_texture_atlas_t *xpl_texture_atlas_new(const int width, const int height, const int depth) {
+xpl_texture_atlas_t *xpl_texture_atlas_new(const size_t width, const size_t height, const size_t depth) {
 	assert((depth == 1) ||
 		   (depth == 3) ||
 		   (depth == 4)
@@ -107,7 +112,9 @@ xpl_texture_atlas_t *xpl_texture_atlas_new(const int width, const int height, co
 	self->used          = 0;
 	self->width         = width;
 	self->height        = height;
+#ifndef XPL_PLATFORM_IOS
 	self->depth         = depth;
+#endif
 	self->texture_id    = 0;
 
 	texture_atlas_add_initial_node(self);
@@ -164,6 +171,7 @@ void xpl_texture_atlas_commit(xpl_texture_atlas_t *self) {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // @todo: customize?
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+#ifndef XPL_PLATFORM_IOS
 	switch (self->depth) {
 		case 4:
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
@@ -178,14 +186,19 @@ void xpl_texture_atlas_commit(xpl_texture_atlas_t *self) {
 			break;
 
 		case 1:
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RED,
-                         (GLsizei)self->width, (GLsizei)self->height, 0, GL_RED,
+			glTexImage2D(GL_TEXTURE_2D, 0, XPL_GL_SINGLE_CHANNEL,
+                         (GLsizei)self->width, (GLsizei)self->height, 0, XPL_GL_SINGLE_CHANNEL,
                          GL_UNSIGNED_BYTE, self->data->content);
 			break;
 
 		default:
 			break;
 	}
+#else
+	glTexImage2D(GL_TEXTURE_2D, 0, XPL_GL_SINGLE_CHANNEL,
+				 (GLsizei)self->width, (GLsizei)self->height, 0, XPL_GL_SINGLE_CHANNEL,
+				 GL_UNSIGNED_BYTE, self->data->content);
+#endif
     
     glBindTexture(GL_TEXTURE_2D, GL_NONE);
     
@@ -273,8 +286,12 @@ void xpl_texture_atlas_set_region(xpl_texture_atlas_t *self, xirect region, cons
 	assert((region.x + region.width) <= (self->width - 1));
 	assert((region.y + region.height) <= (self->height - 1));
 
-	int adepth = self->depth;
-	int awidth = self->width;
+#ifndef XPL_PLATFORM_IOS
+	size_t adepth = self->depth;
+#else
+	size_t adepth = 1;
+#endif
+	size_t awidth = self->width;
 
 	int swidth = region.width;
 	int sheight = region.height;

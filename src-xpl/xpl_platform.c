@@ -16,6 +16,7 @@
 #include "xpl_rc.h"
 
 #define PATH_SEP '/'
+#define OS_SEP XPL_PATH_SEPARATOR
 
 // ----------~ sleeeeep ~-----------------------
 #if defined(XPL_PLATFORM_WINDOWS)
@@ -100,7 +101,7 @@ void xpl_sleep_seconds(double seconds) {
     Sleep(t);
 }
 
-#elif defined(XPL_PLATFORM_OSX)
+#elif defined(XPL_PLATFORM_OSX) || defined(XPL_PLATFORM_IOS)
 #include <unistd.h>
 #include <sys/types.h>
 #include <sched.h>
@@ -251,7 +252,7 @@ double xpl_get_time(void) {
 #endif
 
 // ------------ Thread support -----------------
-#ifdef XPL_PLATFORM_OSX
+#if defined(XPL_PLATFORM_OSX) || defined(XPL_PLATFORM_IOS)
 // Mostly in xpl_thread, but this shim allows the OSX impl to be the same
 // as the posix one
 #include <pthread.h>
@@ -329,7 +330,6 @@ static const char *application_root_format() {
     return resource_path_format;
 }
 
-#define OS_SEP '\\'
 #define PLATFORM_RESOURCE_ROOT_FORMAT       application_root_format()
 #define PLATFORM_APP_RESOURCE_FORMAT        "resources\\%s"
 #define PLATFORM_LIBRARY_RESOURCE_FORMAT    "xpl\\%s"
@@ -376,7 +376,6 @@ static const char *bundle_root_format() {
     return resource_path_format;
 }
 
-#define OS_SEP '/'
 #define PLATFORM_RESOURCE_ROOT_FORMAT       bundle_root_format()
 #define PLATFORM_APP_RESOURCE_FORMAT        "resources/%s"
 #define PLATFORM_LIBRARY_RESOURCE_FORMAT    "xpl/%s"
@@ -384,7 +383,6 @@ static const char *bundle_root_format() {
 
 #else
 
-#define OS_SEP '/'
 #define PLATFORM_RESOURCE_ROOT_FORMAT       "%s"
 #define PLATFORM_APP_RESOURCE_FORMAT        "resources/%s"
 #define PLATFORM_LIBRARY_RESOURCE_FORMAT    "xpl/%s"
@@ -437,9 +435,11 @@ static void format_resource_path(char *path_out, const char *path_in, const char
     path_out[length - 1] = 0;
 }
 
+#if !defined(XPL_PLATFORM_IOS) && !defined(XPL_PLATFORM_OSX)
 void xpl_resource_path(char *path_out, const char *path_in, size_t length) {
     format_resource_path(path_out, path_in, PLATFORM_APP_RESOURCE_FORMAT, length);
 }
+#endif
 
 void xpl_library_resource_path(char *path_out, const char *path_in, size_t length) {
     format_resource_path(path_out, path_in, PLATFORM_LIBRARY_RESOURCE_FORMAT, length);
@@ -533,15 +533,7 @@ void xpl_resource_resolve_opts(xpl_resolve_resource_opts_t *out, const char *pat
 	xpl_data_resource_path(&out->data_resource_path[0], path_in, PATH_MAX);
 }
 
-#ifndef XPL_PLATFORM_WINDOWS
-size_t xpl_mbs_to_wcs(const char *mbs, wchar_t *wcs, size_t wcs_size) {
-	return mbstowcs(wcs, mbs, wcs_size);
-}
-
-size_t xpl_wcs_to_mbs(const wchar_t *wcs, char *mbs, size_t mbs_size) {
-	return wcstombs(mbs, wcs, mbs_size);
-}
-#else
+#if defined(XPL_PLATFORM_WINDOWS)
 size_t xpl_mbs_to_wcs(const char *mbs, wchar_t *wcs, size_t wcs_size) {
 	size_t len = MultiByteToWideChar(CP_UTF8, 0, mbs, strlen(mbs), wcs, wcs_size);
 	if (wcs) wcs[xmin(len, wcs_size)] = 0;
@@ -553,7 +545,17 @@ size_t xpl_wcs_to_mbs(const wchar_t *wcs, char *mbs, size_t mbs_size) {
 	if (mbs) mbs[xmin(len, mbs_size)] = 0;
 	return len;
 }
+#elif !defined(XPL_PLATFORM_IOS)
+size_t xpl_mbs_to_wcs(const char *mbs, wchar_t *wcs, size_t wcs_size) {
+	return mbstowcs(wcs, mbs, wcs_size);
+}
 
+size_t xpl_wcs_to_mbs(const wchar_t *wcs, char *mbs, size_t mbs_size) {
+	return wcstombs(mbs, wcs, mbs_size);
+}
+#else
+// setlocale doesn't work on IOS
+// see xpl_platform.m for cocoa-based implementation.
 #endif
 
 

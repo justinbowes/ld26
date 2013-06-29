@@ -750,7 +750,7 @@ void xpl_imui_render_init() {
     
 	g_circle_verts = init_circle_verts();
     
-	g_text_cache = xpl_text_cache_new();
+	g_text_cache = xpl_text_cache_new(256);
     
 	g_circle_verts = init_circle_verts();
 	g_geom_cache = geometry_cache_new();

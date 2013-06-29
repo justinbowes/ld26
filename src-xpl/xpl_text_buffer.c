@@ -42,7 +42,7 @@ typedef struct glyph_vertex {
 
 xpl_text_buffer_t *xpl_text_buffer_new(int surface_width, int surface_height, int lcd_filtering_onoff) {
 	int buffer_depth_bytes = lcd_filtering_onoff; // Yes, this is monstrous
-	xpl_text_buffer_t *result = xpl_text_buffer_shared_font_manager_new(xpl_font_manager_new(512, 512, buffer_depth_bytes));
+	xpl_text_buffer_t *result = xpl_text_buffer_shared_font_manager_new(xpl_font_manager_new(surface_width, surface_height, buffer_depth_bytes));
 	result->shared_font_manager = FALSE;
 	return result;
 }
@@ -445,37 +445,60 @@ void xpl_text_buffer_commit(const xpl_text_buffer_t *self) {
 	xpl_bo_commit(self->vao->index_bos[0]);
 }
 
-void xpl_text_buffer_render(const xpl_text_buffer_t *self, const GLfloat *mvp) {
+static void text_buffer_render_setup(const xpl_text_buffer_t *self) {
 	glEnable(GL_BLEND);
 	glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
-
+	
 	glDepthMask(GL_FALSE);
 	glUseProgram(self->shader->id);
-
-//	if (self->font_manager->atlas->depth == 1) {
-//		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ONE, GL_ZERO);
-//	} else {
+	
+	//	if (self->font_manager->atlas->depth == 1) {
+	//		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ONE, GL_ZERO);
+	//	} else {
 	// premultiplied alpha. Premultiply your alpha.
 	glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
 	//	}
+#ifndef XPL_PLATFORM_IOS
 	glUniform3f(xpl_shader_get_uniform(self->shader, "subpixel"),
                 1.0f / self->font_manager->atlas->width,
                 1.0f / self->font_manager->atlas->height,
-                (GLfloat)self->font_manager->atlas->depth);
-
+                self->font_manager->atlas->depth);
+#endif
+	
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, self->font_manager->atlas->texture_id);
 	glUniform1i(xpl_shader_get_uniform(self->shader, "tex"), 0); // Use texture unit zero.
-	glUniformMatrix4fv(xpl_shader_get_uniform(self->shader, "mvp"), 1, GL_FALSE, mvp);
+}
 
-	xpl_vao_program_draw_elements(self->vao, self->shader, GL_TRIANGLES, 0);
-
+static void text_buffer_render_cleanup() {
 	glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
     glBindTexture(GL_TEXTURE_2D, GL_NONE);
 	glUseProgram(GL_NONE);
 	glDepthMask(GL_TRUE);
     
     GL_DEBUG();
+}
+
+void xpl_text_buffer_render(const xpl_text_buffer_t *self, const GLfloat *mvp) {
+	// lazy atlas
+	if (! self->font_manager->atlas->texture_id) return;
+	if (! self->vertex_count) return;
+	
+	text_buffer_render_setup(self);
+	glUniform4f(xpl_shader_get_uniform(self->shader, "global_tint"), 1.f, 1.f, 1.f, 1.f);
+	xpl_text_buffer_render_no_setup(self, mvp);
+	text_buffer_render_cleanup();	
+}
+
+void xpl_text_buffer_render_tinted(const xpl_text_buffer_t *self, const GLfloat *mvp, const xvec4 color) {
+	// lazy atlas
+	if (! self->font_manager->atlas->texture_id) return;
+	if (! self->vertex_count) return;
+	
+	text_buffer_render_setup(self);
+	glUniform4fv(xpl_shader_get_uniform(self->shader, "global_tint"), 1, color.data);
+	xpl_text_buffer_render_no_setup(self, mvp);
+	text_buffer_render_cleanup();
 }
 
 void xpl_text_buffer_render_no_setup(const xpl_text_buffer_t *self, const GLfloat *mvp) {

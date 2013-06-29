@@ -11,6 +11,7 @@
 
 #include "xpl_vec.h"
 #include "xpl_font.h"
+#include "xpl_hash.h"
 
 #define XPL_MARKUP_FAMILY_NAME_MAX 128
 
@@ -57,5 +58,27 @@ void xpl_markup_clear(xpl_markup_t *markup);
 void xpl_markup_set(xpl_markup_t *markup,
                     const char *family, float size, int bold, int italic,
                     xvec4 foreground_color, xvec4 background_color);
+
+// ---------------------------------------------------------------------
+
+XPLINLINE int xpl_markup_hash(const xpl_markup_t *markup) {
+	int hash = XPL_HASH_INIT;
+	hash = xpl_hashs(markup->family, hash);
+	hash = xpl_hashf(markup->size, hash);
+	hash = xpl_hashi(markup->bold, hash);
+	hash = xpl_hashi(markup->italic, hash);
+    hash = xpl_hashi(markup->outline, hash);
+	hash = xpl_hashf(markup->outline_thickness, hash);
+	hash = xpl_hashf(markup->foreground_color.r, hash);
+	hash = xpl_hashf(markup->foreground_color.g, hash);
+	hash = xpl_hashf(markup->foreground_color.b, hash);
+	hash = xpl_hashf(markup->foreground_color.a, hash);
+	hash = xpl_hashf(markup->background_color.r, hash);
+	hash = xpl_hashf(markup->background_color.g, hash);
+	hash = xpl_hashf(markup->background_color.b, hash);
+	hash = xpl_hashf(markup->background_color.a, hash);
+    
+	return hash;
+}
 
 #endif

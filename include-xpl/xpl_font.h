@@ -11,7 +11,7 @@
 
 #include <wchar.h>
 
-#include <uthash.h>
+#include "uthash.h"
 
 #include "xpl_markup.h"
 #include "xpl_texture_atlas.h"
@@ -88,8 +88,10 @@ typedef struct xpl_font {
 	enum xpl_font_outline_type  outline_type;
 	float                       outline_thickness;
 
+#ifndef XPL_PLATFORM_IOS
 	int                         lcd_filtering; // bool
 	unsigned char               lcd_weights[5];
+#endif
 
 	// Default line spacing. Glyphs may exceed this.
 	float                       height;

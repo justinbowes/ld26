@@ -85,9 +85,9 @@ xpl_shader_t *xpl_shader_new(const char *name) {
 	return shader;
 }
 
-static const char *get_file_content_for_effect_key(const char *effect_key, const char **error) {
+static const char *get_file_content_for_effect_key(const char *effect_key, const char **error, bool include_directives) {
     char full_key[1024];
-	snprintf(full_key, 1024, "%s.%s.%s", effect_key, s_version_suffix, XPL_PLATFORM_STRING);
+	snprintf(full_key, 1024, "%s.%s.%s%s", effect_key, s_version_suffix, XPL_PLATFORM_STRING, include_directives ? ".root" : "");
     
 	const char *source = 0;
 	xpl_resolve_resource_opts_t resource_opts;
@@ -108,7 +108,7 @@ static const char *get_file_content_for_effect_key(const char *effect_key, const
 
 static bstring source_for_effect_key_internal(const char *effect_key, const char **error, struct bstrList *included_keys, int count, int level) {
     if (level >= 32) {
-        LOG_ERROR("Too many levels of includes reading %s, aborting", effect_key);
+        LOG_ERROR("Too many levels of #include reading %s, aborting", effect_key);
         *error = "Incomplete includes";
         return NULL;
     }
@@ -121,7 +121,7 @@ static bstring source_for_effect_key_internal(const char *effect_key, const char
     }
     included_keys->entry[included_keys->qty++] = bfromcstr(effect_key);
     
-    const char *source = get_file_content_for_effect_key(effect_key, error);
+    const char *source = get_file_content_for_effect_key(effect_key, error, level == 0);
     if (*error) return NULL;
     
     bstring bsource = bfromcstr(source);
@@ -135,7 +135,7 @@ static bstring source_for_effect_key_internal(const char *effect_key, const char
     for (size_t i = 0; i < lines->qty; ++i) {
 
         if (sscanf((const char *)lines->entry[i]->data, "#line %d", &line) > 0) {
-            bstring reline = bformat("#line %d %d", line, count);
+            bstring reline = bformat("#line %d %d // %s", line, count, effect_key);
             bassign(lines->entry[i], reline);
             bdestroy(reline);
         } else {
@@ -164,11 +164,21 @@ static bstring source_for_effect_key_internal(const char *effect_key, const char
                     break;
                 }
             }
-            bdestroy(bincluded_key);
+			bdestroy(bincluded_key);
             
             bstring insert_effect = bformat("// #include \"%s\"\n", included_effect_key);
             if (! already_included) {
-                bstring effect_content = source_for_effect_key_internal(included_effect_key, error, included_keys, ++count, level + 1);
+				bstring include_key = bfromcstr(included_effect_key);
+				bstring include_suffix = bfromcstr(".include");
+				bconcat(include_key, include_suffix);
+				bdestroy(include_suffix);
+				
+				char *include_key_cstr = bstr2cstr(include_key, ' ');
+				bdestroy(include_key);
+				
+                bstring effect_content = source_for_effect_key_internal(include_key_cstr, error, included_keys, ++count, level + 1);
+				bcstrfree(include_key_cstr);
+				
                 if (*error) {
                     return NULL;
                 }
@@ -177,11 +187,12 @@ static bstring source_for_effect_key_internal(const char *effect_key, const char
                 bdestroy(effect_content);
                 
                 // Restore original line numbering
-                bstring reline = bformat("#line %d %d", line, my_source_number);
+                bstring reline = bformat("#line %d %d // %s", line, my_source_number, effect_key);
                 bconcat(insert_effect, reline);
                 bdestroy(reline);
 
             }
+
             bassign(lines->entry[i], insert_effect);
             bdestroy(insert_effect);
         }
@@ -239,7 +250,7 @@ GLuint xpl_shader_add(xpl_shader_t *shader, const GLenum shader_type, const char
             LOG_DEBUG("%d\t: %s", i, included_keys->entry[i]->data);
         }
         xpl_gl_breakpoint_func();
-        LOG_DEBUG("%s", source);
+        LOG_DEBUG("\n%s", source);
         xpl_gl_breakpoint_func();
 	}
     
@@ -266,6 +277,7 @@ GLuint xpl_shader_add(xpl_shader_t *shader, const GLenum shader_type, const char
 	return shader_handle;
 }
 
+#ifndef XPL_GLES
 void xpl_shader_bind_frag_data_location(xpl_shader_t *shader, GLuint color_number, const char *name) {
     assert(shader);
     assert(shader->id);
@@ -277,6 +289,7 @@ void xpl_shader_bind_frag_data_location(xpl_shader_t *shader, GLuint color_numbe
     
     GL_DEBUG();
 }
+#endif
 
 GLuint xpl_shader_link(xpl_shader_t *shader) {
 	assert(shader);
@@ -490,26 +503,41 @@ int xpl_shaders_init(const char *path_prefix, const char *path_suffix) {
 	strcpy(s_shader_suffix, path_suffix);
 
 	// Get the OpenGL version in use and introduce version tokens
+#ifdef XPL_GLES
+	sprintf(s_version_suffix, "ES2");
+#else
 	int major, minor;
 	glGetIntegerv(GL_MAJOR_VERSION, &major);
 	glGetIntegerv(GL_MINOR_VERSION, &minor);
 	sprintf(s_version_suffix, "GL%d%d", major, minor);
+#endif
 
-	glswAddDirectiveToken("GL20", "#version 110");
-	glswAddDirectiveToken("GL21", "#version 120");
-
-	glswAddDirectiveToken("GL30", "#version 130");
-	glswAddDirectiveToken("GL31", "#version 140");
-	glswAddDirectiveToken("GL32", "#version 150");
-	glswAddDirectiveToken("GL33", "#version 330");
-
-	glswAddDirectiveToken("ES", "/* TODO provide directives for OpenGL ES */");
+	const char *directive_map[] = {
+		"GL20", "#version 110",
+		"GL21", "#version 120",
+		"GL30", "#version 130",
+		"GL31", "#version 140",
+		"GL32", "#version 150",
+		"ES2",	"#version 100",
+		"",		"#version 330",
+		NULL
+	};
+	
+	LOG_DEBUG("Searching for directive for GL version %s", s_version_suffix);
+	for (const char **k = &directive_map[0], **l = &directive_map[1]; **k; k += 2, l += 2) {
+		if ((strcmp(s_version_suffix, *k) == 0) ||
+			(strcmp("", *k) == 0)) {
+			// Only include this on the root include
+			glswAddDirectiveToken("root", *l);
+			break;
+		}
+	}
 
 	return TRUE;
 }
 
 void xpl_shaders_add_directive(const char *define) {
-	glswAddDirectiveToken(NULL, define);
+	glswAddDirectiveToken("root", define);
 }
 
 xpl_shader_t *xpl_shader_get_prepared(const char *name, const char *vs_name, const char *fs_name) {

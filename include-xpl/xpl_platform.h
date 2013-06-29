@@ -23,30 +23,43 @@
 
 #define XPL_PLATFORM_WINDOWS_D	1
 #define XPL_PLATFORM_OSX_D		2
-#define XPL_PLATFORM_UNIX_D		3
+#define XPL_PLATFORM_IOS_D		4
+#define XPL_PLATFORM_UNIX_D		8
 
 #ifdef _WIN32
 #undef __STRICT_ANSI__
 #endif
 
 #if defined(_WIN32)
-#define WINVER 0x0501
-#define _WIN32_WINNT 0x0501
-#if ! defined(WIN32_LEAN_AND_MEAN)
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#define XPL_PLATFORM XPL_PLATFORM_WINDOWS_D
-#define XPL_PLATFORM_WINDOWS XPL_PLATFORM
-#define XPL_PLATFORM_STRING "Windows"
+#	define WINVER 0x0501
+#	define _WIN32_WINNT 0x0501
+#	if ! defined(WIN32_LEAN_AND_MEAN)
+#		define WIN32_LEAN_AND_MEAN
+#	endif
+#	include <windows.h>
+#	define XPL_TOOLKIT_GLFW
+#	define XPL_PLATFORM XPL_PLATFORM_WINDOWS_D
+#	define XPL_PLATFORM_WINDOWS XPL_PLATFORM
+#	define XPL_PLATFORM_STRING "Windows"
 #elif defined(__APPLE__)
-#define XPL_PLATFORM XPL_PLATFORM_OSX_D
-#define XPL_PLATFORM_OSX XPL_PLATFORM
-#define XPL_PLATFORM_STRING "OSX"
+#	include <TargetConditionals.h>
+#	define XPL_TOOLKIT_COCOA
+#	if (TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR)
+#		define XPL_TOOLKIT_IOS
+#		define XPL_PLATFORM XPL_PLATFORM_IOS_D
+#		define XPL_PLATFORM_IOS XPL_PLATFORM
+#		define XPL_PLATFORM_STRING "IOS"
+#	else
+#		define XPL_TOOLKIT_GLFW
+#		define XPL_PLATFORM XPL_PLATFORM_OSX_D
+#		define XPL_PLATFORM_OSX XPL_PLATFORM
+#		define XPL_PLATFORM_STRING "OSX"
+#	endif
 #else
-#define XPL_PLATFORM XPL_PLATFORM_UNIX_D
-#define XPL_PLATFORM_UNIX XPL_PLATFORM
-#define XPL_PLATFORM_STRING "Unix"
+#	define XPL_TOOLKIT_GLFW
+#	define XPL_PLATFORM XPL_PLATFORM_UNIX_D
+#	define XPL_PLATFORM_UNIX XPL_PLATFORM
+#	define XPL_PLATFORM_STRING "Unix"
 #endif
 
 
@@ -74,7 +87,7 @@ float fmaxf(float f1, float f2);
 float roundf(float f);
 #else
 #	define snwprintf swprintf
-#	if defined XPL_PLATFORM_OSX
+#	if defined(XPL_PLATFORM_OSX) || defined(XPL_PLATFORM_IOS)
 #		include <sys/syslimits.h>
 #	else
 #		include <linux/limits.h>
@@ -82,7 +95,7 @@ float roundf(float f);
 #endif
 
 // ------------- thread stuff -------------------
-#ifdef XPL_PLATFORM_OSX
+#if defined(XPL_PLATFORM_OSX) || defined(XPL_PLATFORM_IOS)
 #include <pthread.h>
 int pthread_timedjoin_np(pthread_t td, void **res, struct timespec *ts);
 #endif

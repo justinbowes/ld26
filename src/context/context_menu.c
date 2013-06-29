@@ -14,6 +14,7 @@
 #include "xpl_hash.h"
 #include "xpl_rand.h"
 #include "xpl_sprite.h"
+#include "xpl_sprite_sheet.h"
 
 #include "context/context_logo.h"
 #include "context/context_game.h"
@@ -31,15 +32,17 @@ static menu_select_t                    menu_stack[MENU_STACK_MAX];
 static int                              menu_index = -1;
 
 // Config menu
-#define MAX_VID_MODES   32
+static float                            configure_scroll = 0.f;
 static xpl_app_params_t                 app_config;
+#ifndef XPL_PLATFORM_IOS
+#define MAX_VID_MODES   32
 static GLFWvidmode                      supported_video_modes[MAX_VID_MODES];
 static size_t                           supported_video_mode_count;
 static size_t                           selected_video_mode_index = -1;
 static int								preferences_is_expanded = 0;
 static int                              resolution_is_expanded = 0;
-static float                            resolution_scroll = 0.f;
 static bool                             video_config_changed = false;
+#endif
 
 static xpl_imui_theme_t                 *imui_theme;
 static xpl_imui_context_t               *imui_context;
@@ -95,8 +98,10 @@ static void create_background() {
     overlay_shader = xpl_shader_get_prepared("Overlay", "Overlay.Vertex", "Overlay.Fragment");
 	
 	bg_batch = xpl_sprite_batch_new();
-	bg_sprite = xpl_sprite_new(bg_batch, "star.png", NULL);
-	up_sprite = xpl_sprite_new(bg_batch, "tile_up.png", NULL);
+	xpl_sprite_sheet_t *bg_sheet = xpl_sprite_sheet_new(bg_batch, "bitmaps/menu.json");
+	
+	bg_sprite = xpl_sprite_get(bg_sheet, "star.png");
+	up_sprite = xpl_sprite_get(bg_sheet, "tile_up.png");
 	for (int i = 0; i < BG_PARTICLE_COUNT; ++i) {
 		bg_particle[i] = xvec2_all(-10.f);
 	}
@@ -106,13 +111,17 @@ static void create_background() {
 }
 
 static void destroy_background() {
-	xpl_bo_destroy(&effect_vbo);
+	xpl_shader_release(&overlay_shader);
 	xpl_vao_destroy(&effect_vao);
-	// xpl_shader_release(&background_shader);
+	xpl_bo_destroy(&effect_vbo);
+	xpl_sprite_batch_destroy(&bg_batch);
+	xpl_sprite_destroy(&bg_sprite);
+	xpl_sprite_destroy(&up_sprite);
 
 	audio_destroy(&title_bgm);
 }
 
+#ifndef XPL_PLATFORM_IOS
 static void populate_video_modes() {
     GLFWvidmode current_mode;
     glfwGetDesktopMode(&current_mode);
@@ -142,22 +151,28 @@ static void populate_video_modes() {
         break;
     }
 }
+#endif
 
-static void menu_configure_graphics(xpl_app_t *app, xrect area) {
-    area = xrect_contract_to(area, 600, 440);
+static void menu_configure(xpl_app_t *app, xrect area) {
+    area = xrect_contract_to(area, xmin(600, area.width), xmin(440, area.height));
     
+#ifndef XPL_PLATFORM_IOS
     int window_clicked = FALSE;
     int save_clicked = FALSE;
+#endif
 	int reset_clicked;
     int back_clicked;
 	int bgm_clicked;
     
     xpl_imui_context_begin(imui_context, app->execution_info, area);
     {
-        xpl_imui_control_scroll_area_begin(xl("config_title"), area.size, &resolution_scroll);
+        xpl_imui_control_scroll_area_begin(xl("config_title"), area.size, &configure_scroll);
         {
             xpl_imui_indent_custom(16.0f);
             {
+				bgm_clicked = xpl_imui_control_check(xl("config_bgm"), prefs.bgm_on, TRUE);
+				reset_clicked = xpl_imui_control_button(xl("config_reset"), 0, TRUE);
+#ifndef XPL_PLATFORM_IOS
             	if (xpl_imui_control_collapse(xl("config_preferences"), "", &preferences_is_expanded, TRUE)) {
 					bgm_clicked = xpl_imui_control_check(xl("config_bgm"), prefs.bgm_on, TRUE);
 					reset_clicked = xpl_imui_control_button(xl("config_reset"), 0, TRUE);
@@ -184,6 +199,7 @@ static void menu_configure_graphics(xpl_app_t *app, xrect area) {
                     }
 					save_clicked = xpl_imui_control_button(xl("config_save"), XPL_IMUI_BUTTON_DEFAULT, video_config_changed);
                 }
+#endif
                 xpl_imui_separator_line();
                 back_clicked = xpl_imui_control_button(xl("back"), XPL_IMUI_BUTTON_CANCEL, TRUE);
             }
@@ -208,6 +224,7 @@ static void menu_configure_graphics(xpl_app_t *app, xrect area) {
 		prefs = prefs_get();
 	}
 	
+#ifndef XPL_PLATFORM_IOS
     if (window_clicked) {
         app_config.is_fullscreen = !app_config.is_fullscreen;
         video_config_changed = true;
@@ -221,55 +238,20 @@ static void menu_configure_graphics(xpl_app_t *app, xrect area) {
             app->restart = true;
         }
     }
+#endif
     
     if (back_clicked) {
         menu_pop();
     }
     
 }
-
-/*
-static void menu_configure(xpl_app_t *app, xrect area) {
-    area = xrect_contract_to(area, 640, 160);
-    
-    int graphics_clicked;
-    int controls_clicked;
-    int back_clicked;
-    
-    float nullscroll = 0.f;
-    xpl_imui_context_begin(imui_context, app->execution_info, area);
-    {
-        xpl_imui_control_scroll_area_begin(xl("config_title"), area.size, &nullscroll);
-        {
-            xpl_imui_indent_custom(16.0f);
-            {
-                graphics_clicked = xpl_imui_control_button(xl("config_button_graphics"), 0, TRUE);
-                controls_clicked = xpl_imui_control_button(xl("config_button_controls"), 0, FALSE);
-                xpl_imui_separator_line();
-                back_clicked = xpl_imui_control_button(xl("back"), XPL_IMUI_BUTTON_CANCEL | XPL_IMUI_BUTTON_DEFAULT, TRUE);
-            }
-            xpl_imui_outdent_custom(16.0f);
-        }
-        xpl_imui_control_scroll_area_end();
-    }
-    xpl_imui_context_end(imui_context);
-    
-    if (graphics_clicked) {
-        menu_push(ms_configure_graphics);
-    }
-    
-    if (back_clicked) {
-        menu_pop();
-    }
-}
- */
 
 static void menu_main(xpl_app_t *app, xrect area) {
-    area = xrect_contract_to(area, 600, 210);
+    area = xrect_contract_to(area, xmin(area.width, 600), xmin(area.height, 210));
     
     int new_clicked;
     int configure_clicked;
-    int exit_clicked;
+    int exit_clicked = FALSE;
     
     float nullscroll = 0.f;
     xpl_imui_context_begin(imui_context, app->execution_info, area);
@@ -283,8 +265,10 @@ static void menu_main(xpl_app_t *app, xrect area) {
                 new_clicked = xpl_imui_control_button(xl("main_new"), 0, TRUE);
                 xpl_imui_separator();
                 configure_clicked = xpl_imui_control_button(xl("main_configure"), 0, TRUE);
+#ifndef XPL_PLATFORM_IOS
                 xpl_imui_separator_line();
                 exit_clicked = xpl_imui_control_button(xl("exit"), 0, TRUE);
+#endif
             }
             xpl_imui_outdent_custom(16.0f);
         }
@@ -393,7 +377,7 @@ static void render(xpl_context_t *self, double time, void *vdata) {
     switch (menu_stack[menu_index]) {
            
         case ms_configure_graphics:
-            mf = menu_configure_graphics;
+            mf = menu_configure;
             break;
             
         case ms_main:
@@ -420,15 +404,18 @@ static void *init(xpl_context_t *self) {
     
     app_config = xpl_app_params_load(FALSE);
     
+#ifndef XPL_PLATFORM_IOS
     populate_video_modes();
-    create_background();
-    
-    preferences_is_expanded = FALSE;
     resolution_is_expanded = FALSE;
+    preferences_is_expanded = FALSE;
+#endif
+    create_background();
 
 	prefs = prefs_get();
     
+#ifndef XPL_PLATFORM_IOS
     glfwEnable(GLFW_MOUSE_CURSOR);
+#endif
     
     return NULL;
 }

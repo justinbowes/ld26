@@ -9,9 +9,10 @@
 #ifndef xpl_osx_xpl_texture_atlas_h
 #define xpl_osx_xpl_texture_atlas_h
 
-#include <GL3/gl3.h>
+#include "xpl.h"
+#include "xpl_gl.h"
 
-#include <utlist.h>
+#include "utlist.h"
 
 #include "xpl_dynamic_buffer.h"
 #include "xpl_vec.h"
@@ -33,9 +34,11 @@ typedef struct xpl_texture_atlas {
 	xpl_texture_atlas_node_t    *nodes;     // utlist
 	int                         node_count;
 
-	int							width;
-	int							height;
-	int							depth;      // buffer depth in bytes (4 = 32 bit)
+	size_t						width;
+	size_t						height;
+#ifndef XPL_PLATFORM_IOS
+	size_t						depth;      // buffer depth in bytes (4 = 32 bit)
+#endif
 
 	int							used;       // surface size used
 
@@ -45,7 +48,7 @@ typedef struct xpl_texture_atlas {
 
 } xpl_texture_atlas_t;
 
-xpl_texture_atlas_t *xpl_texture_atlas_new(const int width, const int height, const int depth);
+xpl_texture_atlas_t *xpl_texture_atlas_new(const size_t width, const size_t height, const size_t depth);
 void xpl_texture_atlas_destroy(xpl_texture_atlas_t **ppatlas);
 
 // Assemble texture atlas from multiple bitmaps.

@@ -12,6 +12,7 @@
 #include <stdio.h>
 
 #include "xpl_platform.h"
+#include "xpl_file.h"
 
 // ----------- logging ----------------------
 #define XPL_LOG_LEVEL_TRACE             0
@@ -33,18 +34,12 @@
 
 #define LOG_ANSI
 
-
-#if defined(XPL_PLATFORM_WINDOWS)
+#if defined(XPL_PLATFORM_OSX) || defined(XPL_PLATFORM_IOS) || defined(XPL_PLATFORM_WINDOWS)
 # undef LOG_ANSI
 #endif
 
-#if defined(XPL_PLATFORM_OSX)
-# undef LOG_ANSI
-# define XPL_STDERR stderr
-# define XPL_STDOUT stdout
-#endif
-
-#if defined(XPL_PLATFORM_UNIX)
+#if defined(XPL_PLATFORM_UNIX) || defined(XPL_PLATFORM_OSX) || defined(XPL_PLATFORM_IOS)
+# include <libgen.h>
 # define XPL_STDERR stderr
 # define XPL_STDOUT stdout
 #endif
@@ -84,10 +79,8 @@
 #define XPL_COLOR_bakcyn ""
 #define XPL_COLOR_bakwht ""
 #define XPL_COLOR_txtrst ""
-char *basename(const char *name);
 
 #else
-#include <libgen.h>
 #define XPL_COLOR_txtblk "\033[0;30m"
 #define XPL_COLOR_txtred "\033[0;31m"
 #define XPL_COLOR_txtgrn "\033[0;32m"
@@ -128,9 +121,11 @@ char *basename(const char *name);
 static char __xpl_log_output[LOG_MAX] XPL_UNUSED;
 #	ifdef _WIN32
 /* MinGW points to _iob which the IDEs don't like */
-#		define xpl_log(stream, color, level, file, func, line, ...) printf("[%s%s%s]\t %s %s:%d %s\n", color, level, XPL_COLOR_txtrst, basename(file), func, line, (snprintf(__xpl_log_output, LOG_MAX, __VA_ARGS__), __xpl_log_output)); fflush(stdout)
+#		define xpl_log(stream, color, level, file, func, line, ...) \
+			printf("[%s%s%s]\t %s %s:%d %s\n", color, level, XPL_COLOR_txtrst, basename(file), func, line, (snprintf(__xpl_log_output, LOG_MAX, __VA_ARGS__), __xpl_log_output)); fflush(stdout)
 #	else
-#		define xpl_log(stream, color, level, file, func, line, ...) /* LOG level */ fprintf(stream, "[%s%s%s]\t %s %s:%d %s\n", color, level, XPL_COLOR_txtrst, basename(file), func, line, (snprintf(__xpl_log_output, LOG_MAX, __VA_ARGS__), __xpl_log_output)); fflush(stream)
+#		define xpl_log(stream, color, level, file, func, line, ...) \
+			fprintf(stream, "[%s%s%s]\t %s %s:%d %s\n", color, level, XPL_COLOR_txtrst, basename(file), func, line, (snprintf(__xpl_log_output, LOG_MAX, __VA_ARGS__), __xpl_log_output)); fflush(stream)
 #	endif
 #else
 #define xpl_log(s, c, lv, f, fn, ln, ...)

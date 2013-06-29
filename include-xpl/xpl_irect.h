@@ -41,4 +41,11 @@ XPLINLINE xirect xirect_contract(xirect rect, int amount) {
 }
 
 
+XPLINLINE int xirect_in_bounds(xirect rect, xivec2 point) {
+	return	point.x >= rect.origin.x &&
+			point.y >= rect.origin.y &&
+			point.x <= rect.origin.x + rect.size.width &&
+			point.y <= rect.origin.y + rect.size.height;
+}
+
 #endif
