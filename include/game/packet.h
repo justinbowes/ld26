@@ -13,15 +13,6 @@
 
 #define CHAT_MAX 64
 
-#define encode(x, type, ptr) \
-	*((type *)ptr) = x; \
-	ptr += sizeof(type);
-
-
-#define decode(ptr, type, x) \
-	x = *((type *)ptr); \
-	ptr += sizeof(type);
-
 typedef enum packet_type {
 	pt_hello,
 	pt_goodbye,

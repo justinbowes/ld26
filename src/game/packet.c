@@ -13,8 +13,20 @@
 #include "game/packet.h"
 #include "game/game.h"
 
+
+#define encode(x, type, ptr) \
+	*((type *)ptr) = (sizeof(type) == 1 ? x : \
+		sizeof(type) == 2 ? htons(x) : htonl(x)); \
+	ptr += sizeof(type);
+
+
+#define decode(ptr, type, x) \
+	x = (sizeof(type) == 1 ? *((type *)ptr) : \
+		sizeof(type) == 2 ? ntohs(*((type *)ptr)) : ntohl(*((type *)ptr))); \
+	ptr += sizeof(type);
+
 static const uint16_t ultrapew_magic = (uint16_t)0xff37;
-static const uint8_t protocol_version = 0x02;
+static const uint8_t protocol_version = 0x03;
 
 size_t packet_encode(packet_t *packet, uint16_t client_id, uint8_t *buffer) {
 	uint8_t *p = buffer;
