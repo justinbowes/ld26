@@ -10,6 +10,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <netdb.h>
+#include <time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -32,17 +33,12 @@
 
 typedef struct client_info {
 	int					id;
-	
-	UDPNET_ADDRESS		remote_addr;
-	
-	uint32_t			seq;
-	double				last_packet_time;
-	
-	player_id_t			player_id;
-	
-	bool				drop;
-		
-	UT_hash_handle		hh;
+	UDPNET_ADDRESS				remote_addr;
+	uint32_t				seq;
+	double					last_packet_time;
+	player_id_t				player_id;
+	bool					drop;
+	UT_hash_handle				hh;
 } client_info_t;
 
 static client_info_t 	*clients 		= NULL;
@@ -61,14 +57,18 @@ static void exit_error(char *msg) {
 }
 
 static void log_event(const char *type, client_info_t *client_info, const char *format, ...) {
+	char timebuf[32];
 	char buffer[1024];
+	uint16_t cid = client_info ? client_info->player_id.client_id : 0;
+	const char *cname = client_info ? client_info->player_id.name : "";
+    	time_t now = time(0);
 	va_list args;
+
 	va_start(args, format);
 	vsnprintf(buffer, 1024, format, args);
 	va_end(args);
-	uint16_t cid = client_info ? client_info->player_id.client_id : 0;
-	const char *cname = client_info ? client_info->player_id.name : "";
-	LOG_INFO("[%s] client_id=[%u,\"%s\"] data=[%s]", type, cid, cname, buffer);
+    	strftime(timebuf, 32, "%Y-%m-%d %H:%M:%S.000", localtime(&now));
+	LOG_INFO("%s [%s] client_id=[%u,\"%s\"] data=[%s]", timebuf, type, cid, cname, buffer);
 }
 
 static void pointcast_buffer(uint8_t *buf, int size, client_info_t *client) {
@@ -230,7 +230,7 @@ int main(int argc, char **argv) {
 
 		uint16_t client_source;
 		packet_t packet;
-		if (!packet_decode(&packet, &client_source, buf)) {
+		if (! packet_decode(&packet, &client_source, buf)) {
 			LOG_WARN("Malformed packet, dropping");
 			continue;
 		}

@@ -8,22 +8,25 @@ SOURCES = ../src-server/echoserver_main.c ../src-xpl/xpl_platform.c ../src/game/
 OBJECTS = $(patsubst %.c,%.o,$(wildcard *.c))
 TARGET = echoserver
 
-.PHONY : all build import depend clean
+.PHONY : all
 
-all: import depend clean build
+all: clean import depend build
 
 build: $(OBJECTS)
 	$(CC) $(CFLAGS) $(OBJECTS) $(LFLAGS) -o $(TARGET)
 
 import:
+	@echo "import"
 	@rm -f *.c *~
 	@for file in $(SOURCES); do ln -s $$file ; done
 
 depend:
+	@echo "depend"
 	@makedepend $(INCDIR) -Y -m $(SOURCES)
 
 clean:
-	@rm -f *.o *.bak *~ *%
+	@echo "clean"
+	@rm -f *.o *.bak *.c *~ *%
 
 ##### End of makefile
 # DO NOT DELETE

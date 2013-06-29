@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 
 #include "game/packet.h"
 #include "game/game.h"
