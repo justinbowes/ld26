@@ -150,7 +150,7 @@ extern game_t game;
 
 #define SERVER_SIZE		128
 
-typedef struct error {
+typedef struct error_struct {
 	char		msg[256];
 	float		timeout;
 } error_t;
