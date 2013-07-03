@@ -166,7 +166,8 @@ void xpl_init_timer(void) {
 }
 
 double xpl_get_time(void) {
-    return (double) (get_absolute_time() - s_timer_info->start_timer) * s_timer_info->resolution;
+    uint64_t diff = get_absolute_time() - s_timer_info->start_timer;
+	return (double)diff * s_timer_info->resolution;
 }
 
 #else

@@ -71,7 +71,9 @@ end
 def process_version_header
     src_root = ENV['SOURCE_ROOT']
     config = ENV['CONFIGURATION'].downcase.to_sym
-    info_plist_filename = ENV['INFOPLIST_FILE']
+	info_plist_filename = "#{ENV['TARGET_BUILD_DIR']}/#{ENV['INFOPLIST_PATH']}"
+	conInfo="Contents/Info.plist"
+	dsym_plist_filename="#{ENV['DWARF_DSYM_FOLDER_PATH']}/#{ENV['DWARF_DSYM_FILE_NAME']}/#{conInfo}"
 
     print "Working from %s in %s mode\n" % [src_root, config]
 
@@ -83,13 +85,14 @@ def process_version_header
     ])    
     cf_bundle_version = build.to_s
     cf_bundle_short_version_string = [ major, minor, revision, build ].join '.'
+
     info_plist_contents = read_file(info_plist_filename)
     replace_plist_value(info_plist_contents, "CFBundleVersion", cf_bundle_version)
     replace_plist_value(info_plist_contents, "CFBundleShortVersionString", cf_bundle_short_version_string)
+    write_file(info_plist_filename, info_plist_contents);
 
     replace_define(version_contents, 'LAST_BUILD_SUCCEEDED') { |old| "true" }
     write_file(version_header_filename, version_contents)
-    write_file(info_plist_filename, info_plist_contents);
 end
 
 process_version_header()

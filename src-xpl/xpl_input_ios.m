@@ -141,11 +141,21 @@ void xpl_input_disable_characters(void) {
 	[key_input resignFirstResponder];
 }
 
-bool xpl_input_mouse_down_in(xirect rect) {
+bool xpl_input_interaction_active(int iid) {
+	if (iid < 0) return false;
+	return states[iid];
+}
+
+bool xpl_input_mouse_down_in(xirect rect, xivec2 *coord, int *iid) {
 	for (size_t i = 0; i < MAX_TOUCHES; ++i) {
 		if (! states[i]) continue;
-		if (xirect_in_bounds(rect, touches[i])) return true;
+		if (xirect_in_bounds(rect, touches[i])) {
+			if (coord) *coord = touches[i];
+			if (iid) *iid = i;
+			return true;
+		}
 	}
+	if (iid) *iid = -1;
 	return false;
 }
 

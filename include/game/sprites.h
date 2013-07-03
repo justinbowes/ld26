@@ -27,6 +27,8 @@ typedef struct sprites {
 	xpl_sprite_t						*particle_sprite;
 	xpl_sprite_t						*weapon_key_sprites[8];
 	xpl_sprite_t						*control_key_sprites[3];
+	xpl_sprite_t						*joystick_pen_sprite;
+	xpl_sprite_t						*joystick_sprite;
 	xpl_sprite_t						*ui_coin_sprite;
 	xpl_sprite_t						*fire_button_lit;
 	xpl_sprite_t						*fire_button_dark;
@@ -40,6 +42,7 @@ extern sprites_t						sprites;
 
 #define STAR_LAYERS		3
 #define STARS_PER_LAYER	256
+#define DEBRIS_PER_LAYER 256
 #define STAR_LAYER_SIZE	4096
 
 #define TILE_SIZE		32

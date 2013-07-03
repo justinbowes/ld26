@@ -1172,8 +1172,9 @@ int xpl_imui_control_slider(const char *text, float *value, float value_min, flo
 	return result || value_changed;
 }
 
-int xpl_imui_control_textfield(const char *prompt, char *mbsinput, size_t input_len, int *cursor_pos, const char *password_char, int enabled) {
+int xpl_imui_control_textfield(const char *prompt, char *mbsinput, const size_t input_len, int *cursor_pos, const char *password_char, int enabled) {
 	assert(context_valid());
+	assert(input_len);
 	control_id id = control_gen_default_id();
 
 	// Configure for input
@@ -1182,7 +1183,8 @@ int xpl_imui_control_textfield(const char *prompt, char *mbsinput, size_t input_
 	// calculate cursors
 	xpl_markup_t text_markup;
 	set_markup(&text_markup, FALSE, 0);
-	char text[256] = { 0 };
+	char text[input_len];
+	text[0] = '\0';
 
 	// Copy user text to output buffer
 	if (password_char && password_char[0]) {
@@ -1193,7 +1195,7 @@ int xpl_imui_control_textfield(const char *prompt, char *mbsinput, size_t input_
 			strcat(&text[0], &password_char[0]);
 		}
 	} else {
-		snprintf(&text[0], 200, "%s", mbsinput);
+		snprintf(&text[0], input_len, "%s", mbsinput);
 	}
 
 	const float height = text_markup.size + 2 * g_context->theme->textfield.border.size;
@@ -1267,15 +1269,15 @@ int xpl_imui_control_textfield(const char *prompt, char *mbsinput, size_t input_
 			// Configure for user text
 			set_markup(&text_markup, FALSE, color_chad(id, enabled,
 													&g_context->theme->textfield.text.color));
-		} else if (has_keyboard_focus) {
-			// Clear prompt when active.
-			strncpy(&text[0], "", 200);
+//		} else if (has_keyboard_focus) {
+//			// Clear prompt when active.
+//			strncpy(&text[0], "", input_len);
 		} else {
 			// Show prompt when inactive.
 			set_markup(&text_markup, FALSE, color_chad(id, enabled,
 													&g_context->theme->textfield.prompt.color));
 			// Copy prompt to output buffer.
-			strncpy(&text[0], prompt, 200);
+			strncpy(&text[0], prompt, input_len);
 		}
 		gfx_add_text(xvec2_set(text_area.x, text_area.y), text, &text_markup, XPL_IMUI_ALIGN_LEFT);
 	}

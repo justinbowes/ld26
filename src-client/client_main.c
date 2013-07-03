@@ -99,15 +99,42 @@ static void main_loop(xpl_app_t *app) {
     glfwSetWindowCloseCallback(glfw_window_close_fun);
 
 	double initial_time = glfwGetTime();
-	double total_time, engine_time, render_interval, render_time, current_time;
+	app->execution_info->current_time = initial_time;
+	app->execution_info->remaining_time_to_process = 0.0;
+	
+	double engine_time, render_interval, render_time;
     double render_start_time = initial_time, engine_start_time = initial_time;
+	
 	while(glfwGetWindowParam(GLFW_OPENED) && !app->restart) {
+		double current_time = glfwGetTime();
+		double last_frame_time = current_time - /* last */ engine_start_time;
+		app->execution_info->current_time = current_time;
+		app->execution_info->remaining_time_to_process += last_frame_time;
+		engine_start_time = current_time;
+
+        if (app->execution_info->remaining_time_to_process > app->engine_info->max_engine_interval) {
+            app->execution_info->remaining_time_to_process = app->engine_info->max_engine_interval;
+            LOG_DEBUG("Clipping engine time to %f", app->execution_info->remaining_time_to_process);
+        }
+		
+		xpl_log_times(app->execution_info, engine_time, 0.0, render_time, last_frame_time);
+		frame_counter++;
+		if (frame_counter >= 1000) {
+			xpl_execution_stats_t stats_out;
+			xpl_average_times(app->execution_info, &stats_out);
+			if (stats_out.all_time > 0.0f) {
+				LOG_DEBUG("Stats: %f FPS (%f average = %f engine + %f render)",
+                          1.0f / stats_out.all_time,
+                          stats_out.all_time, stats_out.engine_time, stats_out.render_time);
+			}
+			frame_counter = 0;
+		}
+		
 		glfwGetWindowSize(&app->execution_info->screen_size.x, &app->execution_info->screen_size.y);
 
 		// Once per frame regardless of the frame rate.
 		audio_update();
 
-		engine_start_time = initial_time;
 		while (app->execution_info->remaining_time_to_process >= app->engine_info->timestep) {
 			xpl_context_t *next_context = context->functions.handoff(context, context_data);
 			if (next_context != context) {
@@ -124,7 +151,6 @@ static void main_loop(xpl_app_t *app) {
 		if (! context) break;
 
 		current_time = glfwGetTime();
-		app->execution_info->current_time = current_time;
 		engine_time = current_time - engine_start_time;
 
 		// Render();
@@ -135,30 +161,6 @@ static void main_loop(xpl_app_t *app) {
 
 		current_time = glfwGetTime();
 		render_time = current_time - render_start_time;
-
-		total_time = current_time - initial_time;
-		initial_time = current_time;
-		app->execution_info->time_delta = total_time;
-		app->execution_info->remaining_time_to_process += total_time;
-
-		xpl_log_times(app->execution_info, engine_time, 0.0, render_time, total_time);
-
-		frame_counter++;
-		if (frame_counter >= 1000) {
-			xpl_execution_stats_t stats_out;
-			xpl_average_times(app->execution_info, &stats_out);
-			if (stats_out.all_time > 0.0f) {
-				LOG_DEBUG("Stats: %f FPS (%f average = %f engine + %f render)",
-                          1.0f / stats_out.all_time,
-                          stats_out.all_time, stats_out.engine_time, stats_out.render_time);
-			}
-			frame_counter = 0;
-		}
-
-        if (app->execution_info->remaining_time_to_process > app->engine_info->max_engine_interval) {
-            app->execution_info->remaining_time_to_process = app->engine_info->max_engine_interval;
-            LOG_DEBUG("Clipping engine time to %f", app->execution_info->remaining_time_to_process);
-        }
     }
 
     xpl_execution_stats_t total_stats = app->execution_info->total_stats;

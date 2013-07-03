@@ -37,7 +37,7 @@ XPLINLINE int hotspot_key(const char *name, int index) {
 	return xpl_hashi(index, PS_HASH(name));
 }
 
-XPLINLINE void hotspot_set(const char *name, int index, xirect area, xivec2 size) {
+XPLINLINE void hotspot_set(const char *name, int index, xirect area, xivec2 screen_size) {
 	hotspot_t *entry = NULL;
 	int key = hotspot_key(name, index);
 	HASH_FIND_INT(hotspot_table, &key, entry);
@@ -52,17 +52,20 @@ XPLINLINE void hotspot_set(const char *name, int index, xirect area, xivec2 size
 		HASH_ADD_INT(hotspot_table, key, entry);
 	}
 	// Remap from center-origin, y-down
-	entry->area.y = size.height - entry->area.y - entry->area.height;
+	entry->area.y = screen_size.height - entry->area.y - entry->area.height;
 }
 
 
-XPLINLINE bool hotspot_active(const char *name, int index) {
+XPLINLINE bool hotspot_active(const char *name, int index, xivec2 *coord, int *iid) {
 	hotspot_t *entry = NULL;
 	int key = hotspot_key(name, index);
 	HASH_FIND_INT(hotspot_table, &key, entry);
-	if (! entry) return false;
+	if (! entry) {
+		if (iid) *iid = -1;
+		return false;
+	}
 	
-	return (xpl_input_mouse_down_in(entry->area));
+	return (xpl_input_mouse_down_in(entry->area, coord, iid));
 }
 
 

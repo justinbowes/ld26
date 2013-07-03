@@ -9,8 +9,12 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
+#ifndef XPL_PLATFORM_WINDOWS
+#	include <arpa/inet.h>
+#	include <netinet/in.h>
+#else
+#	include <Winsock2.h>
+#endif
 
 #include "game/packet.h"
 #include "game/game.h"

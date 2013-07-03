@@ -17,7 +17,7 @@
 // --- xpl_engine_info
 
 xpl_engine_info_t *xpl_engine_info_new() {
-	xpl_engine_info_t *engine_info = xpl_alloc_type(xpl_engine_info_t);
+	xpl_engine_info_t *engine_info = xpl_calloc_type(xpl_engine_info_t);
 	engine_info->timestep = 1.0
 			/ (double) (ini_getl("Engine", "frequency", 60,
 								"engine.ini"));
@@ -83,20 +83,19 @@ void xpl_average_times(xpl_engine_execution_info_t *execution_info,
 	if (head == NULL)
 		return;
 
-	size_t count = 0;
+	double count = 0.0;
 
 	DL_FOREACH(head, stats) {
 		stats_out->all_time += stats->all_time;
 		stats_out->engine_time += stats->engine_time;
 		stats_out->interpolation_time += stats->interpolation_time;
 		stats_out->render_time += stats->render_time;
-		count++;
+		count += 1.0;
 	}
-	double d = (double) count - 1; // We threw away the first frame.
-	stats_out->all_time /= d;
-	stats_out->engine_time /= d;
-	stats_out->interpolation_time /= d;
-	stats_out->render_time /= d;
+	stats_out->all_time /= count;
+	stats_out->engine_time /= count;
+	stats_out->interpolation_time /= count;
+	stats_out->render_time /= count;
 }
 
 void xpl_last_times(xpl_engine_execution_info_t *execution_info,

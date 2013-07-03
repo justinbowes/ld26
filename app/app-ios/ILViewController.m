@@ -24,7 +24,7 @@
 
 #import "ILViewController.h"
 
-#define SKIP_MENU
+#define SKIP_MENU_NO
 
 @interface ILViewController () {
 	xpl_app_t *app;
@@ -92,7 +92,7 @@
 	xpl_l10n_set_fallback_locale("en");
 	xpl_l10n_load_saved_locale();
 	
-    xpl_threads_init(4, NULL);
+    // xpl_threads_init(4, NULL);
 	xpl_init_timer();
 
 	audio_startup();
@@ -174,8 +174,12 @@
 	return result;
 }
 
+static int engine_steps = 0;
 - (void)update
 {
+	
+	double time = xpl_get_time();
+	
 	if (! draw_context) {
 		// Annoyingly, we don't really have any guaranteee that the rect
 		// we're using here for initialization is the same as the one
@@ -186,9 +190,11 @@
 	if (context_needs_init) {
 		context_data = draw_context->functions.init(draw_context);
 		context_needs_init = false;
+		app->engine_info->time = time;
 		return;
 	}
-	
+		
+	/*
 	frame_counter++;
 	if (frame_counter >= 1000) {
 		xpl_execution_stats_t stats_out;
@@ -200,16 +206,13 @@
 		}
 		frame_counter = 0;
 	}
+	 */
 	
-	app->execution_info->current_time = xpl_get_time();
-	
-	app->execution_info->remaining_time_to_process = self.timeSinceLastUpdate;
 	
 	audio_update();
 
-	int engine_steps = 0;
-	while ((app->execution_info->remaining_time_to_process >= app->engine_info->timestep) &&
-		   (engine_steps < 10)) {
+	int current_engine_steps = 0;
+	while (app->engine_info->time < time) {
 		xpl_context_t *next_context = draw_context->functions.handoff(draw_context, context_data);
 		if (next_context != draw_context) {
 			draw_context->functions.destroy(draw_context, context_data);
@@ -220,10 +223,13 @@
 			draw_context->functions.init(draw_context);
 		}
 		draw_context->functions.engine(draw_context, app->engine_info->timestep, context_data);
-		app->execution_info->remaining_time_to_process -= app->engine_info->timestep;
+		app->engine_info->time += app->engine_info->timestep;
+		++current_engine_steps;
 		++engine_steps;
+		// LOG_DEBUG("Engine time %f, rtimebase %f", app->execution_info->current_time, (time - timebase));
 	}
-	LOG_DEBUG("Engine steps: %d, engine lag %f", engine_steps, app->execution_info->remaining_time_to_process);
+	// if (! (engine_steps % 10)) LOG_DEBUG("Engine steps: %d, engine fps %f", engine_steps, engine_steps / (time - timebase));
+	app->execution_info->current_time = xpl_get_time();
 }
 
 - (void)drawSnapshot {

@@ -14,7 +14,7 @@
 
 XPLINLINE int weapon_buttons_left(xivec2 screen) {
 	if (screen.width <= 480) return 140;
-	return 160;
+	return 280;
 }
 
 XPLINLINE int weapon_buttons_spacing(xivec2 screen) {
@@ -42,5 +42,18 @@ XPLINLINE int weapon_cooldown_left(xivec2 screen) {
 XPLINLINE int fire_button_left(xivec2 screen) {
 	return screen.width - 72;
 }
+
+XPLINLINE int joystick_pen_width(xivec2 screen) {
+	return (screen.width <= 480 ? 128 : 256);
+}
+
+XPLINLINE int joystick_pen_height(xivec2 screen) {
+	return (screen.width <= 480 ? 72 : 144);
+}
+
+XPLINLINE int joystick_stick_size(xivec2 screen) {
+	return (screen.width <= 480 ? 32 : 64);
+}
+
 
 #endif

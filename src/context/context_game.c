@@ -81,7 +81,7 @@ typedef struct log {
 #define TORQUE			192.0f
 #define INITIAL_HEALTH	255
 
-#define SPAWN_BOX		64
+#define SPAWN_BOX		1024
 
 #define DEFAULT_SCANLINE	0.7f
 
@@ -111,6 +111,7 @@ static const int fire[]		= { ' ',	13,		0};
 game_t									game;
 network_t								network;
 error_t									error;
+joystick_t								joystick;
 
 static double							timestep;
 
@@ -163,7 +164,7 @@ static void game_destroy(xpl_context_t *self, void *data);
 static void game_engine(xpl_context_t *self, double time, void *data);
 static void *game_init(xpl_context_t *self);
 static void game_init_overlay(void);
-static void game_init_text(void);
+static void game_init_text(float size_ratio);
 static void game_render(xpl_context_t *self, double time, void *data);
 static void game_render_log(xpl_context_t *self);
 static void game_render_playfield(xpl_context_t *self, double time);
@@ -210,6 +211,7 @@ static void player_local_disconnect(void);
 static bool player_local_is_connected(void);
 static void player_local_update_chat(void);
 static void player_local_update_firing(bool jiffy_elapsed);
+static void player_local_update_joystick(xivec2 screen, double time);
 static void player_local_update_rotation(double time);
 static void player_local_update_thrust(double time);
 static void player_local_update_weapon(void);
@@ -274,8 +276,6 @@ static void game_destroy(xpl_context_t *self, void *data) {
 
 #define INDICATOR_COOLDOWN_JIFFIES 15
 
-static double latency_manual = 0.0;
-
 static void game_engine(xpl_context_t *self, double time, void *data) {
 	
 	timestep = self->app->engine_info->timestep;
@@ -289,14 +289,6 @@ static void game_engine(xpl_context_t *self, double time, void *data) {
 	}
 	
 	network.latency_time += time;
-	
-	if (xpl_input_key_down('Z')) {
-		latency_manual -= 0.01;
-		LOG_DEBUG("Manual latency: %f", latency_manual);
-	} else if (xpl_input_key_down('X')) {
-		latency_manual += 0.01;
-		LOG_DEBUG("Manual latency: %f", latency_manual);
-	}
 	
 	if (game.player_connected[0]) {
 		scanline_strength = DEFAULT_SCANLINE;
@@ -375,6 +367,7 @@ static void game_engine(xpl_context_t *self, double time, void *data) {
 			game.player_local[0].visible = true;
 			damage_audio->volume = DAMAGE_VOLUME * ((255.f - game.player[0].health) / 255.f);
 			player_local_update_chat();
+			player_local_update_joystick(self->size, time);
 			player_local_update_thrust(time);
 			player_local_update_rotation(time);
 			player_local_update_firing(jiffy_elapsed);
@@ -460,16 +453,20 @@ static void *game_init(xpl_context_t *self) {
 	strncpy(game.player_id[0].name, prefs.name, NAME_SIZE);
 	network.server_port = prefs.port;
 	
-	game_init_overlay();
-	game_init_text();
+	float ratio = xmax(1024 / self->size.width, 1.0);
 
-	sprites_init();
+	camera.dc = xirect_set(0, 0, self->size.width, self->size.height);
+	camera.dc.y += (TILE_SIZE + 40);
+	camera.dc.height -= (TILE_SIZE + 40);
+	camera.dc.height -= (16 / ratio) * LOG_LINES;
 	
-	camera.draw_area = xirect_set(0, 0, self->size.width, self->size.height);
-	// room for bottom bar
-	camera.draw_area.y += (TILE_SIZE + 40); camera.draw_area.height -= (TILE_SIZE + 40);
-	// room for log
-	camera.draw_area.height -= 48;
+	camera.draw_area = xirect_set(camera.dc.x * ratio, camera.dc.y * ratio,
+								  camera.dc.width * ratio, camera.dc.height * ratio);
+	
+	game_init_overlay();
+	game_init_text(1.f / ratio);
+	sprites_init();
+
 	
 	scanline_strength = DEFAULT_SCANLINE;
 	
@@ -510,10 +507,11 @@ static void game_init_overlay(void) {
 	overlay_strength = 0.f;
 }
 
-static void game_init_text(void) {
+static void game_init_text(float size_ratio) {
 	ui_log.buffer = xpl_text_buffer_new(256, 256, 1);
 	xpl_markup_clear(&ui_log.markup);
-	xpl_markup_set(&ui_log.markup, UI_FONT, 16.f, FALSE, FALSE, xvec4_set(0.0f, 0.0f, 0.3f, 1.f), xvec4_set(0.f, 0.f, 0.f, 0.0f));
+	xpl_markup_set(&ui_log.markup, UI_FONT, 16.f * size_ratio,
+				   FALSE, FALSE, xvec4_set(0.0f, 0.0f, 0.3f, 1.f), xvec4_set(0.f, 0.f, 0.f, 0.0f));
 	memset(ui_log.lines, 0, LOG_LINES * LOG_LINE_MAX);
 	ui_log.timeout = LOG_TIMEOUT;
 	
@@ -576,11 +574,13 @@ static void game_render_log(xpl_context_t *self) {
 
 static void game_render_playfield(xpl_context_t *self, double time) {
 	
+	float width = (self->size.width <= 800 ? 800 : self->size.width);
+	float height = ((float)self->size.height / self->size.width) * width;
 	xmat4 ortho;
-	xmat4_ortho(0.f, self->size.width, 0.f, self->size.height, -1.f, 1.f, &ortho);
+	xmat4_ortho(0.f, width, 0.f, height, -1.f, 1.f, &ortho);
 	
 	glEnable(GL_SCISSOR_TEST);
-	glScissor(camera.draw_area.x, camera.draw_area.y, camera.draw_area.width, camera.draw_area.height);
+	glScissor(camera.dc.x, camera.dc.y, camera.dc.width, camera.dc.height);
 
 	// Render player names, excluding self
 	for (int i = 1; i < MAX_PLAYERS; ++i) {
@@ -679,10 +679,10 @@ static void game_render_ui(xpl_context_t *self) {
 		xpl_imui_context_begin(imui, self->app->execution_info, xrect_set(0, self->size.height - 80, self->size.width, 30));
 		{
 			if (chat_reset_focus) {
-				xpl_imui_context_reset_focus();
-				chat_reset_focus = false;
 				if (! xpl_input_key_down('T')) {
+					xpl_imui_context_reset_focus();
 					xpl_imui_control_textfield(xl("chat_message"), chat_buffer, CHAT_MAX, &chat_cursor, "", TRUE);
+					chat_reset_focus = false;
 				}
 			} else {
 				xpl_imui_control_textfield(xl("chat_message"), chat_buffer, CHAT_MAX, &chat_cursor, "", TRUE);
@@ -901,36 +901,13 @@ static void packet_handle_player(uint16_t client_id, packet_t *packet) {
 			game.player_local[pi].rotate_audio->action = aa_play;
 		}
 		game.player_local[pi].thrust_audio->action = packet->player.is_thrust ? aa_play : aa_stop;
-		
-//		xvec2 v2 = v2_for_velocity(game.player[pi].velocity);
-//		double speed = xvec2_length(v2);
-//		double latency = network.latency;
-//		if (speed > 0.f) {
-//			// Where did we project the player to be?
-//			position_t projected_position = game.player[pi].position;
-//			
-//			// Where would the player have been without a latency projection?
-//			player_update_position(pi, -game.player_local[pi].latency);
-//			position_t original_position = game.player[pi].position;
-//
-//			// How far is the player from their packet position, at their last velocity?
-//			int dx = (packet->player.position.px - game.player[pi].position.px);
-//			int dy = (packet->player.position.py - game.player[pi].position.py);
-//			double distance = sqrt(dx * dx + dy * dy) / VELOCITY_SCALE;
-//			latency = (distance / speed);
-//			// Undo revert
-//			player_update_position(pi, game.player_local[pi].latency);
-//			LOG_DEBUG("Approximated latency: %f", latency);
-//		}
-		//double latency = latency_manual ? latency_manual : 2.0 * network.latency;
-//		double latency = latency_manual;
-		double latency = 2.0 * network.latency;
-		
-		// Overwrite the player data with the packet, which we'll have to re-advance.
+
+		// Could be done better. Probably needs to be done better.
+		// Assume remote latency is same as local.
+		game.player_local[pi].latency = network.latency;
+
 		game.player_local[pi].visible = true;
-//		player_update_position(pi, -game.player_local[pi].latency);
 		game.player[pi] = packet->player;
-		game.player_local[pi].latency = latency;
 		LOG_DEBUG("New remote latency: %f", game.player_local[pi].latency);
 		player_update_position(pi, game.player_local[pi].latency);
 	}
@@ -1215,7 +1192,8 @@ static void player_init(int i) {
 	game.player[i].health = INITIAL_HEALTH;
 	game.player[i].orientation = xpl_irand_range(0, UINT8_MAX);
 	game.player_local[i].visible = false;
-	game.player[i].velocity.dx = 150;
+
+	game.player[i].velocity.dx = 0;
 	game.player[i].velocity.dy = 0;
 	
 	if (! game.player_local[i].rotate_audio) {
@@ -1260,7 +1238,7 @@ static bool player_local_is_connected(void) {
 
 static void player_local_update_chat(void) {
 	if (! chat_showing) {
-		if (xpl_input_key_down('T') || hotspot_active("chat", 0)) {
+		if (xpl_input_key_down('T') || hotspot_active("chat", 0, NULL, NULL)) {
 			chat_buffer[0] = '\0';
 			chat_showing = true;
 			chat_close_wait = false;
@@ -1269,7 +1247,7 @@ static void player_local_update_chat(void) {
 	} else {
 		
 		bool key_down = false;
-		if (xpl_input_key_down(XPL_KEY_ESC) || hotspot_active("chat", 0)) {
+		if (xpl_input_key_down(XPL_KEY_ESC) || hotspot_active("chat", 0, NULL, NULL)) {
 			chat_close_wait = true;
 			key_down = true;
 		}
@@ -1296,7 +1274,7 @@ static void player_local_update_firing(bool jiffy_elapsed) {
 	if (chat_showing) return;
 	
 	if (game.fire_cooldown == 0) {
-		if (key_down(fire) || hotspot_active("fire", 0)) {
+		if (key_down(fire) || hotspot_active("fire", 0, NULL, NULL)) {
 			int w = game.active_weapon;
 			int cost = projectile_config[w].price;
 			if (cost == -1 || cost <= game.player[0].score) {
@@ -1307,26 +1285,63 @@ static void player_local_update_firing(bool jiffy_elapsed) {
 	}
 }
 
+static void player_local_update_joystick(xivec2 screen, double time) {
+	xivec2 coord;
+	if (hotspot_active("joystick", 0, &coord, &joystick.iid)) {
+		// Hotspot coordinates come out reversed; awesome
+		coord.y = screen.height - coord.y;
+		joystick.stick.origin = coord;
+		joystick.active = true;
+	} else if (xpl_input_interaction_active(joystick.iid)) {
+		coord.y = screen.height - coord.y;
+		xpl_input_get_mouse_position(&coord);
+		joystick.stick.origin = coord;
+		joystick.active = true;
+	} else {
+		joystick.stick.origin = joystick.neutral;
+		joystick.active = false;
+	}
+	joystick.stick.x = xclamp(joystick.stick.x, joystick.bounds.x, joystick.bounds.x + joystick.bounds.width);
+	joystick.stick.y = xclamp(joystick.stick.y, joystick.bounds.y, joystick.bounds.y + joystick.bounds.height);
+	
+}
+
 static void player_local_update_rotation(double time) {
 	if (chat_showing) return;
 	
 	bool audio_on = false;
-	if (key_down(left) || hotspot_active("thrust", 1)) {
-		game.player[0].orientation += TORQUE * time;
-		game.control_indicator_on[1] = true;
+	float qty = 0.f;
+	if (key_down(left) || hotspot_active("thrust", 1, NULL, NULL)) {
+		qty += TORQUE;
+		audio_on = true;
+	}
+	if (key_down(right) || hotspot_active("thrust", 2, NULL, NULL)) {
+		qty -= TORQUE;
+		audio_on = true;
+	}
+	
+	if (joystick.active) {
+		// minus because right is negative rotation
+		float input = -TORQUE * 2.0f * (joystick.stick.x - joystick.neutral.x) / (float)joystick.bounds.width;
+		qty = roundf(4.f * input) / 4.f;
+		LOG_DEBUG("Joystick ∂x: %f", qty);
+	}
+	
+	qty *= time;
+	if (qty != 0.f) {
+		if (qty > 0.f) {
+			game.control_indicator_on[1] = true;
+		} else {
+			game.control_indicator_on[2] = true;
+		}
 		audio_on = true;
 	} else {
+		game.control_indicator_on[0] = false;
 		game.control_indicator_on[1] = false;
+		audio_on = false;
 	}
-	
-	if (key_down(right) || hotspot_active("thrust", 2)) {
-		game.player[0].orientation -= TORQUE * time;
-		game.control_indicator_on[2] = true;
-		audio_on = true;
-	} else {
-		game.control_indicator_on[2] = false;
-	}
-	
+
+	game.player[0].orientation += qty;
 	game.player_local[0].rotate_audio->action = audio_on ? aa_play : aa_stop;
 }
 
@@ -1335,8 +1350,24 @@ static void player_local_update_thrust(double time) {
 	game.control_indicator_on[0] = false;
 	game.player_local[0].thrust_audio->action = aa_stop;
 	
-	if (chat_showing) return;
-	if (! (key_down(up) || hotspot_active("thrust", 0))) return;
+	
+	float qty = 0.f;
+	qty = (! chat_showing) && key_down(up) ? 1.f : 0.f;
+	qty = xmax(hotspot_active("thrust", 0, NULL, NULL) ? 1.f : 0.f, qty);
+
+	if (joystick.active) {
+		float offset = (joystick.stick.y - joystick.neutral.y) / (float)joystick.bounds.height;
+		LOG_DEBUG("Thrust from joystick: %f", offset);
+		offset = 1.5f * offset - 0.5f;
+		offset = xclamp(offset, 0.0f, 1.0f);
+		if (offset > 0.f) {
+			offset = roundf(3.f * offset) / 3.f;
+			offset *= offset; // more low-end precision
+			qty = xmax(qty, offset);
+		}
+	}
+	
+	if (qty == 0.f) return;
 	
 	game.player[0].is_thrust = true;
 	game.player_local[0].thrust_audio->action = aa_play;
@@ -1364,7 +1395,7 @@ static void player_local_update_weapon(void) {
 	if (! chat_showing) {
 		for (int i = 0; i < keycount; ++i) {
 			if (game.active_weapon != i) {
-				if (xpl_input_key_down(weapon_keys[i]) || hotspot_active("weapon", i)) {
+				if (xpl_input_key_down(weapon_keys[i]) || hotspot_active("weapon", i, NULL, NULL)) {
 					game.active_weapon = i;
 					audio_quickplay_pan("select", SELECT_VOLUME, 0.5f);
 				}
@@ -1436,7 +1467,10 @@ static int player_with_client_id_get(uint16_t client_id, bool allow_allocate, bo
 	}
 	
 	// Not found. Allocate a player slot.
-	assert(empty_slot >= 1); // Shouldn't be overwriting player 0.
+	if (empty_slot == 0) {
+		LOG_ERROR("Self leaving; had better be exiting");
+		ui_error_set("You have disconnected.");
+	}
 	
 	game.player_connected[empty_slot] = true;
 	game.player_id[empty_slot].client_id = client_id;
@@ -1871,8 +1905,8 @@ static void ui_pilot_config_show(xpl_context_t *self) {
 		xpl_imui_control_textfield(xl("pilot_name_prompt"), game.player_id[0].name, NAME_SIZE, &name_cursor, "", TRUE);
 		xpl_imui_separator_line();
 		xpl_imui_control_label(xl("server_section"));
-		xpl_imui_control_textfield(xl("server_host_prompt"), network.server_host, 128, &server_host_cursor, "", TRUE);
-		xpl_imui_control_textfield(xl("server_port_prompt"), server_port, 32, &server_port_cursor, "", TRUE);
+		xpl_imui_control_textfield(xl("server_host_prompt"), network.server_host, 128, &server_host_cursor, "", FALSE);
+		xpl_imui_control_textfield(xl("server_port_prompt"), server_port, 32, &server_port_cursor, "", FALSE);
 		network.server_port = atoi(server_port);
 		xpl_imui_separator_line();
 		if (xpl_imui_control_button(xl("ok"), XPL_IMUI_BUTTON_DEFAULT,

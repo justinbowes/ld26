@@ -195,6 +195,7 @@ static void draw_command(xpl_sprite_batch_t *self, sprite_batch_command_t *cmd) 
 		y4 = p4y;
 	}
 
+	// I don't think this is what I had im mind.
 	x1 += world_origin_x;
 	y1 += world_origin_y;
 	x2 += world_origin_x;

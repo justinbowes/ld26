@@ -18,6 +18,7 @@
 typedef struct xpl_engine_info {
 	double                  timestep;
 	double                  max_engine_interval;
+	double					time;
 } xpl_engine_info_t;
 
 xpl_engine_info_t *xpl_engine_info_new(void);

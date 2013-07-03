@@ -71,6 +71,13 @@ void xpl_input_get_mouse_position(xivec2 *position) {
 	glfwGetMousePos(&position->x, &position->y);
 }
 
+bool xpl_input_interaction_active(int iid) {
+	if (iid == -1) return false;
+	xpl_mouse_button_state_t c;
+	xpl_input_get_mouse_buttons(&c);
+	return iid & c;
+}
+
 void xpl_input_get_mouse_buttons(xpl_mouse_button_state_t *buttons) {
 	int v = ((glfwGetMouseButton(GLFW_MOUSE_BUTTON_1) ? xmb_left : 0) |
 			 (glfwGetMouseButton(GLFW_MOUSE_BUTTON_2) ? xmb_right : 0) |
@@ -88,13 +95,22 @@ void xpl_input_get_scroll_deltas(xivec2 *deltas) {
 	deltas->y = scroll_position - last_scroll_position;
 }
 
-bool xpl_input_mouse_down_in(xirect rect) {
+bool xpl_input_mouse_down_in(xirect rect, xivec2 *coord, int *iid) {
 	xivec2 position;
 	xpl_mouse_button_state_t buttons;
 	xpl_input_get_mouse_buttons(&buttons);
 	if (! buttons) return false;
 	xpl_input_get_mouse_position(&position);
-	return xirect_in_bounds(rect, position);
+	
+	if (xirect_in_bounds(rect, position)) {
+		if (coord) *coord = position;
+		if (iid) *iid = buttons;
+		return true;
+	} else {
+		if (iid) *iid = -1;
+	}
+	
+	return false;
 }
 
 

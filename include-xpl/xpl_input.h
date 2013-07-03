@@ -37,7 +37,8 @@ void xpl_input_disable_keyboard(void);
 void xpl_input_enable_characters(void);
 void xpl_input_disable_characters(void);
 
-bool xpl_input_mouse_down_in(xirect rect);
+bool xpl_input_mouse_down_in(xirect rect, xivec2 *coord, int *iid);
+bool xpl_input_interaction_active(int iid);
 void xpl_input_get_mouse_position(xivec2 *position);
 void xpl_input_get_mouse_buttons(xpl_mouse_button_state_t *buttons);
 void xpl_input_get_scroll_deltas(xivec2 *deltas);

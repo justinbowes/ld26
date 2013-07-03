@@ -142,33 +142,44 @@ static bool l10n_lookup(const char *loc, const char *key, char **l10n_out) {
         return (*l10n_out != NULL);
     }
     
+	int file_index = 0;
     LOG_DEBUG("Lookup IO for %s:%s", loc, key);
-    char resource_name[PATH_MAX];
-    snprintf(resource_name, PATH_MAX, "l10n_%s.ini", loc);
-    char *text = NULL;
-    
-    char filename[PATH_MAX];
-    int chars_copied = -1;
-    if (xpl_resolve_resource(filename, resource_name, PATH_MAX)) {
-        size_t buffer_size = 64;
-        while (chars_copied == -1) {
-            text = xpl_realloc(text, buffer_size * sizeof(char));
-			text[0] = 0;
-            chars_copied = ini_gets("l10n", key, "", text, (int)buffer_size, filename);
-            if (chars_copied == buffer_size - 1) {
-                buffer_size *= 1.5;
-                chars_copied = -1;
-            }
-        }
-        if (chars_copied == 0) {
-        	xpl_free(text);
-        	text = NULL;
-        }
-    }
+	
+	char *text = NULL;
 	char *unescaped = NULL;
-	if (chars_copied > 0) {
-		unescaped = unescape(text);
-		xpl_free(text);
+	int chars_copied;
+	while (true) {
+		chars_copied = -1;
+		char resource_name[PATH_MAX];
+		if (loc && strlen(loc)) {
+			snprintf(resource_name, PATH_MAX, "l10n_%s_%d.ini", loc, file_index++);
+		} else {
+			snprintf(resource_name, PATH_MAX, "l10n_%d.ini", file_index++);			
+		}
+		char filename[PATH_MAX];
+		bool found = xpl_resolve_resource(filename, resource_name, PATH_MAX);
+		if (found) {
+			size_t buffer_size = 64;
+			while (chars_copied == -1) {
+				text = xpl_realloc(text, buffer_size * sizeof(char));
+				text[0] = 0;
+				chars_copied = ini_gets("l10n", key, "", text, (int)buffer_size, filename);
+				if (chars_copied == buffer_size - 1) {
+					buffer_size *= 1.5;
+					chars_copied = -1;
+				}
+			}
+			if (chars_copied == 0) {
+				xpl_free(text);
+				text = NULL;
+			}
+		}
+		if (chars_copied > 0) {
+			unescaped = unescape(text);
+			xpl_free(text);
+			break;
+		}
+		if (! found) break;
 	}
 	
     l10n_entry_t *entry = xpl_calloc_type(l10n_entry_t);

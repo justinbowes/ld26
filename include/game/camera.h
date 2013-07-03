@@ -20,6 +20,7 @@ typedef struct camera {
 	position_t	max;
 	
 	xirect		draw_area;
+	xirect		dc;
 } camera_t;
 
 extern camera_t camera;

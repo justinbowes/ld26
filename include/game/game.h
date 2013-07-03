@@ -174,4 +174,15 @@ typedef struct network {
 
 extern network_t network;
 
+typedef struct joystick {
+	xivec2 neutral;
+	xirect stick;
+	xirect bounds;
+	xvec2 output;
+	int iid;
+	bool active;
+} joystick_t;
+
+extern joystick_t joystick;
+
 #endif

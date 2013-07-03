@@ -20,10 +20,19 @@
 #include "game/hotspots.h"
 #include "game/layout.h"
 
+#include "science/star_generator.h"
+#include "random/det_rng.h"
+
 sprites_t						sprites;
 xivec3							star_layers[STAR_LAYERS][STARS_PER_LAYER];
+xivec3							debris_layer[DEBRIS_PER_LAYER];
 
 void sprites_init(void) {
+	
+	rng_seq_t rng;
+	time_t now = time(0);
+	int init_v[] = { 0xa1b2c3d4, (int)now };
+	rng_seq_init_ints(init_v, 2, &rng);
 	
 	sprites.playfield_batch = xpl_sprite_batch_new();
 	sprites.ui_batch = xpl_sprite_batch_new();
@@ -49,16 +58,31 @@ void sprites_init(void) {
 	for (int i = 0; i < 3; ++i) {
 		sprites.control_key_sprites[i] = xpl_sprite_get(ui_sheet, key_sprites[i]);
 	}
+	
+	sprites.joystick_pen_sprite = xpl_sprite_get(ui_sheet, "thrust_stick_pen.png");
+	sprites.joystick_sprite = xpl_sprite_get(ui_sheet, "thrust_stick.png");
+	
 	sprites.ui_coin_sprite = xpl_sprite_get(ui_sheet, "coin.png");
 	sprites.fire_button_lit = xpl_sprite_get(ui_sheet, "fire_button_lit.png");
 	sprites.fire_button_dark = xpl_sprite_get(ui_sheet, "fire_button_dark.png");
 	
 	for (int i = 0; i < STAR_LAYERS; ++i) {
 		for (int j = 0; j < STARS_PER_LAYER; ++j) {
+			star_t star;
+			star_randomize(&star, &rng);
 			star_layers[i][j].x = xpl_irand_range(0, STAR_LAYER_SIZE);
 			star_layers[i][j].y = xpl_irand_range(0, STAR_LAYER_SIZE);
-			star_layers[i][j].z = (int)RGBA(0xff, 0xff, 0xff, 0x80);
+			
+			star_layers[i][j].z = (int)RGBA((int)(star.color.r * 0xff),
+											(int)(star.color.g * 0xff),
+											(int)(star.color.b * 0xff),
+											(int)(star.sradii * 0x40 + 0x40));
 		}
+	}
+	for (int j = 0; j < DEBRIS_PER_LAYER; ++j) {
+		debris_layer[j].x = xpl_irand_range(0, STAR_LAYER_SIZE);
+		debris_layer[j].y = xpl_irand_range(0, STAR_LAYER_SIZE);
+		debris_layer[j].z = (int)RGBA(0xff, 0xff, 0xff, 0x80);
 	}
 	
 	for (int i = 0; i < TUTORIAL_PAGES; ++i) {
@@ -77,7 +101,8 @@ void sprites_playfield_render(xpl_context_t *self, xmat4 *ortho) {
 		*sprite_ortho = *ortho;
 		
 		// Background stars
-		for (int i = 0; i < STAR_LAYERS; ++i) {
+		// Need to draw back to front
+		for (int i = STAR_LAYERS - 1; i >= 0; --i) {
 			for (int j = 0; j < STARS_PER_LAYER; ++j) {
 				int64_t px = (star_layers[i][j].x - (camera.center.px >> (2 * i + 2))) % STAR_LAYER_SIZE;
 				int64_t py = (star_layers[i][j].y - (camera.center.py >> (2 * i + 2))) % STAR_LAYER_SIZE;
@@ -86,9 +111,22 @@ void sprites_playfield_render(xpl_context_t *self, xmat4 *ortho) {
 					px < camera.draw_area.x + camera.draw_area.width &&
 					py < camera.draw_area.y + camera.draw_area.height) {
 					xvec4 color = RGBA_F((uint32_t)star_layers[i][j].z);
+					float k = 50.f * color.a;
+					color.a = 0.5f;
+					float size = k / (i + 1);
+					float hsize = size / 2;
 					xpl_sprite_draw_transformed(sprites.star_sprite,
-												px, py, 0.f, 0.f,
-												10 / (i + 1), 10 / (i + 1),
+												px - hsize, py - hsize, hsize, hsize,
+												size, size,
+												1.f, 1.f,
+												0.f,
+												&color);
+					color.a = 1.0f;
+					float rsize = k / (i + 2);
+					float hrsize = rsize / 2;
+					xpl_sprite_draw_transformed(sprites.star_sprite,
+												px - hrsize, py - hrsize, hsize, hsize,
+												rsize, rsize,
 												1.f, 1.f,
 												0.f,
 												&color);
@@ -163,24 +201,50 @@ void sprites_playfield_render(xpl_context_t *self, xmat4 *ortho) {
 						v.x += 8;
 					}
 				}
-			} else if (game.indicators_on) {
-				// Draw indicator
-				int64_t dlx = (int64_t)game.player[i].position.px - (int64_t)game.player[0].position.px;
-				int64_t dly = (int64_t)game.player[i].position.py - (int64_t)game.player[0].position.py;
-				xvec2 d = {{ (float)dlx, (float)dly }};
-				float angle = atan2f(d.y, d.x);
-				d = xvec2_add(d, xvec2_set(camera.draw_area.x + (camera.draw_area.width >> 1),
-										   camera.draw_area.y + (camera.draw_area.height >> 1)));
-				d.x = xclamp(d.x, camera.draw_area.x, camera.draw_area.x + camera.draw_area.width - INDICATOR_SIZE);
-				d.y = xclamp(d.y, camera.draw_area.y, camera.draw_area.y + camera.draw_area.height - INDICATOR_SIZE);
-				xvec4 color = xvec4_set(1.f, 1.f, 0.f, 0.6f);
-				xpl_sprite_draw_transformed(sprites.indicator_sprite,
-											d.x, d.y,
-											INDICATOR_SIZE * 0.5f, INDICATOR_SIZE * 0.5f,
-											INDICATOR_SIZE, INDICATOR_SIZE,
-											1.0f, 1.0f,
-											angle,
+			}
+		}
+		
+		// Debris
+		for (int j = 0; j < DEBRIS_PER_LAYER; ++j) {
+			const size_t i = 0; // as though in front of stars
+			int64_t px = (debris_layer[j].x - camera.center.px << (i + 1)) % STAR_LAYER_SIZE;
+			int64_t py = (debris_layer[j].y - camera.center.py << (i + 1)) % STAR_LAYER_SIZE;
+			if (px > camera.draw_area.x &&
+				py > camera.draw_area.y &&
+				px < camera.draw_area.x + camera.draw_area.width &&
+				py < camera.draw_area.y + camera.draw_area.height) {
+				xvec4 color = RGBA_F((uint32_t)debris_layer[j].z);
+				xpl_sprite_draw_transformed(sprites.star_sprite,
+											px, py, 0.f, 0.f,
+											8 * (i + 1), 8 * (i + 1),
+											1.f, 1.f,
+											0.f,
 											&color);
+			}
+		}
+		
+		if (game.indicators_on) {
+			for (int i = 0; i < MAX_PLAYERS; ++i) {
+				if (! game.player_connected[i]) continue;
+				if (! player_in_bounds(i, PLAYER_SIZE, camera.min, camera.max)) {
+					// Draw indicator
+					int64_t dlx = (int64_t)game.player[i].position.px - (int64_t)game.player[0].position.px;
+					int64_t dly = (int64_t)game.player[i].position.py - (int64_t)game.player[0].position.py;
+					xvec2 d = {{ (float)dlx, (float)dly }};
+					float angle = atan2f(d.y, d.x);
+					d = xvec2_add(d, xvec2_set(camera.draw_area.x + (camera.draw_area.width >> 1),
+											   camera.draw_area.y + (camera.draw_area.height >> 1)));
+					d.x = xclamp(d.x, camera.draw_area.x, camera.draw_area.x + camera.draw_area.width - INDICATOR_SIZE);
+					d.y = xclamp(d.y, camera.draw_area.y, camera.draw_area.y + camera.draw_area.height - INDICATOR_SIZE);
+					xvec4 color = xvec4_set(1.f, 1.f, 0.f, 0.6f);
+					xpl_sprite_draw_transformed(sprites.indicator_sprite,
+												d.x, d.y,
+												INDICATOR_SIZE * 0.5f, INDICATOR_SIZE * 0.5f,
+												INDICATOR_SIZE, INDICATOR_SIZE,
+												1.0f, 1.0f,
+												angle,
+												&color);
+				}
 			}
 		}
 		
@@ -196,15 +260,27 @@ void sprites_ui_render(xpl_context_t *self, xmat4 *ortho) {
 		*sprite_ortho = *ortho;
 		
 		// Bottom and top panels
-		xpl_sprite_draw(sprites.panel_background_sprite, 0.f, 0.f, self->size.width, camera.draw_area.y);
-		xpl_sprite_draw(sprites.panel_background_sprite, 0.f, camera.draw_area.y + camera.draw_area.height, self->size.width, camera.draw_area.y);
+		xpl_sprite_draw(sprites.panel_background_sprite, 0.f, 0.f, self->size.width, camera.dc.y);
+		xpl_sprite_draw(sprites.panel_background_sprite, 0.f, camera.dc.y + camera.dc.height, self->size.width, camera.dc.y);
 		
 		// Control hotspots
-		for (int i = 0; i < 3; ++i) {
-			xirect area = {{  8 + (TILE_SIZE + 8) * i, 24, TILE_SIZE, TILE_SIZE }};
-			xpl_sprite_draw_colored(sprites.control_key_sprites[i], area.x, area.y, area.width, area.height,
-									game.control_indicator_on[i] ? active_color : inactive_color);
-			hotspot_set("thrust", i, area, self->size);
+//		for (int i = 0; i < 3; ++i) {
+//			xirect area = {{  8 + (TILE_SIZE + 8) * i, 24, TILE_SIZE, TILE_SIZE }};
+//			xpl_sprite_draw_colored(sprites.control_key_sprites[i], area.x, area.y, area.width, area.height,
+//									game.control_indicator_on[i] ? active_color : inactive_color);
+//			hotspot_set("thrust", i, area, self->size);
+//		}
+		{
+			joystick.bounds = xirect_set(0, 0, joystick_pen_width(self->size), joystick_pen_height(self->size));
+			joystick.neutral.x = joystick.bounds.width / 2 + joystick.bounds.x;
+			joystick.neutral.y = joystick.bounds.y;
+			joystick.stick.width = joystick.stick.height = joystick_stick_size(self->size);
+			xpl_sprite_draw_colored(sprites.joystick_pen_sprite, joystick.bounds.x, joystick.bounds.y, joystick.bounds.width, joystick.bounds.height, inactive_color);
+			xpl_sprite_draw(sprites.joystick_sprite,
+							joystick.stick.x - (joystick.stick.width >> 1),
+							joystick.stick.y - (joystick.stick.height >> 1),
+							joystick.stick.width, joystick.stick.height);
+			hotspot_set("joystick", 0, joystick.bounds, self->size);
 		}
 		
 		xpl_sprite_draw_colored(sprites.ui_coin_sprite, weapon_buttons_left(self->size), 4, 16, 16, coin_color);
