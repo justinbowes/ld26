@@ -226,7 +226,7 @@ static void projectile_add(void);
 static void projectile_explode_effect(int pi, int target);
 static bool projectile_type_is_mine(int type);
 static void projectile_update(int i, bool jiffy_elapsed, double time);
-static int projectile_with_pid_get(uint16_t pid, int ti, bool *was_new);
+static int projectile_with_pid_get(uint16_t pid, int ti, bool allow_dead, bool *was_new);
 
 static void server_resolve_addr(void);
 
@@ -635,7 +635,7 @@ static void game_render_ui(xpl_context_t *self) {
 	int cash = game.player[0].score;
 	// Render prices and keys
 	ui_markup.size = weapon_price_size(self->size);
-	for (int i = 0; i < 8; ++i) {
+	for (int i = 0; i < projectile_type_count; ++i) {
 		int price = projectile_config[i].price;
 		char price_str[8];
 		char key_str[2];
@@ -752,6 +752,7 @@ static void log_advance_line(void) {
 
 
 static void packet_handle(uint16_t client_id, packet_t *packet) {
+	LOG_DEBUG("Handling packet: seq=%u type=%d", packet->seq, packet->type);
 	switch (packet->type) {
 		case pt_hello:
 			packet_handle_hello(client_id, packet);
@@ -797,21 +798,22 @@ static void packet_handle_damage(uint16_t client_id, packet_t *packet) {
 	
 	int origin = player_with_client_id_get(packet->damage.player_id, false, NULL);
 	int target = player_with_client_id_get(client_id, false, NULL);
-	int projectile = projectile_with_pid_get(packet->damage.projectile_id, -1, NULL);
+	int projectile = projectile_with_pid_get(packet->damage.projectile_id, -1, true, NULL);
 
 	xvec2 velocity = xvec2_from_polar(xpl_frand() * 64.f, xpl_frand() * M_2PI);
 	xvec4 color = RGBA_F(0x80ffc0a0);
 	text_particle_add(game.player[target].position, velocity, damage, color, 2.0);
-	
 	
 	if (packet->damage.flags & DAMAGE_FLAG_REPAIRS) {
 		log_add_text("%s repaired for %d",
 					 player_name(origin, false),
 					 packet->damage.amount);
 		
-	} else if (projectile >= 0 && game.projectile[projectile].health > 0) {
-		char weapon_name_key[20];
-		snprintf(weapon_name_key, 20, "weapon_name_%d", game.projectile[projectile].type);
+	} else if (projectile >= 0) {
+		char weapon_name_key[40];
+		int type = game.projectile[projectile].type;
+		const char *identifier = projectile_config[type].identifier;
+		snprintf(weapon_name_key, 40, "weapon_name_%s", identifier);
 		
 		log_add_text(xl("weapon_damage_format"),
 					 player_name(origin, false),
@@ -920,12 +922,15 @@ static void packet_handle_projectile(uint16_t client_id, packet_t *packet) {
 		return;
 	}
 	bool is_new;
-	int pi = projectile_with_pid_get(packet->projectile.pid, packet->projectile.type, &is_new);
+	int pi = projectile_with_pid_get(packet->projectile.pid, packet->projectile.type, false, &is_new);
 	game.projectile_local[pi].owner = client_id;
 	game.projectile[pi] = packet->projectile;
 	LOG_DEBUG("Projectile: %u, %u", game.projectile[pi].position.px, game.projectile[pi].position.py);
 	if (is_new) {
 		int type = game.projectile[pi].type;
+		
+		if (type < 0 || type >= projectile_type_count) return; // drop
+		
 		audio_quickplay_position(projectile_config[type].fire_effect, FIRE_VOLUME, v3_relative_audio(game.projectile[pi].position));
 	}
 	projectile_update(pi, false, network.latency);
@@ -1336,8 +1341,8 @@ static void player_local_update_rotation(double time) {
 		}
 		audio_on = true;
 	} else {
-		game.control_indicator_on[0] = false;
 		game.control_indicator_on[1] = false;
+		game.control_indicator_on[2] = false;
 		audio_on = false;
 	}
 
@@ -1349,7 +1354,6 @@ static void player_local_update_thrust(double time) {
 	game.player[0].is_thrust = false;
 	game.control_indicator_on[0] = false;
 	game.player_local[0].thrust_audio->action = aa_stop;
-	
 	
 	float qty = 0.f;
 	qty = (! chat_showing) && key_down(up) ? 1.f : 0.f;
@@ -1496,7 +1500,7 @@ static void projectile_add(void) {
 	xvec2 direction_vector = player_get_direction_vector(0);
 	
 	uint16_t pid = xpl_irand_range(0, UINT16_MAX);
-	int i = projectile_with_pid_get(pid, weapon, NULL);
+	int i = projectile_with_pid_get(pid, weapon, false, NULL);
 	// Add a little margin to get slow projectiles clear of the nose
 	float position = projectile_type_is_mine(weapon) ? -0.7 : 0.7;
 	xvec2 front = xvec2_scale(direction_vector, position * PLAYER_SIZE);
@@ -1566,10 +1570,11 @@ static void projectile_initialize(uint16_t pid, int pi, int ti) {
 }
 
 // Get a projectile. Pass a negative projectile type to prevent creation.
-static int projectile_with_pid_get(uint16_t pid, int ti, bool *was_new) {
+static int projectile_with_pid_get(uint16_t pid, int ti, bool allow_dead, bool *was_new) {
 	int allocate_index = -1;    
 	for (int i = 0; i < MAX_PROJECTILES; ++i) {
 		if (pid == game.projectile[i].pid) {
+			if (allow_dead) return i;
 			if (game.projectile[i].health > 0) {
 				if (was_new) *was_new = false;
 				return i;
@@ -1593,8 +1598,12 @@ static int projectile_with_pid_get(uint16_t pid, int ti, bool *was_new) {
 	}
 }
 
-static bool projectile_type_is_mine(int type) {
-	return (type == pt_mine || type == pt_blackhole);
+XPLINLINE bool projectile_type_is_mine(int type) {
+	return projectile_config[type].is_mine;
+}
+
+XPLINLINE bool projectile_type_is(const char *identifier, int type) {
+	return ! strcmp(projectile_config[type].identifier, identifier);
 }
 
 static void projectile_update(int i, bool jiffy_elapsed, double time) {
@@ -1628,7 +1637,7 @@ static void projectile_update(int i, bool jiffy_elapsed, double time) {
 	
 	
 	float current_explosion_radius = 0.f;
-	if (jiffy_elapsed && type != pt_repair) {
+	if (jiffy_elapsed && ! projectile_type_is("health_kit", type)) {
 		if (projectile_type_is_mine(type) && game.projectile[i].health == 1) {
 			// Mines linger at 1 health
 			game.projectile[i].health++;
@@ -1658,10 +1667,10 @@ static void projectile_update(int i, bool jiffy_elapsed, double time) {
 		current_explosion_radius = projectile_config[type].explode_radius;
 	}
 
-	bool in_contact = (type == pt_repair) || (dtt <= current_explosion_radius);
+	bool in_contact = projectile_type_is("health_kit", type) || (dtt <= current_explosion_radius);
 	game.projectile_local[i].force_detonate = game.projectile_local[i].force_detonate || in_contact;
 
-	if (projectile_type_is_mine(type) || type == pt_repair) {
+	if (projectile_type_is_mine(type) || projectile_type_is("health_kit", type)) {
 		// Are there any non-mine projectiles too close or exploding?
 		// Do a complete rescan otherwise we need to do n^3 to cascade backwards
 		for (int j = 0; j < MAX_PROJECTILES; ++j) {
@@ -1686,7 +1695,7 @@ static void projectile_update(int i, bool jiffy_elapsed, double time) {
 	}
 
 	// Black hole accelerates you in
-	if (type == pt_blackhole && game.projectile[i].health == 1) {
+	if (projectile_type_is("mine", type) && game.projectile[i].health == 1) {
 		xvec2 direction = {{ pdx, pdy }};
 		float length = dtt;
 		// Fudge because black hole throws you around so fast
@@ -1716,7 +1725,7 @@ static void projectile_update(int i, bool jiffy_elapsed, double time) {
 		// Apply damage
 		uint8_t damage;
 		if (projectile_config[type].explode_radius || projectile_type_is_mine(type)) {
-			damage = (type == pt_blackhole) ? 255 : projectile_config[type].initial_health;
+			damage = projectile_type_is("blackhole", type) ? 255 : projectile_config[type].initial_health;
 		} else {
 			damage = in_contact ? game.projectile[i].health : 0;
 		}
@@ -1727,26 +1736,27 @@ static void projectile_update(int i, bool jiffy_elapsed, double time) {
 		}
 		
 		uint8_t flags = 0;
-		if (type != pt_repair) {
+		if (projectile_type_is("health_kit", type)) {
+			int health = game.player[0].health;
+			health += damage;
+			health = xclamp(health, 0, UINT8_MAX);
+			game.player[0].health = health;
+			flags |= DAMAGE_FLAG_REPAIRS;
+		} else {
 			if (game.player[0].health <= damage) {
-				game.respawn_cooldown = RESPAWN_COOLDOWN; 
+				game.respawn_cooldown = RESPAWN_COOLDOWN;
 				damage = game.player[0].health;
 				flags |= DAMAGE_FLAG_EXPLODES;
 				game.player[0].health = 0;
 			} else {
 				game.player[0].health -= damage;
 			}
-		} else {
-			int health = game.player[0].health;
-			health += damage;
-			health = xclamp(health, 0, UINT8_MAX);
-			game.player[0].health = health;
-			flags |= DAMAGE_FLAG_REPAIRS;
 		}
 		LOG_DEBUG("Player health remaining: %u", game.player[0].health);
 		
 		if (damage)	{
 			packet_send_damage(game.projectile_local[i].owner, game.projectile[i].pid, damage, flags);
+			game.projectile[i].health = 0; // Don't allow it to damage us again.
 			// if (projectile_type_is_mine(type)) game.projectile[i].health = 1;
 		}
 	}

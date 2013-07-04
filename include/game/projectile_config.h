@@ -33,12 +33,15 @@ typedef struct projectile_config {
 	int		fire_cooldown;
 	int		price;
 	bool	can_hit_self;
+	bool	is_mine;
 	
+	const char *identifier;
 	const char *fire_effect;
 	const char *explode_effect;
 	
 } projectile_config_t;
 
+/*
 typedef enum projectile_type {
 	pt_pew			= 0,
 	pt_heavypew		= 1,
@@ -49,6 +52,7 @@ typedef enum projectile_type {
 	pt_blackhole	= 6,
 	pt_repair		= 7
 } projectile_type_t;
+ */
 
 #define EXPL_VIS_FACTOR (128.0 / VELOCITY_SCALE)
 
@@ -77,7 +81,9 @@ static const projectile_config_t projectile_config[] = {
 		20,
 		-1,
 		false,
+		false,
 		
+		"pew",
 		"weapon_0",
 		"explode_4"
 	},
@@ -105,7 +111,9 @@ static const projectile_config_t projectile_config[] = {
 		16,
 		1,
 		false,
+		false,
 		
+		"heavy_pew",
 		"weapon_1",
 		"explode_4"
 	},
@@ -133,7 +141,9 @@ static const projectile_config_t projectile_config[] = {
 		30,
 		5,
 		false,
+		false,
 		
+		"missile",
 		"weapon_2",
 		"explode_2"
 	},
@@ -161,7 +171,9 @@ static const projectile_config_t projectile_config[] = {
 		60,
 		10,
 		false,
+		false,
 		
+		"heavy_missile",
 		"weapon_3",
 		"explode_2"
 	},
@@ -189,10 +201,13 @@ static const projectile_config_t projectile_config[] = {
 		180,
 		250,
 		true,
+		false,
 		
+		"nuke",
 		"weapon_4",
 		"explode_0"
 	},
+	/*
 	{ // 5: mine
 		90,
 		0,
@@ -217,7 +232,9 @@ static const projectile_config_t projectile_config[] = {
 		30,
 		10,
 		true,
+		true,
 		
+		"mine",
 		"weapon_5",
 		"explode_2"
 	},
@@ -245,10 +262,13 @@ static const projectile_config_t projectile_config[] = {
 		180,
 		500,
 		true,
+		true,
 		
+		"mine",
 		"weapon_6",
 		"explode_3"
 	},
+	 */
 	{ // 7: repair
 		128,
 		0,
@@ -273,10 +293,14 @@ static const projectile_config_t projectile_config[] = {
 		360,
 		250,
 		true,
+		false,
 		
+		"health_kit",
 		"weapon_7",
 		NULL
 	},
 };
+
+static const size_t projectile_type_count = sizeof(projectile_config) / sizeof(projectile_config[0]);
 
 #endif

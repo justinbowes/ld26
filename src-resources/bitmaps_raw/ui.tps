@@ -22,7 +22,7 @@
         <key>dataFormat</key>
         <string>json</string>
         <key>textureFileName</key>
-        <filename>../../dist/bitmaps/ui.png</filename>
+        <filename>../../resources/common/bitmaps/ui.png</filename>
         <key>flipPVR</key>
         <false/>
         <key>ditherType</key>
@@ -111,7 +111,7 @@
             <enum type="AndEngine::MagFilter">MagLinear</enum>
         </struct>
         <key>dataFileName</key>
-        <filename>../../dist/bitmaps/ui.json</filename>
+        <filename>../../resources/common/bitmaps/ui.json</filename>
         <key>mainExtension</key>
         <string></string>
         <key>forceIdenticalLayout</key>
@@ -162,6 +162,9 @@
             <filename>weapon_7.png</filename>
             <filename>thrust_stick_pen.png</filename>
             <filename>thrust_stick.png</filename>
+            <filename>key_left.png</filename>
+            <filename>key_right.png</filename>
+            <filename>key_thrust.png</filename>
         </array>
         <key>ignoreFileList</key>
         <array/>

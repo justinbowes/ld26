@@ -468,8 +468,8 @@ void xpl_sprite_draw_transformed(struct xpl_sprite *sprite,
                                  float rotation_rads,
                                  xvec4 *color) {
     
-	assert(sprite->batch->started);
 	assert(sprite);
+	assert(sprite->batch->started);
     
     static xvec4 white = {{ 1.f, 1.f, 1.f, 1.f }};
     

@@ -49,9 +49,9 @@ void sprites_init(void) {
 	sprites.solid_sprite = xpl_sprite_get(ui_sheet, "tile_solid.png");
 	sprites.grid8_sprite = xpl_sprite_get(ui_sheet, "tile_grid.png");
 	
-	for (int i = 0; i < 8; ++i) {
+	for (int i = 0; i < projectile_type_count; ++i) {
 		char resource[PATH_MAX];
-		snprintf(resource, PATH_MAX, "weapon_%d.png", i);
+		snprintf(resource, PATH_MAX, "%s.png", projectile_config[i].fire_effect);
 		sprites.weapon_key_sprites[i] = xpl_sprite_get(ui_sheet, resource);
 	}
 	const char *key_sprites[3] = { "key_thrust.png", "key_left.png", "key_right.png" };
@@ -264,12 +264,7 @@ void sprites_ui_render(xpl_context_t *self, xmat4 *ortho) {
 		xpl_sprite_draw(sprites.panel_background_sprite, 0.f, camera.dc.y + camera.dc.height, self->size.width, camera.dc.y);
 		
 		// Control hotspots
-//		for (int i = 0; i < 3; ++i) {
-//			xirect area = {{  8 + (TILE_SIZE + 8) * i, 24, TILE_SIZE, TILE_SIZE }};
-//			xpl_sprite_draw_colored(sprites.control_key_sprites[i], area.x, area.y, area.width, area.height,
-//									game.control_indicator_on[i] ? active_color : inactive_color);
-//			hotspot_set("thrust", i, area, self->size);
-//		}
+#ifdef XPL_PLATFORM_IOS
 		{
 			joystick.bounds = xirect_set(0, 0, joystick_pen_width(self->size), joystick_pen_height(self->size));
 			joystick.neutral.x = joystick.bounds.width / 2 + joystick.bounds.x;
@@ -282,9 +277,17 @@ void sprites_ui_render(xpl_context_t *self, xmat4 *ortho) {
 							joystick.stick.width, joystick.stick.height);
 			hotspot_set("joystick", 0, joystick.bounds, self->size);
 		}
+#else
+		for (int i = 0; i < 3; ++i) {
+			xirect area = {{  8 + (TILE_SIZE + 8) * i, 24, TILE_SIZE, TILE_SIZE }};
+			xpl_sprite_draw_colored(sprites.control_key_sprites[i], area.x, area.y, area.width, area.height,
+									game.control_indicator_on[i] ? active_color : inactive_color);
+			hotspot_set("thrust", i, area, self->size);
+		}
+#endif
 		
 		xpl_sprite_draw_colored(sprites.ui_coin_sprite, weapon_buttons_left(self->size), 4, 16, 16, coin_color);
-		for (int i = 0; i < 8; ++i) {
+		for (int i = 0; i < projectile_type_count; ++i) {
 			xirect area = {{
 				weapon_button_left(self->size, i), 24, TILE_SIZE, TILE_SIZE
 			}};

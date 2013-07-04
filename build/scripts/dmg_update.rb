@@ -69,6 +69,7 @@ def main
 	volume_name = "#{product_name} #{major}_#{minor}_#{revision}_#{build}"
 	volume_title = "#{product_name} #{major}.#{minor}.#{revision}.#{build}"
 	target_dmg_prefix = "#{src_root}/../dist/#{volume_name}"
+	target_zip = "#{src_root}/../dist/ultrapew.zip"
 	target_dmg = "#{target_dmg_prefix}.dmg"
     
 	FileUtils.cp src_dmg, target_dmg
@@ -84,6 +85,10 @@ def main
 	`hdiutil detach #{device}`
 	`hdiutil convert -format UDZO '#{target_dmg}' -o '#{target_dmg_prefix}.z.dmg'`
 	FileUtils.mv "#{target_dmg_prefix}.z.dmg", "#{target_dmg}"
+	FileUtils.rm target_zip, :force => true #swallow errors
+	zipline = "zip '#{target_zip}' '#{target_dmg}'"
+	`#{zipline}`
+	puts "Done #{zipline}, see #{target_zip}"
 end
     
 main()

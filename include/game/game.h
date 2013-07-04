@@ -135,6 +135,9 @@ typedef struct game {
 	int			fire_cooldown;
 	float		respawn_cooldown;
 	
+	int			kill_count;
+	double		combo_timeout;
+	
 	uint8_t		indicators_cooldown;
 	bool		indicators_on;
 	
