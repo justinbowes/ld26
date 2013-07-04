@@ -8,6 +8,9 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <locale.h>
+
 
 #include "xpl_file.h"
 #include "xpl_platform.h"
@@ -37,20 +40,13 @@ void xpl_file_get_contents(const char *filename, xpl_dynamic_buffer_t *buffer) {
 	fclose(file);
 }
 
-#ifdef XPL_PLATFORM_WINDOWS
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <locale.h>
-
 // Clean-room reimpl of GNU-like basename for Windows
 #define INCLUDES_DRIVE(path)	((((path)[0] >= 'a' && (path)[0] <= 'z') || \
 								  ((path)[0] >= 'A' && (path)[0] <= 'Z')) && (path)[1] == ':')
 #define DRIVE_LENGTH(path)		(INCLUDES_DRIVE(path) ? 2 : 0)
 #define IS_SEPARATOR(chr)		((chr) == '/' || (chr) == '\\')
 
-char *basename(const char *name) {
+char *xpl_basename(const char *name) {
 	const char *after_last = name + DRIVE_LENGTH(name);
 	int is_all_slashes = TRUE;
 	const char *cp;
@@ -74,12 +70,12 @@ char *basename(const char *name) {
 /**
  * Warning: this is thorough, but not not bad.
  */
-char *dirname(const char *path)
+char *xpl_dirname(char *path)
 {
 	static char *retfail = NULL;
 	wchar_t refcopy[MAX_PATH+MAX_PATH+1];
 	wchar_t *refpath;
-	size_t len;
+	size_t len = 0;
 	
 	/* to handle path names for files in multibyte character locales,
 	 * we need to set up LC_CTYPE to match the host file system locale.  */
@@ -98,7 +94,7 @@ char *dirname(const char *path)
 		/* create the wide character reference copy of path */
 		refpath = refcopy;
 		
-		len = xpl_mbs_to_wcs(refpath, path, len);
+		len = xpl_mbs_to_wcs(path, refpath, len);
 		refcopy[len] = L'\0';
 		/* SUSv3 identifies a special case, where path is exactly equal to "//";
 		 * (we will also accept "\\" in the Win32 context, but not "/\" or "\/",
@@ -210,7 +206,7 @@ char *dirname(const char *path)
 				 * using our own buffer.  */
 				*refname = L'\0';
 				retfail = xpl_realloc(retfail, len = 1 + wcstombs(NULL, refcopy, 0));
-				xpl_wcs_to_mbs(path = retfail, refcopy, len);
+				xpl_wcs_to_mbs(refcopy, path = retfail, len);
             }
 			/* restore caller's locale, clean up, and return the resolved dirname.  */
 			setlocale(LC_CTYPE, locale);
@@ -223,7 +219,7 @@ char *dirname(const char *path)
 	 * in case the caller trashed it after a previous call.
 	 */
 	retfail = xpl_realloc(retfail, len = 1 + wcstombs (NULL, L".", 0));
-	xpl_wcs_to_mbs(retfail, L".", len);
+	xpl_wcs_to_mbs(L".", retfail, len);
 	
 	/* restore caller's locale, clean up, and return the default dirname.  */
 	setlocale (LC_CTYPE, locale);
@@ -233,4 +229,3 @@ char *dirname(const char *path)
 	return retfail;
 }
 
-#endif

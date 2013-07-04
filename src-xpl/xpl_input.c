@@ -27,6 +27,17 @@ typedef struct {
 } xpl_character_listener_t;
 static xpl_character_listener_t *character_listeners = NULL;
 
+extern void xpl_input__platform_init(void);
+
+void xpl_input_init(void) {
+	xpl_character_listener_t *el, *tmp;
+	HASH_ITER(hh, character_listeners, el, tmp) {
+		HASH_DEL(character_listeners, el);
+		xpl_free(el);
+	}
+	xpl_input__platform_init();
+}
+
 bool xpl_input_character_is_printable(int key, bool include_crlf) {
 	return key >= ' ' || (include_crlf && (key == '\n' || key == '\r'));
 }

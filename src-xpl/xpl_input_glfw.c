@@ -43,6 +43,15 @@ bool xpl_input_keyboard_should_auto_focus(void) {
 	return true; // default behavior except where keyboard is intrusive
 }
 
+void xpl_input__platform_init(void) {
+	keyboard_active = false;
+	characters_active = false;
+	last_scroll_position = false;
+	for (int i = 0; i < MAX_KEY; ++i) {
+		keys_active[i] = FALSE;
+	}
+}
+
 void xpl_input_enable_keyboard(void) {
 	if (keyboard_active) return;
 	glfwSetKeyCallback(key_listener);
@@ -93,6 +102,7 @@ void xpl_input_get_scroll_deltas(xivec2 *deltas) {
 	}
 	deltas->x = 0;
 	deltas->y = scroll_position - last_scroll_position;
+	last_scroll_position = scroll_position;
 }
 
 bool xpl_input_mouse_down_in(xirect rect, xivec2 *coord, int *iid) {

@@ -150,7 +150,7 @@ static void *init(xpl_context_t *self) {
     xvec3 target = {{ 6.f, 0.8f, 0.f }};
     xmat4 lookat_v, lookat_p;
     xmat4_look_at(&origin, &target, &xvec3_y_axis, &lookat_v);
-    xmat4_perspective(30.f, 16.f/9.f, 0.1f, 100.f, &lookat_p);
+    xmat4_perspective(30.f, aspect, 0.1f, 100.f, &lookat_p);
     xmat4_multiply(&lookat_p, &lookat_v, &lookat_vp);
     
     for (size_t i = 0; i < 3; ++i) {

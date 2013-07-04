@@ -87,6 +87,7 @@ typedef struct log {
 
 #define UI_FONT			"Chicago"
 
+#define MUSIC_VOLUME	0.5f
 #define DAMAGE_VOLUME	0.5f
 #define CHAT_VOLUME		0.5f
 #define ROTATE_VOLUME	0.2f
@@ -219,8 +220,6 @@ static const char *player_name(int i, bool as_object);
 static void player_update_position(int i, double timestep);
 static int player_with_client_id_get(uint16_t client_id, bool allow_allocate, bool *was_new_player);
 static xvec2 player_v2velocity_get(int i);
-
-static void position_mod(position_t *position);
 
 static void projectile_add(void);
 static void projectile_explode_effect(int pi, int target);
@@ -438,7 +437,7 @@ static xpl_context_t *game_handoff(xpl_context_t *self, void *data) {
 
 
 static void *game_init(xpl_context_t *self) {
-	srand((unsigned int)time(0));
+	srand((int)(xpl_get_time() * 10.0));
 	
 	theme = xpl_imui_theme_load_new("ld26");
 	imui = xpl_imui_context_new(theme);
@@ -472,6 +471,7 @@ static void *game_init(xpl_context_t *self) {
 	
 	bgm_stream = audio_create("bgm", true);
 	bgm_stream->loop = true;
+	bgm_stream->volume = MUSIC_VOLUME;
 	if (prefs.bgm_on) bgm_stream->action = aa_play;
 	
 	damage_audio = audio_create("alert", false);

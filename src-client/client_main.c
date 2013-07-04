@@ -63,8 +63,9 @@ static void parse_args(xpl_app_t *app) {
 }
 
 static void init(xpl_app_t *app) {
-    xpl_threads_init(4, NULL);
-
+    // xpl_threads_init(4, NULL);
+	xpl_init_timer();
+	xpl_input_init();
 	xpl_shaders_init("shaders/", ".glsl");
 	audio_startup();
     
@@ -85,7 +86,7 @@ static void destroy(xpl_app_t *app) {
     }
     
 	audio_shutdown();
-    xpl_threads_shutdown();
+    // xpl_threads_shutdown();
     xpl_shaders_shutdown();
 }
 
@@ -102,8 +103,8 @@ static void main_loop(xpl_app_t *app) {
 	app->execution_info->current_time = initial_time;
 	app->execution_info->remaining_time_to_process = 0.0;
 	
-	double engine_time, render_interval, render_time;
-    double render_start_time = initial_time, engine_start_time = initial_time;
+	double engine_time = 0.0, engine_start_time = initial_time;
+	double render_interval = 0.0, render_time = 0.0, render_start_time = initial_time;
 	
 	while(glfwGetWindowParam(GLFW_OPENED) && !app->restart) {
 		double current_time = glfwGetTime();

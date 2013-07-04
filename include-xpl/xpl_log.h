@@ -34,12 +34,12 @@
 
 #define LOG_ANSI
 
+#include <libgen.h>
 #if defined(XPL_PLATFORM_OSX) || defined(XPL_PLATFORM_IOS) || defined(XPL_PLATFORM_WINDOWS)
 # undef LOG_ANSI
 #endif
 
 #if defined(XPL_PLATFORM_UNIX) || defined(XPL_PLATFORM_OSX) || defined(XPL_PLATFORM_IOS)
-# include <libgen.h>
 # define XPL_STDERR stderr
 # define XPL_STDOUT stdout
 #endif
@@ -122,7 +122,7 @@ static char __xpl_log_output[LOG_MAX] XPL_UNUSED;
 #	ifdef _WIN32
 /* MinGW points to _iob which the IDEs don't like */
 #		define xpl_log(stream, color, level, file, func, line, ...) \
-			printf("[%s%s%s]\t %s %s:%d %s\n", color, level, XPL_COLOR_txtrst, basename(file), func, line, (snprintf(__xpl_log_output, LOG_MAX, __VA_ARGS__), __xpl_log_output)); fflush(stdout)
+			printf("[%s]\t %s %s:%d %s\n", level, xpl_basename(file), func, line, (snprintf(__xpl_log_output, LOG_MAX, __VA_ARGS__), __xpl_log_output)); fflush(stdout)
 #	else
 #		define xpl_log(stream, color, level, file, func, line, ...) \
 			fprintf(stream, "[%s%s%s]\t %s %s:%d %s\n", color, level, XPL_COLOR_txtrst, basename(file), func, line, (snprintf(__xpl_log_output, LOG_MAX, __VA_ARGS__), __xpl_log_output)); fflush(stream)

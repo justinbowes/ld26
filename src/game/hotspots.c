@@ -6,7 +6,7 @@
 //  Copyright (c) 2013 Informi Software Inc. All rights reserved.
 //
 
-#include "hotspots.h"
+#include "game/hotspots.h"
 
 hotspot_t								*hotspot_table = NULL;
 

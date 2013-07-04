@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <xpl_platform.h>
 #ifndef XPL_PLATFORM_WINDOWS
 #	include <arpa/inet.h>
 #	include <netinet/in.h>

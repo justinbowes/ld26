@@ -26,6 +26,8 @@ typedef enum xpl_mouse_button_state {
 	xmb_right	= 1 << 3
 } xpl_mouse_button_state_t;
 
+void xpl_input_init(void);
+
 bool xpl_input_character_is_printable(int character, bool include_crlf);
 bool xpl_input_key_down(int key);
 int xpl_input_add_character_listener(xpl_input_character_func func, void *context);

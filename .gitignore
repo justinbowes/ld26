@@ -2,3 +2,5 @@
 dist/
 xcuserdata/
 *.o
+Debug/
+Release/

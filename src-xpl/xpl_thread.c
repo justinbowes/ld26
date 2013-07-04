@@ -273,7 +273,7 @@ void create_thread(size_t i) {
 	if ((ctx->thread_pool[i].thread_mutex == NULL) ||
 		(!xpl_mutex_is_valid(ctx->thread_pool[i].thread_mutex))) {
 		// Thread allocation failed here. Remember this and quit trying.
-		LOG_ERROR("Failed to create mutex %llu", (long long unsigned)i);
+		LOG_ERROR("Failed to create mutex %lu", (long unsigned)i);
 		ctx->thread_pool_size = i;
 		return;
 	}

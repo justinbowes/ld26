@@ -47,6 +47,11 @@ static xivec2 deltas[MAX_TOUCHES];
 static bool states[MAX_TOUCHES];
 static XPLKeyInputView *key_input;
 
+
+void xpl_input__platform_init(void) {
+	assert(false); // need to call the ios-specific version that takes a view
+}
+
 void xpl_input_ios_init(UIView *view) {
 	key_input = [[XPLKeyInputView alloc] initWithParentView: view];
 	for (size_t i = 0; i < MAX_TOUCHES; ++i) {

@@ -34,6 +34,7 @@ static int                              menu_index = -1;
 // Config menu
 static float                            configure_scroll = 0.f;
 static xpl_app_params_t                 app_config;
+
 #ifndef XPL_PLATFORM_IOS
 #define MAX_VID_MODES   32
 static GLFWvidmode                      supported_video_modes[MAX_VID_MODES];
@@ -160,9 +161,9 @@ static void menu_configure(xpl_app_t *app, xrect area) {
     int window_clicked = FALSE;
     int save_clicked = FALSE;
 #endif
-	int reset_clicked;
-    int back_clicked;
-	int bgm_clicked;
+	int reset_clicked = FALSE;
+    int back_clicked = FALSE;
+	int bgm_clicked = FALSE;
     
     xpl_imui_context_begin(imui_context, app->execution_info, area);
     {
@@ -170,9 +171,10 @@ static void menu_configure(xpl_app_t *app, xrect area) {
         {
             xpl_imui_indent_custom(16.0f);
             {
+#ifdef XPL_PLATFORM_IOS
 				bgm_clicked = xpl_imui_control_check(xl("config_bgm"), prefs.bgm_on, TRUE);
 				reset_clicked = xpl_imui_control_button(xl("config_reset"), 0, TRUE);
-#ifndef XPL_PLATFORM_IOS
+#else
             	if (xpl_imui_control_collapse(xl("config_preferences"), "", &preferences_is_expanded, TRUE)) {
 					bgm_clicked = xpl_imui_control_check(xl("config_bgm"), prefs.bgm_on, TRUE);
 					reset_clicked = xpl_imui_control_button(xl("config_reset"), 0, TRUE);

@@ -30,9 +30,13 @@ xivec3							debris_layer[DEBRIS_PER_LAYER];
 void sprites_init(void) {
 	
 	rng_seq_t rng;
-	time_t now = time(0);
-	int init_v[] = { 0xa1b2c3d4, (int)now };
-	rng_seq_init_ints(init_v, 2, &rng);
+	double time = xpl_get_time();
+	union {
+		double dv;
+		int iv[2];
+	} init_v;
+	init_v.dv = time;
+	rng_seq_init_ints(init_v.iv, 2, &rng);
 	
 	sprites.playfield_batch = xpl_sprite_batch_new();
 	sprites.ui_batch = xpl_sprite_batch_new();
@@ -207,8 +211,8 @@ void sprites_playfield_render(xpl_context_t *self, xmat4 *ortho) {
 		// Debris
 		for (int j = 0; j < DEBRIS_PER_LAYER; ++j) {
 			const size_t i = 0; // as though in front of stars
-			int64_t px = (debris_layer[j].x - camera.center.px << (i + 1)) % STAR_LAYER_SIZE;
-			int64_t py = (debris_layer[j].y - camera.center.py << (i + 1)) % STAR_LAYER_SIZE;
+			int64_t px = ((debris_layer[j].x - camera.center.px) << (i + 1)) % STAR_LAYER_SIZE;
+			int64_t py = ((debris_layer[j].y - camera.center.py) << (i + 1)) % STAR_LAYER_SIZE;
 			if (px > camera.draw_area.x &&
 				py > camera.draw_area.y &&
 				px < camera.draw_area.x + camera.draw_area.width &&

@@ -51,8 +51,8 @@ static struct timer_info {
 } *s_timer_info = NULL;
 
 void xpl_init_timer(void) {
+	if (s_timer_info) return;
     winmm_init();
-    assert(s_timer_info == NULL);
 
     s_timer_info = xpl_alloc_type(struct timer_info);
 
@@ -72,6 +72,10 @@ void xpl_init_timer(void) {
 
 }
 double xpl_get_time(void) {
+	if (! s_timer_info) {
+		LOG_WARN("Timer not initialized; initializing now");
+		xpl_init_timer();
+	}
     double t;
     __int64 t_64;
     
