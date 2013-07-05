@@ -598,3 +598,28 @@ void xpl_font_apply_markup(xpl_font_t *self, const struct xpl_markup *markup) {
     self->outline_thickness = markup->outline_thickness;
 }
 
+
+
+// ------------------------------------------------------------------------------
+
+float xpl_font_get_text_length(xpl_font_t *font, const char *text, size_t position) {
+	assert(font);
+	
+	float len = 0;
+	size_t charno = 0;
+	if (position == -1) position = strlen(text);
+	while (*text && (charno <= position)) {
+		char c = (char) *text;
+		if (c == '\t') {
+			len += 4 * xpl_font_get_text_length(font, " ", -1);
+			continue;
+		}
+		
+		xpl_glyph_t *glyph = xpl_font_get_glyph(font, c);
+		if (glyph) len += glyph->advance_x;
+		
+		++text;
+		++charno;
+	}
+	return len;
+}

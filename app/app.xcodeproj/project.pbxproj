@@ -165,6 +165,8 @@
 		D0853755172F31100072BBB9 /* app.iconset in Resources */ = {isa = PBXBuildFile; fileRef = D0853754172F31100072BBB9 /* app.iconset */; };
 		D090A198177DCDF700752D15 /* context_snapshot.c in Sources */ = {isa = PBXBuildFile; fileRef = D090A195177DCDAA00752D15 /* context_snapshot.c */; };
 		D091983C174B991C00F9CFB9 /* xpl_platform.m in Sources */ = {isa = PBXBuildFile; fileRef = D01465021729AC0800190386 /* xpl_platform.m */; };
+		D0989AA917872A4F00F20DE3 /* combo_render.c in Sources */ = {isa = PBXBuildFile; fileRef = D0989AA817872A4F00F20DE3 /* combo_render.c */; };
+		D0989AAA17872A5300F20DE3 /* combo_render.c in Sources */ = {isa = PBXBuildFile; fileRef = D0989AA817872A4F00F20DE3 /* combo_render.c */; };
 		D0B1082E177DF2A700E2E10D /* cJSON.c in Sources */ = {isa = PBXBuildFile; fileRef = D0B1082D177DF2A700E2E10D /* cJSON.c */; };
 		D0B10832177DF98E00E2E10D /* xpl_sprite_sheet.c in Sources */ = {isa = PBXBuildFile; fileRef = D0B10831177DF98E00E2E10D /* xpl_sprite_sheet.c */; };
 		D0B10833177DF98E00E2E10D /* xpl_sprite_sheet.c in Sources */ = {isa = PBXBuildFile; fileRef = D0B10831177DF98E00E2E10D /* xpl_sprite_sheet.c */; };
@@ -764,6 +766,8 @@
 		D0853754172F31100072BBB9 /* app.iconset */ = {isa = PBXFileReference; lastKnownFileType = folder.iconset; path = app.iconset; sourceTree = SOURCE_ROOT; };
 		D090A195177DCDAA00752D15 /* context_snapshot.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = context_snapshot.c; sourceTree = "<group>"; };
 		D090A197177DCDB700752D15 /* context_snapshot.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = context_snapshot.h; sourceTree = "<group>"; };
+		D0989AA717872A3900F20DE3 /* combo_render.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = combo_render.h; sourceTree = "<group>"; };
+		D0989AA817872A4F00F20DE3 /* combo_render.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = combo_render.c; sourceTree = "<group>"; };
 		D0AFF931172DB836001B597A /* projectile_config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = projectile_config.h; sourceTree = "<group>"; };
 		D0B1082D177DF2A700E2E10D /* cJSON.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cJSON.c; sourceTree = "<group>"; };
 		D0B10830177DF2AF00E2E10D /* cJSON.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cJSON.h; sourceTree = "<group>"; };
@@ -1898,16 +1902,17 @@
 		D0526806172ADBED001A11D7 /* game */ = {
 			isa = PBXGroup;
 			children = (
-				D0526807172ADC00001A11D7 /* game.h */,
-				D0526808172ADD0D001A11D7 /* packet.h */,
-				D0AFF931172DB836001B597A /* projectile_config.h */,
-				D0828CB2172EB46E00BC66AC /* sprites.h */,
 				D0828CB5172EB91600BC66AC /* camera.h */,
-				D0828CB8172EB9F500BC66AC /* util.h */,
-				D0828CBB172EBE1E00BC66AC /* palette.h */,
-				D0828CBC172EC5E100BC66AC /* prefs.h */,
+				D0989AA717872A3900F20DE3 /* combo_render.h */,
+				D0526807172ADC00001A11D7 /* game.h */,
 				D077895C177C8997008C7722 /* hotspots.h */,
 				D077895D177CA1F2008C7722 /* layout.h */,
+				D0526808172ADD0D001A11D7 /* packet.h */,
+				D0828CBB172EBE1E00BC66AC /* palette.h */,
+				D0828CBC172EC5E100BC66AC /* prefs.h */,
+				D0AFF931172DB836001B597A /* projectile_config.h */,
+				D0828CB2172EB46E00BC66AC /* sprites.h */,
+				D0828CB8172EB9F500BC66AC /* util.h */,
 			);
 			path = game;
 			sourceTree = "<group>";
@@ -1921,6 +1926,7 @@
 				D0828CB9172EB9FC00BC66AC /* util.c */,
 				D0828CBD172EC61900BC66AC /* prefs.c */,
 				D0778959177C898B008C7722 /* hotspots.c */,
+				D0989AA817872A4F00F20DE3 /* combo_render.c */,
 			);
 			path = game;
 			sourceTree = "<group>";
@@ -2457,6 +2463,7 @@
 				D0B1083F17831E2D00E2E10D /* blackbody_srgb.c in Sources */,
 				D0B1084017831E2D00E2E10D /* star_generator.c in Sources */,
 				D0B1084117831E2D00E2E10D /* star_properties.c in Sources */,
+				D0989AA917872A4F00F20DE3 /* combo_render.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2582,6 +2589,7 @@
 				D0B10842178327AC00E2E10D /* blackbody_srgb.c in Sources */,
 				D0B10843178327AC00E2E10D /* star_generator.c in Sources */,
 				D0B10844178327AC00E2E10D /* star_properties.c in Sources */,
+				D0989AAA17872A5300F20DE3 /* combo_render.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -73,7 +73,7 @@ char *xpl_basename(const char *name) {
 char *xpl_dirname(char *path)
 {
 	static char *retfail = NULL;
-	wchar_t refcopy[MAX_PATH+MAX_PATH+1];
+	wchar_t refcopy[2 * PATH_MAX + 1];
 	wchar_t *refpath;
 	size_t len = 0;
 	

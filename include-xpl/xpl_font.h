@@ -124,5 +124,6 @@ float xpl_font_glyph_get_kerning(const xpl_glyph_t *self, const wchar_t charcode
 
 struct xpl_markup; // forward declaration
 void xpl_font_apply_markup(xpl_font_t *font, const struct xpl_markup *markup);
+float xpl_font_get_text_length(xpl_font_t *font, const char *text, size_t position);
 
 #endif

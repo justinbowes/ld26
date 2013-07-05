@@ -12,7 +12,9 @@ class Processor
   
   def process(target)
     FileUtils.mkdir_p target unless File.exists? target and File.directory? target
+		puts @files
     @files.each { |file| 
+	  	puts @file
       process_r(file, target)
     }
   end
@@ -125,7 +127,10 @@ class Args
     puts "output:         #{output}"
     puts "inputs:         #{inputs.join ' '}"
     puts "transformers:   #{transformers.join ' '}"
-    Processor.new(inputs, transformers).process(output) if ok
+		if (ok)
+    	p = Processor.new(inputs, transformers)
+			p.process(output)
+		end
   end
 end
 

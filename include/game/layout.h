@@ -11,6 +11,7 @@
 
 #include <xpl_platform.h>
 #include "game/sprites.h"
+#include "game/projectile_config.h"
 
 XPLINLINE int weapon_buttons_left(xivec2 screen) {
 	if (screen.width <= 480) return 140;
@@ -32,7 +33,7 @@ XPLINLINE float weapon_price_size(xivec2 screen) {
 }
 
 XPLINLINE int health_left(xivec2 screen) {
-	return weapon_button_left(screen, 8);
+	return weapon_button_left(screen, projectile_type_count);
 }
 
 XPLINLINE int weapon_cooldown_left(xivec2 screen) {

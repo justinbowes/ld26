@@ -32,6 +32,7 @@
 #endif
 
 #include "game/camera.h"
+#include "game/combo_render.h"
 #include "game/game.h"
 #include "game/hotspots.h"
 #include "game/layout.h"
@@ -95,6 +96,8 @@ typedef struct log {
 #define SELECT_VOLUME	0.2f
 #define EXPLODE_VOLUME	1.0f
 #define FIRE_VOLUME		0.5f
+
+#define COMBO_TIMEOUT	18.0
 
 #define MAX_VELOCITY	6.0f
 
@@ -229,7 +232,6 @@ static int projectile_with_pid_get(uint16_t pid, int ti, bool allow_dead, bool *
 
 static void server_resolve_addr(void);
 
-static float text_get_length(xpl_font_t *font, const char *text, size_t position);
 static void text_particle_add(position_t position, xvec2 velocity, const char *text, xvec4 color, float life);
 static int text_particle_find_new(void);
 static void text_particle_update(int i, double time);
@@ -428,6 +430,12 @@ static void game_engine(xpl_context_t *self, double time, void *data) {
 		error.timeout -= time;
 	}
 	
+	game.combo_timeout -= time;
+	if (game.combo_timeout <= 0.f) {
+		game.combo_timeout = 0.f;
+		game.combo_count = 0;
+	}
+	
 }
 
 
@@ -465,7 +473,7 @@ static void *game_init(xpl_context_t *self) {
 	game_init_overlay();
 	game_init_text(1.f / ratio);
 	sprites_init();
-
+	combo_init();
 	
 	scanline_strength = DEFAULT_SCANLINE;
 	
@@ -523,7 +531,7 @@ static void game_init_text(float size_ratio) {
 	xpl_markup_clear(&text_particle_markup);
 	xpl_markup_set(&text_particle_markup, UI_FONT, 16.f, FALSE, FALSE, xvec4_set(1.f, 1.f, 1.f, 1.f), xvec4_all(0.f));
 
-	ui_cache = xpl_text_cache_new(128);
+	ui_cache = xpl_text_cache_new(128 * size_ratio);
 	xpl_markup_clear(&ui_markup);
 	xpl_markup_set(&ui_markup, UI_FONT, 16.f, FALSE, FALSE, xvec4_set(1.f, 1.f, 1.f, 1.f), xvec4_all(0.f));
 	
@@ -561,6 +569,11 @@ static void game_render(xpl_context_t *self, double time, void *data) {
 		game_render_ui(self);
 	}
 	
+	if (game.combo_timeout && game.combo_count > 1) {
+		combo_render(game.combo_count, game.combo_start_audio, self->size);
+		game.combo_start_audio = false;
+	}
+	
 	game_render_log(self);
 
 	xpl_text_cache_advance_frame(name_cache);
@@ -590,7 +603,7 @@ static void game_render_playfield(xpl_context_t *self, double time) {
 		
 		const char *name = player_name(i, false);
 		xpl_cached_text_t *text = xpl_text_cache_get(name_cache, &name_markup, name);
-		float text_length = text_get_length(text->managed_font, name, -1);
+		float text_length = xpl_font_get_text_length(text->managed_font, name, -1);
 		xvec2 v = camera_get_draw_position(game.player[i].position);
 		xvec3 pen = {{ v.x - text_length / 2, v.y - name_markup.size, 0.f }};
 		pen.x = xclamp(pen.x, camera.draw_area.x, camera.draw_area.x + camera.draw_area.width - text_length);
@@ -608,16 +621,17 @@ static void game_render_playfield(xpl_context_t *self, double time) {
 		if (game.text_particle[i].life <= 0.f) continue;
 		if (! position_in_bounds(game.text_particle[i].position, 64, camera.min, camera.max)) continue;
 		
-		// This thrashes the cache badly.
+		// This thrashes the cache badly. Blend color in the shader instead.
 //		text_particle_markup.foreground_color = game.text_particle[i].color;
 		xpl_cached_text_t *text = xpl_text_cache_get(text_particle_cache, &text_particle_markup, game.text_particle[i].text);
-		float text_length = text_get_length(text->managed_font, game.text_particle[i].text, -1);
+		float text_length = xpl_font_get_text_length(text->managed_font, game.text_particle[i].text, -1);
 		xvec2 v = camera_get_draw_position(game.text_particle[i].position);
 		xvec3 pen = {{ v.x - text_length / 2, v.y - text_particle_markup.size / 2, 0.f }};
 		xmat4 ortho_transform;
 		xmat4_translate(&ortho, &pen, &ortho_transform);
 		xmat4_rotate(&ortho_transform, game.text_particle[i].orientation, &xvec3_z_axis, &ortho_transform);
 		
+		// Hooray performance!
 		xpl_text_buffer_render_tinted(text->buffer, ortho_transform.data, game.text_particle[i].color);
 	}
 	
@@ -652,7 +666,7 @@ static void game_render_ui(xpl_context_t *self) {
 			snprintf(price_str, 8, "%d", price);
 			ui_markup.foreground_color = (price <= cash) ? available_color : expensive_color;
 			xpl_cached_text_t *text = xpl_text_cache_get(ui_cache, &ui_markup, price_str);
-			float text_length = text_get_length(text->managed_font, price_str, -1);
+			float text_length = xpl_font_get_text_length(text->managed_font, price_str, -1);
 			xvec3 pen = {{ weapon_button_left(self->size, i) + TILE_SIZE - text_length, 4.f + ui_markup.size, 0.f }};
 			xmat4 ortho_translate;
 			xmat4_translate(&ortho, &pen, &ortho_translate);		
@@ -667,7 +681,7 @@ static void game_render_ui(xpl_context_t *self) {
 	ui_markup.foreground_color = game.player[0].score ? normal_color : broke_color;
 	ui_markup.size = 24.f;
 	xpl_cached_text_t *text = xpl_text_cache_get(ui_cache, &ui_markup, score);
-	float text_length = text_get_length(text->managed_font, score, -1);
+	float text_length = xpl_font_get_text_length(text->managed_font, score, -1);
 	xvec3 pen = {{ self->size.width - text_length - 16, 32.f + ui_markup.size, 0.f }};
 	xmat4 ortho_translate;
 	xmat4_translate(&ortho, &pen, &ortho_translate);
@@ -843,6 +857,11 @@ static void packet_handle_damage(uint16_t client_id, packet_t *packet) {
 	}
 	
 	if (origin == 0 && target != 0) {
+		if (packet->damage.flags & DAMAGE_FLAG_EXPLODES) {
+			++game.combo_count;
+			game.combo_start_audio = true;
+			game.combo_timeout = COMBO_TIMEOUT;
+		}
 		game.player[0].score += packet->damage.amount;
 		packet_send_player();
 	}
@@ -1228,6 +1247,8 @@ static void player_init(int i) {
 static void player_local_connect(void) {
 	game.player_id[0].nonce = xpl_irand_range(0, UINT16_MAX);
 	game.player_connected[0] = true;
+	game.combo_count = 0;
+	game.combo_timeout = 0.0;
 	network.hello_timeout = 0.f;
 	network.receive_timeout = RECEIVE_TIMEOUT;
 }
@@ -1786,31 +1807,6 @@ static void server_resolve_addr(void) {
 	server_addr->port = network.server_port;
 }
 
-
-// ------------------------------------------------------------------------------
-
-static float text_get_length(xpl_font_t *font, const char *text, size_t position) {
-	assert(font);
-	
-	float len = 0;
-	size_t charno = 0;
-	if (position == -1)
-		position = strlen(text);
-	while (*text && (charno <= position)) {
-		char c = (char) *text;
-		if (c == '\t') {
-			len += text_get_length(font, "    ", -1);
-			continue;
-		}
-		
-		xpl_glyph_t *glyph = xpl_font_get_glyph(font, c);
-		if (glyph) len += glyph->advance_x;
-		
-		++text;
-		++charno;
-	}
-	return len;
-}
 
 // ------------------------------------------------------------------------------
 

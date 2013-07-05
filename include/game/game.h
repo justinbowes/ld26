@@ -135,7 +135,8 @@ typedef struct game {
 	int			fire_cooldown;
 	float		respawn_cooldown;
 	
-	int			kill_count;
+	int			combo_count;
+	bool		combo_start_audio;
 	double		combo_timeout;
 	
 	uint8_t		indicators_cooldown;

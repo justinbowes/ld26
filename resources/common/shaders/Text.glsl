@@ -26,7 +26,7 @@ void main()
 {
 
     gl_Position = mvp * vec4(position, 1.0);
-    vcolor = color * global_tint;
+    vcolor = vec4(color.rgb * global_tint.rgb * global_tint.a, color.a * global_tint.a);
     vshift = shift;
     vgamma = gamma;
     vuv = uv;
@@ -84,7 +84,7 @@ void main()
 	vec3 gamma_color = mix(mix_1, mix_2, z);
     gamma_color = pow(gamma_color, vec3(1.0 / vgamma));
 
-    frag_color = vec4(gamma_color * vcolor.rgb, dot(gamma_color, one) / 3.0 * vcolor.a);
+    frag_color = vec4(gamma_color * vcolor.rgb * vcolor.a, dot(gamma_color, one) / 3.0);
 }
 
 
@@ -107,7 +107,7 @@ void main()
 {
 
     gl_Position = mvp * vec4(position, 1.0);
-    vcolor = color * global_tint;
+    vcolor = vec4(color.rgb * global_tint.rgb * global_tint.a, color.a * global_tint.a);
     vshift = shift;
     vgamma = gamma;
     vuv = uv;

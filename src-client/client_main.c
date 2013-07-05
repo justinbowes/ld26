@@ -5,6 +5,7 @@
 
 #include "xpl.h"
 #include "xpl_gl.h"
+#include "xpl_input.h"
 #include "xpl_app.h"
 #include "xpl_thread.h"
 #include "xpl_engine_info.h"

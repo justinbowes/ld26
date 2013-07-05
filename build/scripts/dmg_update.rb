@@ -86,7 +86,10 @@ def main
 	`hdiutil convert -format UDZO '#{target_dmg}' -o '#{target_dmg_prefix}.z.dmg'`
 	FileUtils.mv "#{target_dmg_prefix}.z.dmg", "#{target_dmg}"
 	FileUtils.rm target_zip, :force => true #swallow errors
-	zipline = "zip '#{target_zip}' '#{target_dmg}'"
+	target_dir = `dirname "#{target_dmg}"`.strip
+	puts "Target dir: #{target_dir}"
+	target_base = `basename "#{target_dmg}"`.strip
+	zipline = "cd #{target_dir} && zip '#{target_zip}' '#{target_base}'"
 	`#{zipline}`
 	puts "Done #{zipline}, see #{target_zip}"
 end
