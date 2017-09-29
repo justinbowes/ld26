@@ -1,11 +1,13 @@
 # UltraPew!
 
 UltraPew is a multiplayer inertial space shooter in the style of Asteroids, featuring:
- * 6 distinct weapons
+ * 6+ distinct weapons (eyewitness accounts vary)
  * up to 64 simultaneous players
  * in-game chat
  * tutorial
  * minimalism
+ 
+ ![screenshot](https://github.com/justinbowes/ld26-ultrapew/blob/master/src-resources/bitmaps_raw/tutorial_5.png)
  
  It runs on
  * Windows 7
