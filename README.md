@@ -7,7 +7,8 @@ UltraPew is a multiplayer inertial space shooter in the style of Asteroids, feat
  * tutorial
  * minimalism
  
- ![screenshot](https://github.com/justinbowes/ld26-ultrapew/blob/master/src-resources/bitmaps_raw/tutorial_5.png)
+ ![screenshot](https://github.com/justinbowes/ld26-ultrapew/blob/master/src-resources/bitmaps_raw/tutorial_4.png)
+ Pardon the garbled MXC reference. I was very tired.
  
  It runs on
  * Windows 7
